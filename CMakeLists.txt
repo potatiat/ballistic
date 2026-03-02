@@ -10,7 +10,6 @@ endif()
 
 project(Ballistic LANGUAGES C VERSION 0.4.0)
 
-
 # option(BALLISTIC_ENABLE_CPU_FEATURE_DETECTION "Makes Ballistic able to detect CPU features of the host" ON)
 option(BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION "Enables LTO for Ballistic (improves performance)" ON)
 option(BALLISTIC_ENABLE_BUILD_TESTS "Enables Ballistic tests" ON)
@@ -20,6 +19,12 @@ option(BALLISTIC_ENABLE_BUILD_TESTS "Enables Ballistic tests" ON)
 # -----------------------------------------------------------------------------
 
 find_package(Python3 REQUIRED)
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    set(BUILD_SHARED_LIBS ON CACHE BOOL "Build the CMark library as shared" FORCE)
+    set(CMARK_LIB_FUZZER OFF CACHE BOOL "Disable building CMark fuzzing harness" FORCE)
+    add_subdirectory(extern/cmark EXCLUDE_FROM_ALL)
+endif()
 
 set(SCRIPT_GENERATE_DECODER_TABLE ${CMAKE_SOURCE_DIR}/tools/generate_a64_table.py)
 set(GENERATED_DECODER_TABLE_HEADER ${CMAKE_SOURCE_DIR}/src/bal_decoder_table_gen.h)
@@ -37,7 +42,7 @@ if (MSVC)
     add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 else()
     add_compile_options(
-        -Wall -Wextra -Wpedantic -Werror
+        -Wall -Wextra -Werror
         -Wconversion -Wsign-conversion -Wshadow
         -Wstrict-prototypes -Wmissing-prototypes
         -Wno-gnu-zero-variadic-macro-arguments # Make formatting assert messages easier
@@ -65,7 +70,6 @@ target_compile_definitions(Ballistic PUBLIC BAL_MAX_LOG_LEVEL=4)
 if(BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION)
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 endif()
-
 
 # Debugging and Sanitizers (Catch UB/Segfaults early)
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -98,8 +102,6 @@ target_link_libraries(${BALLISTIC_CLI_NAME} PRIVATE ${PROJECT_NAME})
 # to test this so only Linux and macOS are supported.
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     set (CDOC_NAME "cdoc")
-    find_library(CMARK_LIBRARY NAMES cmark libcmark REQUIRED)
-    find_path(CMARK_INCLUDE_DIR NAMES cmark.h REQUIRED)
     find_library(CLANG_LIBRARY NAMES clang libclang REQUIRED)
     find_path(CLANG_INCLUDE_DIR NAMES clang-c/Index.h REQUIRED)
 
@@ -107,8 +109,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     target_compile_options(${CDOC_NAME} PRIVATE -Wno-missing-prototypes
         -Wno-sign-conversion -Wno-int-conversion -Wno-unused-parameter
         -Wno-implicit-function-declaration -Wno-shorten-64-to-32)
-    target_include_directories(${CDOC_NAME} PRIVATE ${CMARK_INCLUDE_DIR} ${CLANG_INCLUDE_DIR})
-    target_link_libraries(${CDOC_NAME} PRIVATE ${CMARK_LIBRARY} ${CLANG_LIBRARY})
+    target_include_directories(${CDOC_NAME} PRIVATE ${CLANG_INCLUDE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/extern/cmark/src
+        ${CMAKE_CURRENT_BINARY_DIR}/extern/cmark/src/)
+    target_link_libraries(${CDOC_NAME} PRIVATE ${CLANG_LIBRARY} cmark)
     set (PROJECT_HEADERS include/bal_engine.h include/bal_decoder.h
         include/bal_memory.h include/bal_types.h include/bal_errors.h include/bal_logging.h
         include/bal_assembler.h)
