@@ -27,7 +27,7 @@ typedef void *(*bal_allocate_function_t)(bal_allocator_handle_t allocator,
 /// A function signature for releasing memory.
 ///
 /// Implementations must deallocate the memory at `pointer`, which was
-/// previously allocated by the corresponding allocate function. The `size`
+/// previously allocated by the corresponding to allocate function. The `size`
 /// parameter indicates the size of the allocation being freed. Access to the
 /// heap state is provided via `allocator`.
 typedef void (*bal_free_function_t)(bal_allocator_handle_t allocator, void *pointer, size_t size);
@@ -91,7 +91,7 @@ typedef struct
 ///
 /// # Platform Support
 ///
-/// This function only supports windowsnand POSIX-compliant systems.
+/// This function only supports windows and POSIX-compliant systems.
 BAL_COLD void bal_get_default_allocator(bal_allocator_t *out_allocator);
 
 /// Initializes a flat, contiguous translation interface.
@@ -124,7 +124,7 @@ BAL_COLD bal_error_t bal_memory_init_flat(bal_allocator_t *BAL_RESTRICT        a
                                           size_t                               size,
                                           bal_logger_t                         logger);
 
-/// Frees the internal sttae allocated within `interface` using the provided
+/// Frees the internal state allocated within `interface` using the provided
 /// `allocator`.
 ///
 /// This does **not** free the buffer passed to [`bal_memory_init_flat`] as

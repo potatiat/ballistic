@@ -9,7 +9,7 @@
 #include "bal_platform.h"
 
 /// BAL_HOT()/BAL_COLD()
-/// Marks a function as hot or cold. Hot makes the compiller optimize it more
+/// Marks a function as hot or cold. Hot makes the compiler optimize it more
 /// aggressively. Cold marks the function as rarely executed.
 ///
 /// Usage:

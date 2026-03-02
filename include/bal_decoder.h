@@ -22,7 +22,7 @@ extern "C"
 #define BAL_OPERANDS_SIZE     4
 #define BAL_OPERAND_BIT_WIDTH 5
 
-    /// The type of an instruction operand.
+    /// The type of instruction operand.
     typedef enum
     {
         BAL_OPERAND_TYPE_NONE         = 0,
@@ -50,7 +50,7 @@ extern "C"
     static_assert(5 == BAL_OPERAND_BIT_WIDTH,
                   "Operand bit width must be less than 32 to prevent shift overflow.");
 
-    /// Represents static metadata aasociated with a specific ARM instruction.
+    /// Represents static metadata associated with a specific ARM instruction.
     BAL_ALIGNED(32) typedef struct
     {
         /// The instruction mnemonic.
@@ -87,9 +87,9 @@ extern "C"
     ///
     /// The pointer refers to static readonly memory. It is valid for the
     /// lifetime of the program and must not be freed.
-    BAL_HOT const bal_decoder_instruction_metadata_t *bal_decode_arm64(const uint32_t instruction);
+    BAL_HOT const bal_decoder_instruction_metadata_t *bal_decode_arm64(uint32_t instruction);
 
 #ifdef __cplusplus
 }
 #endif
-#endif // POUND_JIT_DECODER_ARM32_H
+#endif // BAL_DECODER_H

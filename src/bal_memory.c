@@ -47,7 +47,7 @@ bal_memory_init_flat(bal_allocator_t *BAL_RESTRICT        allocator,
         &logger, "Initializing Flat Memory Model. Base: %p, Size: %zu bytes.", buffer, size);
 
     // ABI compliant 16-byte memory alignment.
-    size_t memory_alignment = 15U;
+    const size_t memory_alignment = 15U;
 
     if (((uintptr_t)buffer & memory_alignment) != 0)
     {
@@ -55,10 +55,9 @@ bal_memory_init_flat(bal_allocator_t *BAL_RESTRICT        allocator,
         return BAL_ERROR_MEMORY_ALIGNMENT;
     }
 
-    size_t                        memory_alignment_bytes = 16U;
-    flat_translation_interface_t *flat_interface
-        = (flat_translation_interface_t *)allocator->allocate(
-            allocator->handle, memory_alignment_bytes, sizeof(flat_translation_interface_t));
+    const size_t                  memory_alignment_bytes = 16U;
+    flat_translation_interface_t *flat_interface         = allocator->allocate(
+        allocator->handle, memory_alignment_bytes, sizeof(flat_translation_interface_t));
 
     if (NULL == flat_interface)
     {
@@ -160,7 +159,7 @@ bal_translate_flat(void *BAL_RESTRICT   interface,
     }
 
     flat_translation_interface_t *BAL_RESTRICT context
-        = (flat_translation_interface_t *)((bal_memory_interface_t *)interface)->context;
+        = ((bal_memory_interface_t *)interface)->context;
 
     // Is address out of bounds.
     //

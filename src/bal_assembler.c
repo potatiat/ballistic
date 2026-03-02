@@ -4,7 +4,7 @@
 static void emit_mov(bal_assembler_t *, const char *, uint32_t, uint16_t, uint8_t, uint32_t);
 
 bal_error_t
-bal_assembler_init(bal_assembler_t *assembler, void *buffer, size_t size, bal_logger_t logger)
+bal_assembler_init(bal_assembler_t *assembler, void *buffer, const size_t size, bal_logger_t logger)
 {
     if (NULL == assembler)
     {
@@ -35,30 +35,39 @@ bal_assembler_init(bal_assembler_t *assembler, void *buffer, size_t size, bal_lo
 }
 
 void
-bal_emit_movz(bal_assembler_t *assembler, bal_register_index_t rd, uint16_t imm, uint8_t shift)
+bal_emit_movz(bal_assembler_t           *assembler,
+              const bal_register_index_t rd,
+              const uint16_t             imm,
+              const uint8_t              shift)
 {
     emit_mov(assembler, "MOVZ", rd, imm, shift, 0x2);
 }
 
 void
-bal_emit_movk(bal_assembler_t *assembler, bal_register_index_t rd, uint16_t imm, uint8_t shift)
+bal_emit_movk(bal_assembler_t           *assembler,
+              const bal_register_index_t rd,
+              const uint16_t             imm,
+              const uint8_t              shift)
 {
     emit_mov(assembler, "MOVK", rd, imm, shift, 0x3);
 }
 
 void
-bal_emit_movn(bal_assembler_t *assembler, bal_register_index_t rd, uint16_t imm, uint8_t shift)
+bal_emit_movn(bal_assembler_t           *assembler,
+              const bal_register_index_t rd,
+              const uint16_t             imm,
+              const uint8_t              shift)
 {
     emit_mov(assembler, "MOVN", rd, imm, shift, 0x0);
 }
 
-static inline bool
+static bool
 can_emit(bal_assembler_t *assembler)
 {
     if (assembler->offset >= assembler->capacity)
     {
         BAL_LOG_ERROR(
-            &assembler->logger, "Assembler Overflow. Caapcity %zu reached.", assembler->capacity);
+            &assembler->logger, "Assembler Overflow. Capacity %zu reached.", assembler->capacity);
         assembler->status = BAL_ERROR_INSTRUCTION_OVERFLOW;
         return false;
     }
@@ -66,20 +75,20 @@ can_emit(bal_assembler_t *assembler)
     return true;
 }
 
-static inline void
+static void
 emit_mov(bal_assembler_t *assembler,
          const char      *mnemonic,
-         uint32_t         rd,
-         uint16_t         imm,
-         uint8_t          shift,
-         uint32_t         opcode)
+         const uint32_t   rd,
+         const uint16_t   imm,
+         const uint8_t    shift,
+         const uint32_t   opcode)
 {
     if (assembler->status != BAL_SUCCESS)
     {
         return;
     }
 
-    bool can_emit_return_value = can_emit(assembler);
+    const bool can_emit_return_value = can_emit(assembler);
 
     if (false == can_emit_return_value)
     {
@@ -100,16 +109,16 @@ emit_mov(bal_assembler_t *assembler,
         return;
     }
 
-    uint32_t sf          = 1;
-    uint32_t hw          = shift / 16;
-    uint32_t instruction = 0;
-    uint32_t imm16       = imm;
-    instruction |= (sf << 31);
-    instruction |= (opcode << 29);
-    instruction |= (0x25 << 23); // 0b100101
-    instruction |= (hw << 21);
-    instruction |= (imm16 << 5);
-    instruction |= (rd << 0);
+    const uint32_t sf          = 1;
+    const uint32_t hw          = shift / 16;
+    uint32_t       instruction = 0;
+    const uint32_t imm16       = imm;
+    instruction |= sf << 31;
+    instruction |= opcode << 29;
+    instruction |= 0x25 << 23; // 0b100101
+    instruction |= hw << 21;
+    instruction |= imm16 << 5;
+    instruction |= rd << 0;
 
     BAL_LOG_TRACE(&assembler->logger,
                   "[+0x%04zx] %08x %s X%u, #0x%04x, LSL #%u",
@@ -120,7 +129,7 @@ emit_mov(bal_assembler_t *assembler,
                   imm,
                   shift);
 
-    // This function argument isnt used in the log trace above on release builds because the log
+    // This function argument isn't used in the log trace above on release builds because the log
     // trace is optimized out, making the compiler mark this variable as unused.
     (void)mnemonic;
 

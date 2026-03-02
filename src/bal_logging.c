@@ -7,7 +7,7 @@ BAL_COLD static void bal_default_logger(void           *user_data,
                                         va_list         args);
 
 void
-bal_log_message(bal_logger_t *logger, bal_log_data_t *data, const char *format, ...)
+bal_log_message(const bal_logger_t *logger, bal_log_data_t *data, const char *format, ...)
 {
     va_list args;
     va_start(args, format);

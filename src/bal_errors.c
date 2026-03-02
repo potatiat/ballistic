@@ -2,7 +2,7 @@
 #include <stdio.h>
 
 const char *
-bal_error_to_string(bal_error_t error)
+bal_error_to_string(const bal_error_t error)
 {
     const char *string = "";
     switch (error)

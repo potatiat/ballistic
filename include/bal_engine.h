@@ -88,7 +88,7 @@ typedef struct
     /// arrays.
     bal_instruction_count_t instruction_count;
 
-    /// The number of constants emiited.
+    /// The number of constants emitted.
     ///
     /// This tracks the current position in the `constants` array.
     bal_constant_count_t constant_count;
@@ -117,7 +117,7 @@ typedef struct
 /// Initializes a Ballistic engine.
 ///
 /// Populates `engine` with `logger` and empty buffers allocated with `allocator`. This is
-/// a high cost memory operation that reserves a lot of memory and should
+/// a high-cost memory operation that reserves a lot of memory and should
 /// be called sparingly.
 ///
 /// Returns [`BAL_SUCCESS`] if the engine iz ready for use.
@@ -128,9 +128,9 @@ typedef struct
 ///
 /// Returns [`BAL_ERROR_ALLOCATION_FAILED`] if the allocator cannot fulfill the
 /// request.
-BAL_COLD bal_error_t bal_engine_init(bal_allocator_t *allocator,
-                                     bal_engine_t    *engine,
-                                     bal_logger_t     logger);
+BAL_COLD bal_error_t bal_engine_init(const bal_allocator_t *allocator,
+                                     bal_engine_t          *engine,
+                                     bal_logger_t           logger);
 
 /// Translates machine code starting at `arm_instruction_cursor` into the engine's
 /// internal IR. `interface` provides memory access handling (like instruction
@@ -144,12 +144,12 @@ BAL_COLD bal_error_t bal_engine_init(bal_allocator_t *allocator,
 /// or `engine->status != BAL_SUCCESS`.
 ///
 /// Returns [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if the array `engine->constants` overflows.
-BAL_HOT bal_error_t bal_engine_translate(bal_engine_t *BAL_RESTRICT           engine,
-                                         bal_memory_interface_t *BAL_RESTRICT interface,
+BAL_HOT bal_error_t bal_engine_translate(bal_engine_t *BAL_RESTRICT                 engine,
+                                         const bal_memory_interface_t *BAL_RESTRICT interface,
                                          const uint32_t *BAL_RESTRICT arm_instruction_cursor,
-                                         size_t                       arm_size);
+                                         size_t                       arm_size_bytes);
 
-/// Resets `engine` for the next compilation unit. This is a low cost memory
+/// Resets `engine` for the next compilation unit. This is a low-cost memory
 /// operation designed to be called between translation units.
 ///
 /// Returns [`BAL_SUCCESS`] on success.
@@ -165,7 +165,7 @@ BAL_HOT bal_error_t bal_engine_reset(bal_engine_t *engine);
 ///
 /// This function does not free the [`bal_engine_t`] struct itself, as the
 /// caller may have allocated it on the stack.
-BAL_COLD void bal_engine_destroy(bal_allocator_t *allocator, bal_engine_t *engine);
+BAL_COLD void bal_engine_destroy(const bal_allocator_t *allocator, bal_engine_t *engine);
 #endif /* BALLISTIC_ENGINE_H */
 
 /*** end of file ***/

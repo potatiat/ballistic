@@ -9,13 +9,13 @@
 
 void
 bal_internal_assert_fail(const char *file,
-                         int         line,
+                         const int   line,
                          const char *func,
                          const char *expr_str, // NOLINT
                          const char *user_msg, // NOLINT
                          ...)
 {
-    char assert_format[]
+    const char assert_format[]
         = " \
         ================================================================================ \n \
         BAL ASSERTION FAILURE \n \

@@ -17,7 +17,7 @@ typedef uint8_t  bal_bit_width_t;
 
 typedef enum
 {
-    /// This opcode represents a volotile load of a guest register.
+    /// This opcode represents a volatile load of a guest register.
     OPCODE_GET_REGISTER,
     OPCODE_CONST,
     OPCODE_MOV,
@@ -40,7 +40,7 @@ typedef enum
     OPCODE_CMP,
     OPCODE_CMP_COND,
     OPCODE_TRAP,
-    OPCODE_EMUM_END = 0x7FF, // Force enum to 2 bytes.
+    OPCODE_ENUM_END = 0x7FF, // Force enum to 2 bytes.
 } bal_opcode_t;
 
 #endif /* BALLISTIC_TYPES_H */

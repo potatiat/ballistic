@@ -141,7 +141,10 @@ typedef struct
 ///
 /// The `format` string must match the arguments provided in the variadic list, following standard
 /// `printf`.
-BAL_COLD void bal_log_message(bal_logger_t *logger, bal_log_data_t *data, const char *format, ...);
+BAL_COLD void bal_log_message(const bal_logger_t *logger,
+                              bal_log_data_t     *data,
+                              const char         *format,
+                              ...);
 
 /// Populates `logger` with Ballistic's default logging implementation.
 ///

@@ -2,7 +2,6 @@
 #include "bal_decoder.h"
 #include "bal_logging.h"
 #include <stddef.h>
-#include <stdio.h>
 #include <string.h>
 
 #define MAX_INSTRUCTIONS 65536
@@ -28,40 +27,40 @@ typedef struct
     bal_logger_t           *logger;
 } bal_translation_context_t;
 
-static uint32_t    extract_operand_value(const uint32_t, const bal_decoder_operand_t *);
-static uint32_t    intern_constant(bal_translation_context_t *, const bal_constant_t);
-static inline void translate_const(bal_translation_context_t *,
-                                   const bal_decoder_instruction_metadata_t *,
-                                   uint32_t *);
+static uint32_t extract_operand_value(uint32_t, const bal_decoder_operand_t *);
+static uint32_t intern_constant(bal_translation_context_t *, bal_constant_t);
+static void     translate_const(bal_translation_context_t *,
+                                const bal_decoder_instruction_metadata_t *,
+                                const uint32_t *);
 BAL_COLD bal_error_t
-bal_engine_init(bal_allocator_t *allocator, bal_engine_t *engine, bal_logger_t logger)
+bal_engine_init(const bal_allocator_t *allocator, bal_engine_t *engine, bal_logger_t logger)
 {
     if (NULL == allocator || NULL == engine)
     {
         return BAL_ERROR_INVALID_ARGUMENT;
     }
 
-    size_t source_variables_size = MAX_GUEST_REGISTERS * sizeof(bal_source_variable_t);
-    size_t ssa_bit_widths_size   = MAX_INSTRUCTIONS * sizeof(bal_bit_width_t);
-    size_t instructions_size     = MAX_INSTRUCTIONS * sizeof(bal_instruction_t);
-    size_t constants_size        = MAX_INSTRUCTIONS * sizeof(bal_instruction_t);
+    const size_t source_variables_size = MAX_GUEST_REGISTERS * sizeof(bal_source_variable_t);
+    const size_t ssa_bit_widths_size   = MAX_INSTRUCTIONS * sizeof(bal_bit_width_t);
+    const size_t instructions_size     = MAX_INSTRUCTIONS * sizeof(bal_instruction_t);
+    const size_t constants_size        = MAX_INSTRUCTIONS * sizeof(bal_instruction_t);
 
     // Calculate amount of memory needed for all arrays in engine.
     //
-    size_t memory_alignment    = 64U;
-    size_t offset_instructions = BAL_ALIGN_UP(source_variables_size, memory_alignment);
+    const size_t memory_alignment    = 64U;
+    const size_t offset_instructions = BAL_ALIGN_UP(source_variables_size, memory_alignment);
 
-    size_t offset_ssa_bit_widths
+    const size_t offset_ssa_bit_widths
         = BAL_ALIGN_UP((offset_instructions + instructions_size), memory_alignment);
 
-    size_t offset_constants
+    const size_t offset_constants
         = BAL_ALIGN_UP((offset_ssa_bit_widths + ssa_bit_widths_size), memory_alignment);
 
-    size_t total_size_with_padding
+    const size_t total_size_with_padding
         = BAL_ALIGN_UP((offset_constants + constants_size), memory_alignment);
 
-    uint8_t *data = (uint8_t *)allocator->allocate(
-        allocator->handle, memory_alignment, total_size_with_padding);
+    uint8_t *data
+        = allocator->allocate(allocator->handle, memory_alignment, total_size_with_padding);
 
     BAL_LOG_DEBUG(&logger, "Calculating arena layout (Alignment: %zu bytes):", memory_alignment);
     BAL_LOG_DEBUG(
@@ -86,8 +85,8 @@ bal_engine_init(bal_allocator_t *allocator, bal_engine_t *engine, bal_logger_t l
 
     engine->source_variables      = (bal_source_variable_t *)data;
     engine->instructions          = (bal_instruction_t *)(data + offset_instructions);
-    engine->ssa_bit_widths        = (bal_bit_width_t *)(data + offset_ssa_bit_widths);
     engine->constants             = (bal_constant_t *)(data + offset_constants);
+    engine->ssa_bit_widths        = data + offset_ssa_bit_widths;
     engine->source_variables_size = source_variables_size / sizeof(bal_source_variable_t);
     engine->instructions_size     = instructions_size / sizeof(bal_instruction_t);
     engine->constants_size        = constants_size / sizeof(bal_constant_t);
@@ -112,10 +111,10 @@ bal_engine_init(bal_allocator_t *allocator, bal_engine_t *engine, bal_logger_t l
 }
 
 bal_error_t
-bal_engine_translate(bal_engine_t *BAL_RESTRICT           engine,
-                     bal_memory_interface_t *BAL_RESTRICT interface,
-                     const uint32_t *BAL_RESTRICT         arm_instruction_cursor,
-                     size_t                               arm_size_bytes)
+bal_engine_translate(bal_engine_t *BAL_RESTRICT                 engine,
+                     const bal_memory_interface_t *BAL_RESTRICT interface,
+                     const uint32_t *BAL_RESTRICT               arm_instruction_cursor,
+                     size_t                                     arm_size_bytes)
 {
     (void)interface;
 
@@ -142,12 +141,12 @@ bal_engine_translate(bal_engine_t *BAL_RESTRICT           engine,
 
     const bal_instruction_t *BAL_RESTRICT ir_instruction_end
         = engine->instructions + engine->instructions_size;
-    const uint32_t *arm_start = arm_instruction_cursor;
-    const uint32_t *arm_end   = arm_instruction_cursor + (arm_size_bytes / sizeof(uint32_t));
+    const uint32_t *arm_start                        = arm_instruction_cursor;
+    size_t          arm_size                         = arm_size_bytes / sizeof(uint32_t);
+    const uint32_t *arm_end                          = arm_instruction_cursor + arm_size;
     uint32_t        arm_registers[BAL_OPERANDS_SIZE] = { 0 };
 
-    while ((context.ir_instruction_cursor < ir_instruction_end)
-           && (arm_instruction_cursor < arm_end))
+    while (context.ir_instruction_cursor < ir_instruction_end && arm_instruction_cursor < arm_end)
     {
         if (BAL_UNLIKELY(context.instruction_count >= (MAX_INSTRUCTIONS - 128)))
         {
@@ -160,7 +159,7 @@ bal_engine_translate(bal_engine_t *BAL_RESTRICT           engine,
         const bal_decoder_instruction_metadata_t *metadata
             = bal_decode_arm64(*arm_instruction_cursor);
 
-        size_t relative_offset = (size_t)((uintptr_t)arm_instruction_cursor - (uintptr_t)arm_start);
+        const size_t relative_offset = (uintptr_t)arm_instruction_cursor - (uintptr_t)arm_start;
         if (BAL_UNLIKELY(NULL == metadata))
         {
 
@@ -244,7 +243,7 @@ bal_engine_reset(bal_engine_t *engine)
 }
 
 void
-bal_engine_destroy(bal_allocator_t *allocator, bal_engine_t *engine)
+bal_engine_destroy(const bal_allocator_t *allocator, bal_engine_t *engine)
 {
     // No argument error handling. Segfault if user passes NULL.
 
@@ -263,20 +262,20 @@ extract_operand_value(const uint32_t instruction, const bal_decoder_operand_t *o
         return 0;
     }
 
-    uint32_t mask = (1U << operand->bit_width) - 1;
-    uint32_t bits = (instruction >> operand->bit_position) & mask;
+    const uint32_t mask = (1U << operand->bit_width) - 1;
+    const uint32_t bits = instruction >> operand->bit_position & mask;
     return bits;
 }
 
 BAL_HOT static uint32_t
-intern_constant(bal_translation_context_t *BAL_RESTRICT context, bal_constant_t constant)
+intern_constant(bal_translation_context_t *BAL_RESTRICT context, const bal_constant_t constant)
 {
     if (BAL_UNLIKELY(context->status != BAL_SUCCESS))
     {
         return 0;
     }
 
-    uint32_t index = context->constant_count;
+    const uint32_t index = context->constant_count;
 
     if (BAL_UNLIKELY(index >= context->constants_size))
     {
@@ -291,8 +290,8 @@ intern_constant(bal_translation_context_t *BAL_RESTRICT context, bal_constant_t 
     return index | BAL_IS_CONSTANT_BIT_POSITION;
 }
 
-BAL_HOT static inline uint32_t
-get_or_create_ssa_index(bal_translation_context_t *context, uint64_t register_index)
+BAL_HOT static uint32_t
+get_or_create_ssa_index(bal_translation_context_t *context, const uint64_t register_index)
 {
     uint32_t ssa_index = context->source_variables[register_index].current_ssa_index;
 
@@ -303,9 +302,9 @@ get_or_create_ssa_index(bal_translation_context_t *context, uint64_t register_in
         return ssa_index;
     }
 
-    bal_instruction_t instruction
-        = ((bal_instruction_t)OPCODE_GET_REGISTER << BAL_OPCODE_SHIFT_POSITION)
-          | ((bal_instruction_t)register_index << BAL_SOURCE1_SHIFT_POSITION);
+    const bal_instruction_t instruction = (bal_instruction_t)OPCODE_GET_REGISTER
+                                              << BAL_OPCODE_SHIFT_POSITION
+                                          | register_index << BAL_SOURCE1_SHIFT_POSITION;
 
     *context->ir_instruction_cursor                             = instruction;
     ssa_index                                                   = context->instruction_count;
@@ -322,25 +321,25 @@ get_or_create_ssa_index(bal_translation_context_t *context, uint64_t register_in
     return ssa_index;
 }
 
-BAL_HOT static inline void
+BAL_HOT static void
 translate_const(bal_translation_context_t                *context,
                 const bal_decoder_instruction_metadata_t *metadata,
-                uint32_t                                 *arm_registers)
+                const uint32_t                           *arm_registers)
 {
-    uint64_t rd    = arm_registers[0];
-    uint64_t imm16 = arm_registers[1];
-    uint64_t hw    = arm_registers[2];
-    uint64_t shift = hw * 16;
+    const uint64_t rd    = arm_registers[0];
+    const uint64_t imm16 = arm_registers[1];
+    const uint64_t hw    = arm_registers[2];
+    const uint64_t shift = hw * 16;
 
-    uint64_t mask = 0xFFFFFFFFFFFFFFFFULL;
+    const uint64_t mask = 0xFFFFFFFFFFFFFFFFULL;
 
     // Calculate the shifted immediate value.
     //
-    uint64_t value = (imm16 << shift) & mask;
+    uint64_t value = imm16 << shift & mask;
 
-    // Check mneminic 4th character: MOV[Z], MOV[N], MOV[K].
+    // Check mnemonic 4th character: MOV[Z], MOV[N], MOV[K].
     //
-    char variant = metadata->name[3];
+    const char variant = metadata->name[3];
 
     BAL_LOG_TRACE(context->logger,
                   "  Variant='%c' Rd=%lu Imm=0x%lX Shift=%lu Mask=0x%llX",
@@ -352,7 +351,7 @@ translate_const(bal_translation_context_t                *context,
 
     if ('N' == variant)
     {
-        value = (~value) & mask;
+        value = ~value & mask;
         BAL_LOG_TRACE(context->logger, "  MOVN Inversion: New Value=0x%llX", value);
     }
 
@@ -379,18 +378,17 @@ translate_const(bal_translation_context_t                *context,
             BAL_LOG_TRACE(context->logger, "  MOVK Source: Reg X%lu -> SSA v%lu", rd, old_ssa);
         }
 
-        uint64_t clear_mask = (~(0xFFFFULL << shift)) & mask;
-        uint64_t mask_index = intern_constant(context, clear_mask);
+        const uint64_t clear_mask = (~(0xFFFFULL << shift)) & mask;
+        const uint64_t mask_index = intern_constant(context, clear_mask);
 
         if (BAL_UNLIKELY(context->status != BAL_SUCCESS))
         {
             return;
         }
 
-        *context->ir_instruction_cursor
-            = ((bal_instruction_t)OPCODE_AND << BAL_OPCODE_SHIFT_POSITION)
-              | ((bal_instruction_t)old_ssa_with_flag << BAL_SOURCE1_SHIFT_POSITION)
-              | ((bal_instruction_t)mask_index << BAL_SOURCE2_SHIFT_POSITION);
+        *context->ir_instruction_cursor = (bal_instruction_t)OPCODE_AND << BAL_OPCODE_SHIFT_POSITION
+                                          | old_ssa_with_flag << BAL_SOURCE1_SHIFT_POSITION
+                                          | mask_index << BAL_SOURCE2_SHIFT_POSITION;
 
         BAL_LOG_DEBUG(context->logger,
                       "  EMIT: v%lu = AND v%lu, c%lu (Mask: 0x%llX)",
@@ -399,7 +397,7 @@ translate_const(bal_translation_context_t                *context,
                       mask_index & ~BAL_IS_CONSTANT_BIT_POSITION,
                       clear_mask);
 
-        uint64_t cleared_ssa = context->instruction_count;
+        const uint64_t cleared_ssa = context->instruction_count;
 
         // Remove unused variable warning from release builds.
         //
@@ -412,15 +410,15 @@ translate_const(bal_translation_context_t                *context,
         context->bit_width_cursor++;
         context->instruction_count++;
 
-        uint64_t value_index = intern_constant(context, value);
+        const uint64_t value_index = intern_constant(context, value);
 
         // Source 1 is the result of the AND instruction.
         //
-        uint64_t masked_ssa = context->instruction_count - 1;
-        *context->ir_instruction_cursor
-            = ((bal_instruction_t)OPCODE_ADD << BAL_OPCODE_SHIFT_POSITION)
-              | ((bal_instruction_t)masked_ssa << BAL_SOURCE1_SHIFT_POSITION)
-              | ((bal_instruction_t)value_index << BAL_SOURCE2_SHIFT_POSITION);
+        const uint64_t masked_ssa       = context->instruction_count - 1;
+        *context->ir_instruction_cursor = (bal_instruction_t)OPCODE_ADD << BAL_OPCODE_SHIFT_POSITION
+                                          | masked_ssa << BAL_SOURCE1_SHIFT_POSITION
+                                          | (bal_instruction_t)value_index
+                                                << BAL_SOURCE2_SHIFT_POSITION;
 
         BAL_LOG_DEBUG(context->logger,
                       "  EMIT: v%lu = ADD v%lu, c%lu (Val: 0x%llX)",
@@ -431,7 +429,7 @@ translate_const(bal_translation_context_t                *context,
     }
     else
     {
-        uint64_t constant_index = intern_constant(context, value);
+        const uint64_t constant_index = intern_constant(context, value);
 
         if (BAL_UNLIKELY(context->status != BAL_SUCCESS))
         {
@@ -439,8 +437,8 @@ translate_const(bal_translation_context_t                *context,
         }
 
         *context->ir_instruction_cursor
-            = ((bal_instruction_t)OPCODE_CONST << BAL_OPCODE_SHIFT_POSITION)
-              | ((bal_instruction_t)constant_index << BAL_SOURCE1_SHIFT_POSITION);
+            = (bal_instruction_t)OPCODE_CONST << BAL_OPCODE_SHIFT_POSITION
+              | (bal_instruction_t)constant_index << BAL_SOURCE1_SHIFT_POSITION;
 
         BAL_LOG_DEBUG(context->logger,
                       "  EMIT: v%lu = CONST %lu (0x%llX)",
