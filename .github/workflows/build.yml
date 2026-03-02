@@ -28,7 +28,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install Dependencies
-        run: sudo apt-get update && sudo apt-get install -y clang-tidy-18 clang-format-18 cmake ninja-build libclang-18-dev libcmark-dev pkg-config
+        run: sudo apt-get update && sudo apt-get install -y clang-tidy-18 clang-format-18 cmake ninja-build libclang-18-dev pkg-config
 
       - name: Run Clang-Format
         run: | 
@@ -67,7 +67,7 @@ jobs:
             cc: clang-18
             cxx: clang++-18
             flags_debug: "-fsanitize=address,undefined -fno-omit-frame-pointer"
-            deps_cmd: sudo apt-get update && sudo apt-get install -y ninja-build ccache clang-18 libclang-18-dev libcmark-dev pkg-config
+            deps_cmd: sudo apt-get update && sudo apt-get install -y ninja-build ccache clang-18 libclang-18-dev pkg-config
             
           - os: windows-latest
             cc: clang-cl
@@ -79,7 +79,7 @@ jobs:
             cc: $(brew --prefix llvm@18)/bin/clang
             cxx: $(brew --prefix llvm@18)/bin/clang++
             flags_debug: "-fsanitize=address,undefined"
-            deps_cmd: brew install ninja ccache cmark llvm@18
+            deps_cmd: brew install ninja ccache llvm@18
 
     steps:
       - uses: actions/checkout@v4
