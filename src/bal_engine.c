@@ -32,8 +32,7 @@ static uint32_t    extract_operand_value(const uint32_t, const bal_decoder_opera
 static uint32_t    intern_constant(bal_translation_context_t *, const bal_constant_t);
 static inline void translate_const(bal_translation_context_t *,
                                    const bal_decoder_instruction_metadata_t *,
-                                   uint32_t *,
-                                   const bal_decoder_operand_t *);
+                                   uint32_t *);
 BAL_COLD bal_error_t
 bal_engine_init(bal_allocator_t *allocator, bal_engine_t *engine, bal_logger_t logger)
 {
@@ -193,7 +192,7 @@ bal_engine_translate(bal_engine_t *BAL_RESTRICT           engine,
         switch (metadata->ir_opcode)
         {
             case OPCODE_CONST:
-                translate_const(&context, metadata, arm_registers, operands_cursor);
+                translate_const(&context, metadata, arm_registers);
                 break;
             default:
                 BAL_LOG_DEBUG(context.logger,
@@ -324,17 +323,16 @@ get_or_create_ssa_index(bal_translation_context_t *context, uint64_t register_in
 }
 
 BAL_HOT static inline void
-translate_const(bal_translation_context_t *BAL_RESTRICT                context,
-                const bal_decoder_instruction_metadata_t *BAL_RESTRICT metadata,
-                uint32_t *BAL_RESTRICT                                 arm_registers,
-                const bal_decoder_operand_t *BAL_RESTRICT              operands)
+translate_const(bal_translation_context_t                *context,
+                const bal_decoder_instruction_metadata_t *metadata,
+                uint32_t                                 *arm_registers)
 {
     uint64_t rd    = arm_registers[0];
     uint64_t imm16 = arm_registers[1];
     uint64_t hw    = arm_registers[2];
     uint64_t shift = hw * 16;
 
-    uint64_t mask = (32 == operands[0].bit_width) ? 0xFFFFFFFFULL : 0xFFFFFFFFFFFFFFFFULL;
+    uint64_t mask = 0xFFFFFFFFFFFFFFFFULL;
 
     // Calculate the shifted immediate value.
     //

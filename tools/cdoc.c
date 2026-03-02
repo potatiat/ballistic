@@ -386,7 +386,7 @@ resolve_links(ProjectContext *proj, const char *text, const char *current_file)
             const char *end   = strstr(start, "`]");
             if (end)
             {
-                int  name_len = end - start;
+                int  name_len = (int)(end - start);
                 char name[128];
                 if (name_len < 127)
                 {

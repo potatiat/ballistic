@@ -57,6 +57,8 @@
 
 #include "bal_attributes.h"
 #include <stdarg.h>
+#include <stddef.h>
+#include <stdint.h>
 
 /// Defines the severity of a log message.
 typedef enum
@@ -155,7 +157,7 @@ BAL_COLD void bal_logger_init_default(bal_logger_t *logger);
 #define BAL_LOG(logger, log_level, format, ...)                         \
     do                                                                  \
     {                                                                   \
-        if (!(logger))                                                  \
+        if (((uintptr_t)logger) == (uintptr_t)NULL)                     \
         {                                                               \
             break;                                                      \
         }                                                               \
