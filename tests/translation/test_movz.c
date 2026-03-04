@@ -11,10 +11,10 @@ test_movz(test_context_t *context)
     const uint16_t immediates[] = { 0, 1, 0xFFFF, 0xAAAA, 0x5555, 0x1234 };
     const uint8_t  shifts[]     = { 0, 16, 32, 48 };
 
-    size_t registers_count        = sizeof(registers) / sizeof(registers[0]);
-    size_t immediates_count       = sizeof(immediates) / sizeof(immediates[0]);
-    size_t shifts_count           = sizeof(shifts) / sizeof(shifts[0]);
-    size_t assembler_buffer_index = 0;
+    const size_t registers_count        = sizeof(registers) / sizeof(registers[0]);
+    size_t       immediates_count       = sizeof(immediates) / sizeof(immediates[0]);
+    const size_t shifts_count           = sizeof(shifts) / sizeof(shifts[0]);
+    size_t       assembler_buffer_index = 0;
 
     for (size_t r = 0; r < registers_count; ++r)
     {
@@ -32,8 +32,8 @@ test_movz(test_context_t *context)
                          &context->interface,
                          context->code_buffer,
                          context->assembler.offset * sizeof(uint32_t));
-    bal_instruction_t *BAL_RESTRICT ir       = context->engine.instructions;
-    size_t                          ir_index = 0;
+    const bal_instruction_t *BAL_RESTRICT ir       = context->engine.instructions;
+    size_t                                ir_index = 0;
 
     for (size_t r = 0; r < registers_count; ++r)
     {
@@ -49,10 +49,10 @@ test_movz(test_context_t *context)
                     goto end;
                 }
 
-                uint32_t pool_index
-                    = (ir[ir_index] >> BAL_SOURCE1_SHIFT_POSITION) & BAL_SOURCE_MASK;
-                uint64_t expected_immediate = (uint64_t)immediates[i] << shifts[s];
-                uint64_t actual_immediate   = context->engine.constants[pool_index];
+                const uint32_t pool_index
+                    = ir[ir_index] >> BAL_SOURCE1_SHIFT_POSITION & BAL_SOURCE_MASK;
+                const uint64_t expected_immediate = (uint64_t)immediates[i] << shifts[s];
+                const uint64_t actual_immediate   = context->engine.constants[pool_index];
 
                 if (expected_immediate != actual_immediate)
                 {
