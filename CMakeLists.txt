@@ -136,6 +136,12 @@ if (BALLISTIC_ENABLE_BUILD_TESTS)
     target_include_directories(${DECODER_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
     target_link_libraries(${DECODER_NAME} PRIVATE ${PROJECT_NAME})
     add_test(NAME ${DECODER_NAME} COMMAND ${DECODER_NAME} tests/test_decoder)
+
+    set(MEMORY_TEST_NAME test_memory)
+    add_executable(${MEMORY_TEST_NAME} tests/test_memory.c)
+    target_link_libraries(${MEMORY_TEST_NAME} PRIVATE ${PROJECT_NAME})
+    add_test(NAME ${MEMORY_TEST_NAME} COMMAND ${MEMORY_TEST_NAME} tests/test_memory.c)
+
     add_test(
             NAME doc_test
             COMMAND Python3::Interpreter ${CMAKE_SOURCE_DIR}/tools/doctest.py
