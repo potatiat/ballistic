@@ -1,6 +1,7 @@
 #include "bal_assembler.h"
 #include <stdbool.h>
 
+static bool can_emit(bal_assembler_t *assembler);
 static void emit_mov(bal_assembler_t *, const char *, uint32_t, uint16_t, uint8_t, uint32_t);
 
 bal_error_t
@@ -32,6 +33,69 @@ bal_assembler_init(bal_assembler_t *assembler, void *buffer, const size_t size, 
     BAL_LOG_INFO(
         &logger, "Assembler initialized. Buffer: %p, Capacity: %zu instructions.", buffer, size);
     return BAL_SUCCESS;
+}
+
+void
+emit_add_immediate(bal_assembler_t           *assembler,
+                   const char                *mnemonic,
+                   const bal_register_index_t rd,
+                   const uint8_t              rn,
+                   const uint16_t             imm12,
+                   const uint8_t              shift)
+{
+    if (assembler->status != BAL_SUCCESS)
+    {
+        return;
+    }
+
+    const bool can_emit_return_value = can_emit(assembler);
+
+    if (false == can_emit_return_value)
+    {
+        return;
+    }
+
+    if (rd > 31)
+    {
+        BAL_LOG_ERROR(&assembler->logger, "X%u out of range (0-31).", rd);
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    if (shift != 0 && shift != 1)
+    {
+        BAL_LOG_ERROR(&assembler->logger, "%u is not a valid shift amount (0-1).", shift);
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    const uint32_t imm12_mask      = 0xFFF;
+    const uint32_t rn_mask         = 0x1F;
+    const uint32_t imm12_uint32    = imm12 & imm12_mask;
+    const uint32_t rn_uint32       = rn & rn_mask;
+    const uint32_t hard_coded_bits = 0x22U;
+    const uint32_t shift_uint32    = shift;
+    const uint32_t sf              = 1U;
+
+    uint32_t instruction = 0;
+    instruction |= sf << 31;
+    instruction |= hard_coded_bits << 23;
+    instruction |= shift_uint32 << 22;
+    instruction |= imm12_uint32 << 10;
+    instruction |= rn_uint32 << 5;
+    instruction |= rd;
+
+    BAL_LOG_TRACE(&assembler->logger,
+                  "[+0x%04zx] %08x %s X%u, #0x%04x, LSL #%u",
+                  assembler->offset * sizeof(uint32_t),
+                  instruction,
+                  mnemonic,
+                  rd,
+                  imm12_uint32,
+                  shift_uint32);
+
+    (void)mnemonic;
+    assembler->buffer[assembler->offset++] = instruction;
 }
 
 void
