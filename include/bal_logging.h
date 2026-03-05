@@ -63,6 +63,9 @@
 /// Defines the severity of a log message.
 typedef enum
 {
+    /// Logging is disabled.
+    BAL_LOG_LEVEL_NONE = -1,
+
     /// Critical errors that likely result in immediate termination or undefined behaviour.
     BAL_LOG_LEVEL_ERROR = 0,
 

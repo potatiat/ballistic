@@ -30,6 +30,10 @@ bal_default_logger(void *user_data, bal_log_data_t *bal_data, const char *format
 
     switch (bal_data->level)
     {
+        case BAL_LOG_LEVEL_NONE: {
+            level_string = "NONE";
+            break;
+        }
         case BAL_LOG_LEVEL_ERROR: {
             level_string = "ERROR";
             break;
