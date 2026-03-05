@@ -36,7 +36,10 @@ bal_memory_init_flat(bal_allocator_t *BAL_RESTRICT        allocator,
     if (NULL == allocator || NULL == interface || NULL == buffer || 0 == size)
     {
         BAL_LOG_ERROR(&logger,
-                      "Memory init failed. Invalid arguments (Buffer: %p, Size: %zu).",
+                      "Memory init failed. Invalid arguments (Allocator: %p, Interface: %p, "
+                      "Buffer: %p, Size: %zu).",
+                      allocator,
+                      interface,
                       buffer,
                       size);
 
