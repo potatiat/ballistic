@@ -144,8 +144,12 @@ typedef struct
 ///
 /// The `format` string must match the arguments provided in the variadic list, following standard
 /// `printf`.
+
 BAL_COLD void bal_log_message(const bal_logger_t *logger,
-                              bal_log_data_t     *data,
+                              bal_log_level_t     log_level,
+                              const char         *filename,
+                              const char         *function,
+                              int                 line,
                               const char         *format,
                               ...);
 
@@ -156,41 +160,48 @@ BAL_COLD void bal_log_message(const bal_logger_t *logger,
 /// `logger` must NOT be `NULL`.
 BAL_COLD void bal_logger_init_default(bal_logger_t *logger);
 
-/// Logs a message if the severity and configuration allows it.
-///
-/// The `logger` argument is the context handle, `log_level` is a `bal_log_level_t` value.
-/// `format` and the variable arguments follow standard `printf` syntax.
-#define BAL_LOG(logger, log_level, format, ...)                         \
-    do                                                                  \
-    {                                                                   \
-        if (((uintptr_t)logger) == (uintptr_t)NULL)                     \
-        {                                                               \
-            break;                                                      \
-        }                                                               \
-                                                                        \
-        if (log_level <= BAL_MAX_LOG_LEVEL)                             \
-        {                                                               \
-            if ((logger)->log && log_level <= (logger)->min_level)      \
-            {                                                           \
-                bal_log_data_t bld = { .filename = __FILE__,            \
-                                       .function = __func__,            \
-                                       .level    = log_level,           \
-                                       .line     = __LINE__ };              \
-                bal_log_message((logger), &bld, format, ##__VA_ARGS__); \
-            }                                                           \
-        }                                                               \
-    } while (0)
-
-#define BAL_LOG_ERROR(logger, format, ...) \
-    BAL_LOG(logger, BAL_LOG_LEVEL_ERROR, format, ##__VA_ARGS__)
-#define BAL_LOG_WARN(logger, format, ...) BAL_LOG(logger, BAL_LOG_LEVEL_WARN, format, ##__VA_ARGS__)
-#define BAL_LOG_INFO(logger, format, ...) BAL_LOG(logger, BAL_LOG_LEVEL_INFO, format, ##__VA_ARGS__)
+#define BAL_LOG_ERROR(logger, format, ...)       \
+    bal_log_message((logger),                    \
+                    BAL_LOG_LEVEL_ERROR,         \
+                    (const char *)__FILE_NAME__, \
+                    (const char *)__FUNCTION__,  \
+                    __LINE__,                    \
+                    format,                      \
+                    ##__VA_ARGS__)
+#define BAL_LOG_WARN(logger, format, ...) \
+    bal_log_message((logger),             \
+                    BAL_LOG_LEVEL_WARN,   \
+                    __FILE_NAME__,        \
+                    __FUNCTION__,         \
+                    __LINE__,             \
+                    format,               \
+                    ##__VA_ARGS__)
+#define BAL_LOG_INFO(logger, format, ...)        \
+    bal_log_message((logger),                    \
+                    BAL_LOG_LEVEL_INFO,          \
+                    (const char *)__FILE_NAME__, \
+                    (const char *)__FUNCTION__,  \
+                    __LINE__,                    \
+                    format,                      \
+                    ##__VA_ARGS__)
 
 #ifndef NDEBUG
 #define BAL_LOG_DEBUG(logger, format, ...) \
-    BAL_LOG(logger, BAL_LOG_LEVEL_DEBUG, format, ##__VA_ARGS__)
+    bal_log_message((logger),              \
+                    BAL_LOG_LEVEL_DEBUG,   \
+                    __FILE_NAME__,         \
+                    __FUNCTION__,          \
+                    __LINE__,              \
+                    format,                \
+                    ##__VA_ARGS__)
 #define BAL_LOG_TRACE(logger, format, ...) \
-    BAL_LOG(logger, BAL_LOG_LEVEL_TRACE, format, ##__VA_ARGS__)
+    bal_log_message((logger),              \
+                    BAL_LOG_LEVEL_TRACE,   \
+                    __FILE_NAME__,         \
+                    __FUNCTION__,          \
+                    __LINE__,              \
+                    format,                \
+                    ##__VA_ARGS__)
 #else
 // DEBUG and TRACE macros are compiled out completely in release builds.
 #define BAL_LOG_DEBUG(logger, format, ...) \

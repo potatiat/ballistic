@@ -7,12 +7,32 @@ BAL_COLD static void bal_default_logger(void           *user_data,
                                         va_list         args);
 
 void
-bal_log_message(const bal_logger_t *logger, bal_log_data_t *data, const char *format, ...)
+bal_log_message(const bal_logger_t   *logger,
+                const bal_log_level_t log_level,
+                const char           *filename,
+                const char           *function,
+                const int             line,
+                const char           *format,
+                ...)
 {
-    va_list args;
-    va_start(args, format);
-    logger->log(logger->user_data, data, format, args);
-    va_end(args);
+    if ((uintptr_t)logger == (uintptr_t)NULL)
+    {
+        return;
+    }
+
+    if (log_level <= BAL_MAX_LOG_LEVEL)
+    {
+        if (logger->log && log_level <= logger->min_level)
+        {
+            bal_log_data_t bal_log_data
+                = { .filename = filename, .function = function, .level = log_level, .line = line };
+
+            va_list args;
+            va_start(args, format);
+            logger->log(logger->user_data, &bal_log_data, format, args);
+            va_end(args);
+        }
+    }
 }
 
 void
