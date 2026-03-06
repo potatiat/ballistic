@@ -65,6 +65,35 @@ test_memory__default_allocate__invalid_size_returns_nullptr(test_context_t *cont
 }
 
 static int
+test_memory__default_flat_translation_init__success(test_context_t *context)
+{
+    const size_t code_buffer_size_bytes = TEST_BUFFER_SIZE * sizeof(uint32_t);
+    const size_t memory_alignment       = 16U;
+    context->code_buffer                = context->allocator.allocate(
+        context->allocator.handle, memory_alignment, code_buffer_size_bytes);
+
+    if (context->code_buffer == NULL)
+    {
+        BAL_LOG_ERROR(&context->logger, "Expected code buffer != NULL");
+        return EXIT_FAILURE;
+    }
+
+    const bal_error_t error = bal_memory_init_flat(&context->allocator,
+                                                   &context->interface,
+                                                   context->code_buffer,
+                                                   code_buffer_size_bytes,
+                                                   context->logger);
+
+    if (error != BAL_SUCCESS)
+    {
+        BAL_LOG_ERROR(&context->logger, "Expected BAL_SUCCESS");
+        return EXIT_FAILURE;
+    }
+
+    return EXIT_SUCCESS;
+}
+
+static int
 test_memory__default_flat_translation_init__invalid_arguments_returns_error(test_context_t *context)
 {
     int return_code = EXIT_SUCCESS;
@@ -142,6 +171,7 @@ main(void)
     test_setup(&context);
     int return_value = EXIT_SUCCESS;
     BAL_TEST_FUNCTION(test_memory__default_allocate__invalid_size_returns_nullptr);
+    BAL_TEST_FUNCTION(test_memory__default_flat_translation_init__success);
     BAL_TEST_FUNCTION(test_memory__default_flat_translation_init__invalid_arguments_returns_error);
     test_teardown(&context);
     return return_value;
