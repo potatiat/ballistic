@@ -21,20 +21,20 @@ This is a rewrite of the dynarmic recompiler, with the goal of fixing its many f
 ### macOS
 
 ```bash
-brew install cmake python3 cmark llvm
+brew install cmake python3 llvm
 ```
 
 ### Debian/Ubuntu
 
 ```bash
 sudo apt update
-sudo apt install build-essential cmake python3 libcmark-dev libclang-dev llvm-dev
+sudo apt install build-essential cmake python3 libclang-dev llvm-dev
 ```
 
 ### Fedora
 
 ```bash
-sudo dnf install cmake python3 gcc-c++ cmark-devel clang-devel llvm-devel
+sudo dnf install cmake python3 gcc-c++ clang-devel llvm-devel
 ```
 
 ## Configure CMake
@@ -50,6 +50,7 @@ cmake ..
 ```bash
 cmake -DCMAKE_PREFIX_PATH=$(brew --prefix llvm) ..
 ```
+
 ## Build Binaries
 
 ```bash
@@ -57,11 +58,12 @@ cmake --build .
 ```
 
 The following executables will be created in the `build/` directory:
-*   `libBallistic.a` (Static Library)
-*   `ballistic_cli` (Used for Ballistic development)
-*   `decoder_cli` (Instruction decoding tool)
-*   `cdoc` (Documentation generator)
-*   `test_*` (Test suite, run with `ctest`)
+
+* `libBallistic.a` (Static Library)
+* `ballistic_cli` (Used for Ballistic development)
+* `decoder_cli` (Instruction decoding tool)
+* `cdoc` (Documentation generator)
+* `test_*` (Test suite, run with `ctest`)
 
 See [tools/](tools/) for more information on these executables.
 
