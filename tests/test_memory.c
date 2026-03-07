@@ -159,6 +159,28 @@ test_memory__default_flat_translation_init__invalid_arguments_returns_error(test
             return_code = EXIT_FAILURE;
             break;
         }
+
+        const size_t valid_memory_alignment = 16;
+        invalid_code_buffer                 = context->allocator.allocate(
+            context->allocator.handle, valid_memory_alignment, valid_buffer_size);
+
+        if (invalid_code_buffer == NULL)
+        {
+            BAL_LOG_ERROR(&context->logger, "Failed to allocate code buffer");
+            return_code = EXIT_FAILURE;
+            break;
+        }
+
+        invalid_code_buffer += 1;
+        error = bal_memory_init_flat(
+            valid_allocator, &valid_interface, invalid_code_buffer, valid_buffer_size, logger);
+
+        if (error != BAL_ERROR_MEMORY_ALIGNMENT)
+        {
+            BAL_LOG_ERROR(&logger, "Expected BAL_ERROR_MEMORY_ALIGNMENT");
+            return_code = EXIT_FAILURE;
+            break;
+        }
     }
 
     return return_code;
