@@ -55,6 +55,10 @@ static int test_memory__default_allocate__invalid_size_returns_nullptr(test_cont
 static int test_memory__default_flat_translation_init__success(test_context_t *context);
 static int test_memory__default_flat_translation_init__invalid_arguments_returns_error(
     test_context_t *context);
+static int
+tests_memory__default_flat_translation_interface_init__failed_interface_allocation_returns_error(
+    test_context_t *context);
+static void *empty_allocate(bal_allocator_handle_t allocator, size_t alignment, size_t size);
 
 int
 main(void)
@@ -64,6 +68,8 @@ main(void)
     BAL_TEST_FUNCTION(test_memory__default_allocate__invalid_size_returns_nullptr);
     BAL_TEST_FUNCTION(test_memory__default_flat_translation_init__success);
     BAL_TEST_FUNCTION(test_memory__default_flat_translation_init__invalid_arguments_returns_error);
+    BAL_TEST_FUNCTION(
+        tests_memory__default_flat_translation_interface_init__failed_interface_allocation_returns_error);
     return return_value;
 }
 
@@ -205,7 +211,8 @@ test_memory__default_flat_translation_init__invalid_arguments_returns_error(test
         }
 
         invalid_code_buffer += 1;
-        error = bal_memory_init_flat(valid_allocator,
+        valid_allocator->allocate = empty_allocate;
+        error                     = bal_memory_init_flat(valid_allocator,
                                      &valid_interface,
                                      invalid_code_buffer,
                                      valid_buffer_size_bytes,
@@ -220,6 +227,41 @@ test_memory__default_flat_translation_init__invalid_arguments_returns_error(test
     }
 
     return return_code;
+}
+
+static int
+tests_memory__default_flat_translation_interface_init__failed_interface_allocation_returns_error(
+    test_context_t *context)
+{
+    int          return_code = EXIT_SUCCESS;
+    bal_logger_t logger      = { 0 };
+    bal_logger_init_default(&logger);
+    logger.min_level = BAL_LOG_LEVEL_NONE;
+
+    const size_t memory_alignment = 16;
+    context->code_buffer          = context->allocator.allocate(
+        context->allocator.handle, memory_alignment, TEST_BUFFER_SIZE_BYTES);
+    context->allocator.allocate = empty_allocate;
+    const bal_error_t error     = bal_memory_init_flat(
+        &context->allocator, &context->interface, context->code_buffer, memory_alignment, logger);
+
+    if (error != BAL_ERROR_ALLOCATION_FAILED)
+    {
+        logger.min_level = BAL_LOG_LEVEL_ERROR;
+        BAL_LOG_ERROR(&logger, "Expected BAL_ERROR_ALLOCATION_FAILED");
+        return_code = EXIT_FAILURE;
+    }
+
+    return return_code;
+}
+
+void *
+empty_allocate(bal_allocator_handle_t allocator, size_t alignment, size_t size)
+{
+    (void)allocator;
+    (void)alignment;
+    (void)size;
+    return NULL;
 }
 
 /*** end of file ***/
