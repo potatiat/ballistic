@@ -58,6 +58,8 @@ static int test_memory__default_flat_translation_init__invalid_arguments_returns
 static int
 tests_memory__default_flat_translation_interface_init__failed_interface_allocation_returns_error(
     test_context_t *context);
+static int tests_memory__default_flat_translation_interface_destroy__invalid_argument_returns_error(
+    test_context_t *context);
 static void *empty_allocate(bal_allocator_handle_t allocator, size_t alignment, size_t size);
 
 int
@@ -70,6 +72,8 @@ main(void)
     BAL_TEST_FUNCTION(test_memory__default_flat_translation_init__invalid_arguments_returns_error);
     BAL_TEST_FUNCTION(
         tests_memory__default_flat_translation_interface_init__failed_interface_allocation_returns_error);
+    BAL_TEST_FUNCTION(
+        tests_memory__default_flat_translation_interface_destroy__invalid_argument_returns_error);
     return return_value;
 }
 
@@ -250,6 +254,38 @@ tests_memory__default_flat_translation_interface_init__failed_interface_allocati
         logger.min_level = BAL_LOG_LEVEL_ERROR;
         BAL_LOG_ERROR(&logger, "Expected BAL_ERROR_ALLOCATION_FAILED");
         return_code = EXIT_FAILURE;
+    }
+
+    return return_code;
+}
+
+static int
+tests_memory__default_flat_translation_interface_destroy__invalid_argument_returns_error(
+    test_context_t *context)
+{
+    int return_code = EXIT_SUCCESS;
+    for (int i = 0; i < 1; ++i)
+    {
+        bal_allocator_t        *valid_allocator   = &context->allocator;
+        bal_memory_interface_t  valid_interface   = { 0 };
+        bal_allocator_t        *invalid_allocator = NULL;
+        bal_memory_interface_t *invalid_interface = NULL;
+        bal_error_t             error = bal_memory_destroy_flat(valid_allocator, invalid_interface);
+        if (error != BAL_ERROR_INVALID_ARGUMENT)
+        {
+            BAL_LOG_ERROR(&context->logger, "Expected BAL_ERROR_INVALID_ARGUMENT");
+            return_code = EXIT_FAILURE;
+            break;
+        }
+
+        error = bal_memory_destroy_flat(invalid_allocator, &valid_interface);
+
+        if (error != BAL_ERROR_INVALID_ARGUMENT)
+        {
+            BAL_LOG_ERROR(&context->logger, "Expected BAL_ERROR_INVALID_ARGUMENT");
+            return_code = EXIT_FAILURE;
+            break;
+        }
     }
 
     return return_code;
