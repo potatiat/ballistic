@@ -120,6 +120,12 @@ default_free(bal_allocator_handle_t handle, void *pointer, size_t size)
 {
     (void)handle;
     (void)size;
+
+    if (NULL == pointer)
+    {
+        return;
+    }
+
     free(pointer);
 }
 
