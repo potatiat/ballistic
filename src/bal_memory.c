@@ -91,10 +91,12 @@ bal_memory_destroy_flat(bal_allocator_t *allocator, bal_memory_interface_t *inte
 
     if (NULL == interface->context)
     {
+        *interface = (bal_memory_interface_t) {};
         return;
     }
 
     allocator->free(allocator->handle, interface->context, sizeof(flat_translation_interface_t));
+    *interface = (bal_memory_interface_t) {};
 }
 
 #if BAL_PLATFORM_POSIX
