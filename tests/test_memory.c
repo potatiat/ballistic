@@ -6,7 +6,8 @@
 // Setup
 // -----------------------------------------------------------------------------
 
-#define TEST_BUFFER_SIZE 4096
+#define TEST_BUFFER_SIZE       4096
+#define TEST_BUFFER_SIZE_BYTES (TEST_BUFFER_SIZE * sizeof(uint32_t))
 
 typedef struct
 {
@@ -29,7 +30,7 @@ test_teardown(test_context_t *context)
 {
     bal_memory_destroy_flat(&context->allocator, &context->interface);
     context->allocator.free(
-        context->allocator.handle, context->code_buffer, TEST_BUFFER_SIZE * sizeof(uint32_t));
+        context->allocator.handle, context->code_buffer, TEST_BUFFER_SIZE_BYTES);
 }
 
 #define BAL_TEST_FUNCTION(test_function_name)          \
@@ -85,10 +86,9 @@ test_memory__default_allocate__invalid_size_returns_nullptr(test_context_t *cont
 static int
 test_memory__default_flat_translation_init__success(test_context_t *context)
 {
-    const size_t code_buffer_size_bytes = TEST_BUFFER_SIZE * sizeof(uint32_t);
-    const size_t memory_alignment       = 16U;
-    context->code_buffer                = context->allocator.allocate(
-        context->allocator.handle, memory_alignment, code_buffer_size_bytes);
+    const size_t memory_alignment = 16U;
+    context->code_buffer          = context->allocator.allocate(
+        context->allocator.handle, memory_alignment, TEST_BUFFER_SIZE_BYTES);
 
     if (context->code_buffer == NULL)
     {
@@ -99,8 +99,11 @@ test_memory__default_flat_translation_init__success(test_context_t *context)
     const bal_error_t error = bal_memory_init_flat(&context->allocator,
                                                    &context->interface,
                                                    context->code_buffer,
-                                                   code_buffer_size_bytes,
+                                                   TEST_BUFFER_SIZE_BYTES,
                                                    context->logger);
+    context->allocator.free(
+        context->allocator.handle, context->code_buffer, TEST_BUFFER_SIZE_BYTES);
+    context->code_buffer = NULL;
 
     if (error != BAL_SUCCESS)
     {
@@ -125,29 +128,23 @@ test_memory__default_flat_translation_init__invalid_arguments_returns_error(test
         //
         logger.min_level = BAL_LOG_LEVEL_NONE;
 
-        bal_allocator_t       *valid_allocator   = &context->allocator;
-        bal_memory_interface_t valid_interface   = { 0 };
-        uint32_t              *valid_code_buffer = context->code_buffer;
-        const uint32_t         valid_buffer_size = TEST_BUFFER_SIZE;
+        bal_allocator_t       *valid_allocator         = &context->allocator;
+        bal_memory_interface_t valid_interface         = { 0 };
+        const size_t           valid_memory_alignment  = 16;
+        const uint32_t         valid_buffer_size_bytes = TEST_BUFFER_SIZE_BYTES;
+        uint32_t              *valid_code_buffer       = context->allocator.allocate(
+            context->allocator.handle, valid_memory_alignment, valid_buffer_size_bytes);
 
-        bal_allocator_t        *invalid_allocator   = NULL;
-        bal_memory_interface_t *invalid_interface   = NULL;
-        uint32_t               *invalid_code_buffer = NULL;
-        const uint32_t          invalid_buffer_size = 0;
+        bal_allocator_t        *invalid_allocator         = NULL;
+        bal_memory_interface_t *invalid_interface         = NULL;
+        uint32_t               *invalid_code_buffer       = NULL;
+        const uint32_t          invalid_buffer_size_bytes = 0;
 
-        bal_error_t error = bal_memory_init_flat(
-            invalid_allocator, &valid_interface, valid_code_buffer, valid_buffer_size, logger);
-
-        if (error != BAL_ERROR_INVALID_ARGUMENT)
-        {
-            logger.min_level = BAL_LOG_LEVEL_ERROR;
-            BAL_LOG_ERROR(&logger, "Expected BAL_ERROR_INVALID_ARGUMENT");
-            return_code = EXIT_FAILURE;
-            break;
-        }
-
-        error = bal_memory_init_flat(
-            valid_allocator, invalid_interface, valid_code_buffer, valid_buffer_size, logger);
+        bal_error_t error = bal_memory_init_flat(invalid_allocator,
+                                                 &valid_interface,
+                                                 valid_code_buffer,
+                                                 valid_buffer_size_bytes,
+                                                 logger);
 
         if (error != BAL_ERROR_INVALID_ARGUMENT)
         {
@@ -158,17 +155,7 @@ test_memory__default_flat_translation_init__invalid_arguments_returns_error(test
         }
 
         error = bal_memory_init_flat(
-            valid_allocator, &valid_interface, invalid_code_buffer, valid_buffer_size, logger);
-
-        if (error != BAL_ERROR_INVALID_ARGUMENT)
-        {
-            logger.min_level = BAL_LOG_LEVEL_ERROR;
-            BAL_LOG_ERROR(&logger, "Expected BAL_ERROR_INVALID_ARGUMENT");
-            return_code = EXIT_FAILURE;
-            break;
-        }
-        error = bal_memory_init_flat(
-            valid_allocator, &valid_interface, valid_code_buffer, invalid_buffer_size, logger);
+            valid_allocator, invalid_interface, valid_code_buffer, valid_buffer_size_bytes, logger);
 
         if (error != BAL_ERROR_INVALID_ARGUMENT)
         {
@@ -178,9 +165,35 @@ test_memory__default_flat_translation_init__invalid_arguments_returns_error(test
             break;
         }
 
-        const size_t valid_memory_alignment = 16;
-        invalid_code_buffer                 = context->allocator.allocate(
-            context->allocator.handle, valid_memory_alignment, valid_buffer_size);
+        error = bal_memory_init_flat(valid_allocator,
+                                     &valid_interface,
+                                     invalid_code_buffer,
+                                     valid_buffer_size_bytes,
+                                     logger);
+
+        if (error != BAL_ERROR_INVALID_ARGUMENT)
+        {
+            logger.min_level = BAL_LOG_LEVEL_ERROR;
+            BAL_LOG_ERROR(&logger, "Expected BAL_ERROR_INVALID_ARGUMENT");
+            return_code = EXIT_FAILURE;
+            break;
+        }
+        error = bal_memory_init_flat(valid_allocator,
+                                     &valid_interface,
+                                     valid_code_buffer,
+                                     invalid_buffer_size_bytes,
+                                     logger);
+
+        if (error != BAL_ERROR_INVALID_ARGUMENT)
+        {
+            logger.min_level = BAL_LOG_LEVEL_ERROR;
+            BAL_LOG_ERROR(&logger, "Expected BAL_ERROR_INVALID_ARGUMENT");
+            return_code = EXIT_FAILURE;
+            break;
+        }
+
+        invalid_code_buffer = context->allocator.allocate(
+            context->allocator.handle, valid_memory_alignment, valid_buffer_size_bytes);
 
         if (invalid_code_buffer == NULL)
         {
@@ -190,8 +203,11 @@ test_memory__default_flat_translation_init__invalid_arguments_returns_error(test
         }
 
         invalid_code_buffer += 1;
-        error = bal_memory_init_flat(
-            valid_allocator, &valid_interface, invalid_code_buffer, valid_buffer_size, logger);
+        error = bal_memory_init_flat(valid_allocator,
+                                     &valid_interface,
+                                     invalid_code_buffer,
+                                     valid_buffer_size_bytes,
+                                     logger);
 
         if (error != BAL_ERROR_MEMORY_ALIGNMENT)
         {
