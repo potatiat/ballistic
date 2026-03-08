@@ -129,8 +129,8 @@ BAL_COLD bal_error_t bal_memory_init_flat(bal_allocator_t *BAL_RESTRICT        a
 ///
 /// This does **not** free the buffer passed to [`bal_memory_init_flat`] as
 /// Ballistic does not take ownership of the host memory region.
-BAL_COLD void bal_memory_destroy_flat(bal_allocator_t        *allocator,
-                                      bal_memory_interface_t *interface);
+BAL_COLD bal_error_t bal_memory_destroy_flat(bal_allocator_t        *allocator,
+                                             bal_memory_interface_t *interface);
 #endif /* BALLISTIC_MEMORY_H */
 
 /*** end of file ***/

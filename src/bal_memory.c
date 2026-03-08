@@ -81,22 +81,23 @@ bal_memory_init_flat(bal_allocator_t *BAL_RESTRICT        allocator,
     return BAL_SUCCESS;
 }
 
-void
+bal_error_t
 bal_memory_destroy_flat(bal_allocator_t *allocator, bal_memory_interface_t *interface)
 {
     if (NULL == allocator || NULL == interface)
     {
-        return;
+        return BAL_ERROR_INVALID_ARGUMENT;
     }
 
     if (NULL == interface->context)
     {
         *interface = (bal_memory_interface_t) {};
-        return;
+        return BAL_SUCCESS;
     }
 
     allocator->free(allocator->handle, interface->context, sizeof(flat_translation_interface_t));
     *interface = (bal_memory_interface_t) {};
+    return BAL_SUCCESS;
 }
 
 #if BAL_PLATFORM_POSIX
