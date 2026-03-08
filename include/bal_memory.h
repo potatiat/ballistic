@@ -125,7 +125,7 @@ BAL_COLD bal_error_t bal_memory_init_flat(bal_allocator_t *BAL_RESTRICT        a
                                           bal_logger_t                         logger);
 
 /// Frees the internal state allocated within `interface` using the provided
-/// `allocator`.
+/// `allocator` and resets `interface` to 0 with a memset.
 ///
 /// This does **not** free the buffer passed to [`bal_memory_init_flat`] as
 /// Ballistic does not take ownership of the host memory region.
