@@ -36,7 +36,11 @@ test_teardown(test_context_t *context)
 #define BAL_TEST_FUNCTION(test_function_name)          \
     do                                                 \
     {                                                  \
+        test_setup(&context);                          \
         return_value = (test_function_name(&context)); \
+        test_teardown(&context);                       \
+        context.code_buffer = NULL;                    \
+                                                       \
         if (return_value != EXIT_SUCCESS)              \
         {                                              \
             return return_value;                       \
@@ -56,12 +60,10 @@ int
 main(void)
 {
     test_context_t context;
-    test_setup(&context);
-    int return_value = EXIT_SUCCESS;
+    int            return_value = EXIT_SUCCESS;
     BAL_TEST_FUNCTION(test_memory__default_allocate__invalid_size_returns_nullptr);
     BAL_TEST_FUNCTION(test_memory__default_flat_translation_init__success);
     BAL_TEST_FUNCTION(test_memory__default_flat_translation_init__invalid_arguments_returns_error);
-    test_teardown(&context);
     return return_value;
 }
 
