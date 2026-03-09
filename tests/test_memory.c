@@ -65,7 +65,7 @@ static void *empty_allocate(bal_allocator_handle_t allocator, size_t alignment, 
 int
 main(void)
 {
-    test_context_t context;
+    test_context_t context      = { 0 };
     int            return_value = EXIT_SUCCESS;
     BAL_TEST_FUNCTION(test_memory__default_allocate__invalid_size_returns_nullptr);
     BAL_TEST_FUNCTION(test_memory__default_flat_translation_init__success);
