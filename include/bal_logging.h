@@ -4,9 +4,9 @@
 //!
 //! # Configuration
 //!
-//! The verbosity is controled by two mechanisms:
+//! The verbosity is controlled by two mechanisms:
 //!
-//! 1. Compile Time: The `BAL_MAX_LOG_LEVEL` macro determins the maximum severity compiled into
+//! 1. Compile Time: The `BAL_MAX_LOG_LEVEL` macro determine the maximum severity compiled into
 //!    the binary. This is set in CMakeLists.txt. Logs below this level are compiled out via
 //!    dead code elimination.
 //! 2. Runtime: The `min_level` field in `bal_logger_t` filters messages dynamically.
@@ -57,8 +57,6 @@
 
 #include "bal_attributes.h"
 #include <stdarg.h>
-#include <stddef.h>
-#include <stdint.h>
 
 /// Defines the severity of a log message.
 typedef enum
@@ -85,16 +83,16 @@ typedef enum
 /// Metadata associated with a specific log event.
 typedef struct
 {
-    /// Source file where the log occured.
+    /// Source file where the log occurred.
     const char *filename;
 
-    /// The function name where the log occured.
+    /// The function name where the log occurred.
     const char *function;
 
     /// The log level.
     bal_log_level_t level;
 
-    /// The line number where the log occured
+    /// The line number where the log occurred
     int line;
 } bal_log_data_t;
 
@@ -103,7 +101,7 @@ typedef struct
 /// Implementations of this function are responsible for formatting and persisting the  log
 /// message. The `user_data` pointer is passed through from the `bal_logger_t` context. The
 /// `bal_data` struct contains metadata about the event, while `format`, and `args` provide the
-/// standard printf-style mesaage content.
+/// standard printf-style message content.
 typedef void (*bal_log_function_t)(void           *user_data,
                                    bal_log_data_t *bal_data,
                                    const char     *format,
