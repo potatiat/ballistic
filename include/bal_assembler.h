@@ -82,12 +82,12 @@ bal_error_t bal_assembler_init(bal_assembler_t *assembler,
 ///
 /// * [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if `assembler->offset >= assembler->capacity`.
 /// * [`BAL_ERROR_INVALID_ARGUMENT`] if function arguments are invalid.
-void emit_add_immediate(bal_assembler_t     *assembler,
-                        const char          *mnemonic,
-                        bal_register_index_t rd,
-                        uint8_t              rn,
-                        uint16_t             imm12,
-                        uint8_t              shift);
+void bal_emit_add_immediate(bal_assembler_t     *assembler,
+                            const char          *mnemonic,
+                            bal_register_index_t rd,
+                            uint8_t              rn,
+                            uint16_t             imm12,
+                            uint8_t              shift);
 
 /// Emit a `MOVZ` (Move Wide with Zero) instruction.
 ///

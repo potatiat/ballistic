@@ -36,12 +36,12 @@ bal_assembler_init(bal_assembler_t *assembler, void *buffer, const size_t size, 
 }
 
 void
-emit_add_immediate(bal_assembler_t           *assembler,
-                   const char                *mnemonic,
-                   const bal_register_index_t rd,
-                   const uint8_t              rn,
-                   const uint16_t             imm12,
-                   const uint8_t              shift)
+bal_emit_add_immediate(bal_assembler_t           *assembler,
+                       const char                *mnemonic,
+                       const bal_register_index_t rd,
+                       const uint8_t              rn,
+                       const uint16_t             imm12,
+                       const uint8_t              shift)
 {
     if (assembler->status != BAL_SUCCESS)
     {
