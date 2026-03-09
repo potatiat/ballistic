@@ -1,4 +1,6 @@
 #include "bal_logging.h"
+
+#include <stdint.h>
 #include <stdio.h>
 
 BAL_COLD static void bal_default_logger(void           *user_data,

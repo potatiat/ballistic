@@ -30,7 +30,7 @@ main(int argc, char *argv[])
     }
 
     bal_allocator_t allocator = { 0 };
-    bal_get_default_allocator(&allocator);
+    bal_allocator_init_default(&allocator);
     bal_logger_t logger = { 0 };
     bal_logger_init_default(&logger);
     bal_memory_interface_t   interface           = { 0 };

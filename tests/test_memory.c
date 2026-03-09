@@ -20,7 +20,7 @@ typedef struct
 static void
 test_setup(test_context_t *context)
 {
-    bal_get_default_allocator(&context->allocator);
+    bal_allocator_init_default(&context->allocator);
     bal_logger_init_default(&context->logger);
     context->logger.min_level = BAL_LOG_LEVEL_ERROR;
 }

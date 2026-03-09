@@ -18,7 +18,7 @@ typedef struct
 static_assert(0 == sizeof(flat_translation_interface_t) % 16, "Struct must be aligned to 16 bytes");
 
 void
-bal_get_default_allocator(bal_allocator_t *out_allocator)
+bal_allocator_init_default(bal_allocator_t *out_allocator)
 {
     out_allocator->handle   = NULL;
     out_allocator->allocate = default_allocate;

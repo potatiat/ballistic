@@ -92,7 +92,7 @@ typedef struct
 /// # Platform Support
 ///
 /// This function only supports windows and POSIX-compliant systems.
-BAL_COLD void bal_get_default_allocator(bal_allocator_t *out_allocator);
+BAL_COLD void bal_allocator_init_default(bal_allocator_t *out_allocator);
 
 /// Initializes a flat, contiguous translation interface.
 ///
