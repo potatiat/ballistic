@@ -31,7 +31,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y clang-tidy-18 clang-format-18 cmake ninja-build libclang-18-dev pkg-config
 
       - name: Run Clang-Format
-        run: | 
+        run: |
           find src include tests tools -name "*.[ch]" \
             -not -name "bal_decoder_table_gen.*" \
                                                 | xargs clang-format-18 --dry-run --Werror --style=file:.clang-format
@@ -60,21 +60,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, windows-latest, macos-14]
-        type: [Debug, Release]
+        os: [ ubuntu-24.04, windows-latest, macos-14 ]
+        type: [ Debug, Release ]
         include:
           - os: ubuntu-24.04
             cc: clang-18
             cxx: clang++-18
             flags_debug: "-fsanitize=address,undefined -fno-omit-frame-pointer"
             deps_cmd: sudo apt-get update && sudo apt-get install -y ninja-build ccache clang-18 libclang-18-dev pkg-config
-            
+
           - os: windows-latest
             cc: clang-cl
             cxx: clang-cl
             flags_debug: "/Zi /Od -Wno-unknown-argument"
             deps_cmd: choco install ccache
-            
+
           - os: macos-14
             cc: $(brew --prefix llvm@18)/bin/clang
             cxx: $(brew --prefix llvm@18)/bin/clang++
@@ -153,9 +153,29 @@ jobs:
         if: matrix.type == 'Release'
         uses: actions/upload-artifact@v4
         with:
-          name: ballistic-tools-${{ matrix.os }}
+          name: libballistic-${{ matrix.os }}
+          if-no-files-found: ignore
           path: |
             build/ballistic_cli*
             build/decoder_cli*
-            build/*.exe
+            build/coverage_cli*
+            build/test_*
+            build/libBallistic.a
+            build.Ballistic.lib
+            include/
+            src/
+            docs/
+            tools/*.py
+
+      - name: Upload Source Code
+        if: matrix.type == 'Release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: do-not-use-${{ matrix.os }}
           if-no-files-found: ignore
+          path: |
+            src/
+            tools/
+            tests/
+            docs/*.md
+            !src/bal_decoder_table*
