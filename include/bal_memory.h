@@ -35,14 +35,16 @@ typedef void (*bal_free_function_t)(bal_allocator_handle_t allocator, void *poin
 /// Translates a Guest Virtual Address (GVA) to a Host Virtual Address (HVA).
 ///
 /// Ballistic invokes this callback when it needs to fetch instructions or
-/// access data. The implementation must translate the provided `guest_address`
-/// using the opaque `context` and return a pointer to the corresponding host
-/// memory.
+/// access data.
 ///
 /// Returns a pointer to the host memory containing the data at `guest_address`, or `NULL`
 /// if the address is unmapped or invalid.
 ///
 /// # Safety
+///
+/// The implementation must translate the provided `guest_address`
+/// using the opaque `context` and return a pointer to the corresponding host
+/// memory.
 ///
 /// The implementation must write the number of contiguous, readable bytes
 /// available at the returned pointer into `max_readable_size`. This prevents
