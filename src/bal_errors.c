@@ -16,6 +16,9 @@ bal_error_to_string(const bal_error_t error)
         case BAL_ERROR_MEMORY_ALIGNMENT:
             string = "buffer is not aligned to the required memory alignment";
             break;
+        case BAL_ERROR_MEMORY_FAULT:
+            string = "accessed invalid memory";
+            break;
         case BAL_ERROR_ENGINE_STATE_INVALID:
             string = "the ballistic engine != BAL_SUCCESS";
             break;

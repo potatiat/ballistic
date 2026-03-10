@@ -12,12 +12,15 @@ typedef enum
 {
     // General Errors.
     //
-    BAL_SUCCESS                    = 0,
-    BAL_ERROR_INVALID_ARGUMENT     = -1,
-    BAL_ERROR_ALLOCATION_FAILED    = -2,
-    BAL_ERROR_MEMORY_ALIGNMENT     = -3,
-    BAL_ERROR_ENGINE_STATE_INVALID = -4,
-    BAL_ERROR_UNKNOWN_INSTRUCTION  = -5,
+    BAL_SUCCESS                 = 0,
+    BAL_ERROR_INVALID_ARGUMENT  = -1,
+    BAL_ERROR_ALLOCATION_FAILED = -2,
+    BAL_ERROR_MEMORY_ALIGNMENT  = -3,
+
+    /// Ballistic tried to access memory it was not allowed to access.
+    BAL_ERROR_MEMORY_FAULT         = -4,
+    BAL_ERROR_ENGINE_STATE_INVALID = -5,
+    BAL_ERROR_UNKNOWN_INSTRUCTION  = -6,
 
     // IR Errors.
     //
