@@ -30,16 +30,17 @@ main(int argc, char *argv[])
     }
 
     bal_allocator_t allocator = { 0 };
-    bal_allocator_init_default(&allocator);
+    bal_allocator_default_init(&allocator);
     bal_logger_t logger = { 0 };
     bal_logger_init_default(&logger);
     bal_memory_interface_t   interface           = { 0 };
     BAL_ALIGNED(16) uint32_t buffer[BUFFER_SIZE] = { 0 };
-    bal_error_t error = bal_memory_init_flat(&allocator, &interface, buffer, BUFFER_SIZE, logger);
+    bal_error_t              error
+        = bal_flat_translation_interface_init(&allocator, &interface, buffer, BUFFER_SIZE, logger);
 
     if (error != BAL_SUCCESS)
     {
-        (void)fprintf(stderr, "bal_memory_init_flat() failed.\n");
+        (void)fprintf(stderr, "bal_flat_translation_interface_init() failed.\n");
         return EXIT_FAILURE;
     }
 
@@ -77,7 +78,7 @@ main(int argc, char *argv[])
             (void)fprintf(stderr, "Error reading binary file.\n");
         }
 
-        error = bal_engine_translate(&engine, &interface, buffer, BUFFER_SIZE);
+        error = bal_engine_translate(&engine, &interface, &buffer, BUFFER_SIZE);
 
         if (error != BAL_SUCCESS)
         {

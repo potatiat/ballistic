@@ -25,18 +25,18 @@ typedef struct
 static inline void
 test_setup(test_context_t *context)
 {
-    bal_allocator_init_default(&context->allocator);
+    bal_allocator_default_init(&context->allocator);
     bal_logger_init_default(&context->logger);
     context->logger.min_level = BAL_LOG_LEVEL_WARN;
 
     size_t memory_alignment = 16;
     context->code_buffer    = context->allocator.allocate(
         context->allocator.handle, memory_alignment, TEST_BUFFER_SIZE * sizeof(uint32_t));
-    bal_memory_init_flat(&context->allocator,
-                         &context->interface,
-                         context->code_buffer,
-                         TEST_BUFFER_SIZE * sizeof(uint32_t),
-                         context->logger);
+    bal_flat_translation_interface_init(&context->allocator,
+                                        &context->interface,
+                                        context->code_buffer,
+                                        TEST_BUFFER_SIZE * sizeof(uint32_t),
+                                        context->logger);
     bal_engine_init(&context->allocator, &context->engine, context->logger);
     bal_assembler_init(
         &context->assembler, context->code_buffer, TEST_BUFFER_SIZE, context->logger);
@@ -46,7 +46,7 @@ static inline void
 test_teardown(test_context_t *context)
 {
     bal_engine_destroy(&context->allocator, &context->engine);
-    bal_memory_destroy_flat(&context->allocator, &context->interface);
+    bal_flat_translation_interface_destroy(&context->allocator, &context->interface);
     context->allocator.free(
         context->allocator.handle, context->code_buffer, TEST_BUFFER_SIZE * sizeof(uint32_t));
 }

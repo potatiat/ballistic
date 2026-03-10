@@ -20,7 +20,7 @@ typedef struct
 static void
 test_setup(test_context_t *context)
 {
-    bal_allocator_init_default(&context->allocator);
+    bal_allocator_default_init(&context->allocator);
     bal_logger_init_default(&context->logger);
     context->logger.min_level = BAL_LOG_LEVEL_ERROR;
 }
@@ -28,7 +28,7 @@ test_setup(test_context_t *context)
 static void
 test_teardown(test_context_t *context)
 {
-    bal_memory_destroy_flat(&context->allocator, &context->interface);
+    bal_flat_translation_interface_destroy(&context->allocator, &context->interface);
     context->allocator.free(
         context->allocator.handle, context->code_buffer, TEST_BUFFER_SIZE_BYTES);
 }
@@ -108,11 +108,11 @@ test_memory__default_flat_translation_init__success(test_context_t *context)
         return EXIT_FAILURE;
     }
 
-    const bal_error_t error = bal_memory_init_flat(&context->allocator,
-                                                   &context->interface,
-                                                   context->code_buffer,
-                                                   TEST_BUFFER_SIZE_BYTES,
-                                                   context->logger);
+    const bal_error_t error = bal_flat_translation_interface_init(&context->allocator,
+                                                                  &context->interface,
+                                                                  context->code_buffer,
+                                                                  TEST_BUFFER_SIZE_BYTES,
+                                                                  context->logger);
     context->allocator.free(
         context->allocator.handle, context->code_buffer, TEST_BUFFER_SIZE_BYTES);
     context->code_buffer = NULL;
@@ -152,11 +152,11 @@ test_memory__default_flat_translation_init__invalid_arguments_returns_error(test
         uint32_t               *invalid_code_buffer       = NULL;
         const uint32_t          invalid_buffer_size_bytes = 0;
 
-        bal_error_t error = bal_memory_init_flat(invalid_allocator,
-                                                 &valid_interface,
-                                                 valid_code_buffer,
-                                                 valid_buffer_size_bytes,
-                                                 logger);
+        bal_error_t error = bal_flat_translation_interface_init(invalid_allocator,
+                                                                &valid_interface,
+                                                                valid_code_buffer,
+                                                                valid_buffer_size_bytes,
+                                                                logger);
 
         if (error != BAL_ERROR_INVALID_ARGUMENT)
         {
@@ -166,7 +166,7 @@ test_memory__default_flat_translation_init__invalid_arguments_returns_error(test
             break;
         }
 
-        error = bal_memory_init_flat(
+        error = bal_flat_translation_interface_init(
             valid_allocator, invalid_interface, valid_code_buffer, valid_buffer_size_bytes, logger);
 
         if (error != BAL_ERROR_INVALID_ARGUMENT)
@@ -177,11 +177,11 @@ test_memory__default_flat_translation_init__invalid_arguments_returns_error(test
             break;
         }
 
-        error = bal_memory_init_flat(valid_allocator,
-                                     &valid_interface,
-                                     invalid_code_buffer,
-                                     valid_buffer_size_bytes,
-                                     logger);
+        error = bal_flat_translation_interface_init(valid_allocator,
+                                                    &valid_interface,
+                                                    invalid_code_buffer,
+                                                    valid_buffer_size_bytes,
+                                                    logger);
 
         if (error != BAL_ERROR_INVALID_ARGUMENT)
         {
@@ -190,11 +190,11 @@ test_memory__default_flat_translation_init__invalid_arguments_returns_error(test
             return_code = EXIT_FAILURE;
             break;
         }
-        error = bal_memory_init_flat(valid_allocator,
-                                     &valid_interface,
-                                     valid_code_buffer,
-                                     invalid_buffer_size_bytes,
-                                     logger);
+        error = bal_flat_translation_interface_init(valid_allocator,
+                                                    &valid_interface,
+                                                    valid_code_buffer,
+                                                    invalid_buffer_size_bytes,
+                                                    logger);
 
         if (error != BAL_ERROR_INVALID_ARGUMENT)
         {
@@ -216,11 +216,11 @@ test_memory__default_flat_translation_init__invalid_arguments_returns_error(test
 
         invalid_code_buffer += 1;
         valid_allocator->allocate = empty_allocate;
-        error                     = bal_memory_init_flat(valid_allocator,
-                                     &valid_interface,
-                                     invalid_code_buffer,
-                                     valid_buffer_size_bytes,
-                                     logger);
+        error                     = bal_flat_translation_interface_init(valid_allocator,
+                                                    &valid_interface,
+                                                    invalid_code_buffer,
+                                                    valid_buffer_size_bytes,
+                                                    logger);
 
         if (error != BAL_ERROR_MEMORY_ALIGNMENT)
         {
@@ -246,7 +246,7 @@ tests_memory__default_flat_translation_interface_init__failed_interface_allocati
     context->code_buffer          = context->allocator.allocate(
         context->allocator.handle, memory_alignment, TEST_BUFFER_SIZE_BYTES);
     context->allocator.allocate = empty_allocate;
-    const bal_error_t error     = bal_memory_init_flat(
+    const bal_error_t error     = bal_flat_translation_interface_init(
         &context->allocator, &context->interface, context->code_buffer, memory_alignment, logger);
 
     if (error != BAL_ERROR_ALLOCATION_FAILED)
@@ -270,7 +270,8 @@ tests_memory__default_flat_translation_interface_destroy__invalid_argument_retur
         bal_memory_interface_t  valid_interface   = { 0 };
         bal_allocator_t        *invalid_allocator = NULL;
         bal_memory_interface_t *invalid_interface = NULL;
-        bal_error_t             error = bal_memory_destroy_flat(valid_allocator, invalid_interface);
+        bal_error_t             error
+            = bal_flat_translation_interface_destroy(valid_allocator, invalid_interface);
         if (error != BAL_ERROR_INVALID_ARGUMENT)
         {
             BAL_LOG_ERROR(&context->logger, "Expected BAL_ERROR_INVALID_ARGUMENT");
@@ -278,7 +279,7 @@ tests_memory__default_flat_translation_interface_destroy__invalid_argument_retur
             break;
         }
 
-        error = bal_memory_destroy_flat(invalid_allocator, &valid_interface);
+        error = bal_flat_translation_interface_destroy(invalid_allocator, &valid_interface);
 
         if (error != BAL_ERROR_INVALID_ARGUMENT)
         {

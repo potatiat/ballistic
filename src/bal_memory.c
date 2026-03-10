@@ -5,7 +5,9 @@
 
 static void                  *default_allocate(bal_allocator_handle_t, size_t, size_t);
 static void                   default_free(bal_allocator_handle_t, void *, size_t);
-BAL_HOT static const uint8_t *bal_translate_flat(void *, bal_guest_address_t, size_t *);
+BAL_HOT static const uint8_t *bal_flat_translation_interface_translate(void *,
+                                                                       bal_guest_address_t,
+                                                                       size_t *);
 
 typedef struct
 {
@@ -18,7 +20,7 @@ typedef struct
 static_assert(0 == sizeof(flat_translation_interface_t) % 16, "Struct must be aligned to 16 bytes");
 
 void
-bal_allocator_init_default(bal_allocator_t *out_allocator)
+bal_allocator_default_init(bal_allocator_t *out_allocator)
 {
     out_allocator->handle   = NULL;
     out_allocator->allocate = default_allocate;
@@ -26,11 +28,11 @@ bal_allocator_init_default(bal_allocator_t *out_allocator)
 }
 
 BAL_COLD bal_error_t
-bal_memory_init_flat(bal_allocator_t *BAL_RESTRICT        allocator,
-                     bal_memory_interface_t *BAL_RESTRICT interface,
-                     void *BAL_RESTRICT                   buffer,
-                     size_t                               size,
-                     bal_logger_t                         logger)
+bal_flat_translation_interface_init(bal_allocator_t *BAL_RESTRICT        allocator,
+                                    bal_memory_interface_t *BAL_RESTRICT interface,
+                                    void *BAL_RESTRICT                   buffer,
+                                    size_t                               size,
+                                    bal_logger_t                         logger)
 
 {
     if (NULL == allocator || NULL == interface || NULL == buffer || 0 == size)
@@ -74,7 +76,7 @@ bal_memory_init_flat(bal_allocator_t *BAL_RESTRICT        allocator,
     flat_interface->size      = size;
     flat_interface->logger    = logger;
     interface->context        = flat_interface;
-    interface->translate      = bal_translate_flat;
+    interface->translate      = bal_flat_translation_interface_translate;
 
     BAL_LOG_INFO(&logger, "Flat interface created successfully at %p.", (void *)flat_interface);
 
@@ -82,7 +84,8 @@ bal_memory_init_flat(bal_allocator_t *BAL_RESTRICT        allocator,
 }
 
 bal_error_t
-bal_memory_destroy_flat(bal_allocator_t *allocator, bal_memory_interface_t *interface)
+bal_flat_translation_interface_destroy(bal_allocator_t        *allocator,
+                                       bal_memory_interface_t *interface)
 {
     if (NULL == allocator || NULL == interface)
     {
@@ -161,9 +164,9 @@ default_free(bal_allocator_handle_t handle, void *pointer, size_t size)
 #endif /* BAL_PLATFORM_WINDOWS */
 
 static const uint8_t *
-bal_translate_flat(void *BAL_RESTRICT   interface,
-                   bal_guest_address_t  guest_address,
-                   size_t *BAL_RESTRICT max_readable_size)
+bal_flat_translation_interface_translate(void *BAL_RESTRICT   interface,
+                                         bal_guest_address_t  guest_address,
+                                         size_t *BAL_RESTRICT max_readable_size)
 {
     if (BAL_UNLIKELY(NULL == interface || 0 == guest_address || NULL == max_readable_size))
     {

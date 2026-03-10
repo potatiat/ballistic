@@ -92,7 +92,7 @@ typedef struct
 /// # Platform Support
 ///
 /// This function only supports windows and POSIX-compliant systems.
-BAL_COLD void bal_allocator_init_default(bal_allocator_t *out_allocator);
+BAL_COLD void bal_allocator_default_init(bal_allocator_t *out_allocator);
 
 /// Initializes a flat, contiguous translation interface.
 ///
@@ -118,19 +118,20 @@ BAL_COLD void bal_allocator_init_default(bal_allocator_t *out_allocator);
 ///
 /// The caller retains ownership of `buffer`. It must remain valid and
 /// unmodified for the lifetime of the created interface.
-BAL_COLD bal_error_t bal_memory_init_flat(bal_allocator_t *BAL_RESTRICT        allocator,
-                                          bal_memory_interface_t *BAL_RESTRICT interface,
-                                          void *BAL_RESTRICT                   buffer,
-                                          size_t                               size,
-                                          bal_logger_t                         logger);
+BAL_COLD bal_error_t
+bal_flat_translation_interface_init(bal_allocator_t *BAL_RESTRICT        allocator,
+                                    bal_memory_interface_t *BAL_RESTRICT interface,
+                                    void *BAL_RESTRICT                   buffer,
+                                    size_t                               size,
+                                    bal_logger_t                         logger);
 
 /// Frees the internal state allocated within `interface` using the provided
 /// `allocator` and resets `interface` to 0 with a memset.
 ///
-/// This does **not** free the buffer passed to [`bal_memory_init_flat`] as
+/// This does **not** free the buffer passed to [`bal_flat_translation_interface_init`] as
 /// Ballistic does not take ownership of the host memory region.
-BAL_COLD bal_error_t bal_memory_destroy_flat(bal_allocator_t        *allocator,
-                                             bal_memory_interface_t *interface);
+BAL_COLD bal_error_t bal_flat_translation_interface_destroy(bal_allocator_t        *allocator,
+                                                            bal_memory_interface_t *interface);
 #endif /* BALLISTIC_MEMORY_H */
 
 /*** end of file ***/
