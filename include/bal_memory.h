@@ -47,11 +47,11 @@ typedef void (*bal_free_function_t)(bal_allocator_handle_t allocator, void *poin
 /// memory.
 ///
 /// The implementation must write the number of contiguous, readable bytes
-/// available at the returned pointer into `max_readable_size`. This prevents
+/// available at the returned pointer into `max_readable_size_bytes`. This prevents
 /// Ballistic from reading beyond the end of a mapped page or buffer.
 typedef const uint8_t *(*bal_translate_function_t)(void               *context,
                                                    bal_guest_address_t guest_address,
-                                                   size_t             *max_readable_size);
+                                                   size_t             *max_readable_size_bytes);
 
 /// The host application is responsible for providing an allocator capable of
 /// handling aligned memory requests.
