@@ -15,12 +15,15 @@ typedef enum
     BAL_SUCCESS                 = 0,
     BAL_ERROR_INVALID_ARGUMENT  = -1,
     BAL_ERROR_ALLOCATION_FAILED = -2,
-    BAL_ERROR_MEMORY_ALIGNMENT  = -3,
+
+    /// Guest code tried to execute an unaligned instruction.
+    BAL_ERROR_PC_ALIGNMENT     = -3,
+    BAL_ERROR_MEMORY_ALIGNMENT = -4,
 
     /// Ballistic tried to access memory it was not allowed to access.
-    BAL_ERROR_MEMORY_FAULT         = -4,
-    BAL_ERROR_ENGINE_STATE_INVALID = -5,
-    BAL_ERROR_UNKNOWN_INSTRUCTION  = -6,
+    BAL_ERROR_MEMORY_FAULT         = -5,
+    BAL_ERROR_ENGINE_STATE_INVALID = -6,
+    BAL_ERROR_UNKNOWN_INSTRUCTION  = -7,
 
     // IR Errors.
     //

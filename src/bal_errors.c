@@ -13,6 +13,9 @@ bal_error_to_string(const bal_error_t error)
         case BAL_ERROR_ALLOCATION_FAILED:
             string = "failed to allocate memory";
             break;
+        case BAL_ERROR_PC_ALIGNMENT:
+            string = "guest code tried to execute an unaligned instruction";
+            break;
         case BAL_ERROR_MEMORY_ALIGNMENT:
             string = "buffer is not aligned to the required memory alignment";
             break;
