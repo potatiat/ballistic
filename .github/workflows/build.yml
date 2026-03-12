@@ -28,21 +28,21 @@ jobs:
           python-version: '3.11'
 
       - name: Install Dependencies
-        run: sudo apt-get update && sudo apt-get install -y clang-tidy-18 clang-format-18 cmake ninja-build libclang-18-dev pkg-config
+        run: sudo apt-get update && sudo apt-get install -y clang-tidy-19 clang-format-19 cmake ninja-build libclang-19-dev pkg-config
 
       - name: Run Clang-Format
         run: |
           find src include tests tools -name "*.[ch]" \
             -not -name "bal_decoder_table_gen.*" \
-                                                | xargs clang-format-18 --dry-run --Werror --style=file:.clang-format
+                                                | xargs clang-format-19 --dry-run --Werror --style=file:.clang-format
 
       - name: Generate Compilation Database
         run: |
           ARCH_TRIPLET=$(gcc -dumpmachine)
           cmake -S . -B ${{ env.BUILD_DIR }} -G Ninja \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-            -DCMAKE_C_COMPILER=clang-18 \
-            -DCMAKE_PREFIX_PATH="/usr/lib/llvm-18;/usr/lib/$ARCH_TRIPLET"
+            -DCMAKE_C_COMPILER=clang-19 \
+            -DCMAKE_PREFIX_PATH="/usr/lib/llvm-19;/usr/lib/$ARCH_TRIPLET"
 
       - name: Generate Source Headers
         run: cmake --build ${{ env.BUILD_DIR }} --target Ballistic --parallel $(nproc)
