@@ -130,6 +130,60 @@ bal_emit_movn(bal_assembler_t           *assembler,
     emit_mov(assembler, "MOVN", rd, imm, shift, 0x0);
 }
 
+void
+bal_emit_ret(bal_assembler_t *assembler, const bal_register_index_t rn)
+{
+    if (NULL == assembler)
+    {
+        return;
+    }
+
+    if (NULL == assembler->buffer)
+    {
+        BAL_LOG_ERROR(&assembler->logger, "assembler->buffer is NULL, aborting emission");
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    const bool can_emit_return_value = can_emit(assembler);
+
+    if (false == can_emit_return_value)
+    {
+        return;
+    }
+
+    if (rn > 31)
+    {
+        BAL_LOG_ERROR(&assembler->logger, "X%u out of range (0-31).", rn);
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    if (assembler->status != BAL_SUCCESS)
+    {
+        BAL_LOG_ERROR(&assembler->logger, "assembler->status != BAL_SUCCESS, aborting emission");
+        return;
+    }
+
+    const uint32_t hard_coded_bits = 0xD65F0000;
+    const uint32_t rn_shift        = 5;
+    const uint32_t instruction     = hard_coded_bits | rn << rn_shift;
+
+    const char *mnemonic = "RET";
+    BAL_LOG_TRACE(&assembler->logger,
+                  "[+0x%04zx] %08x %s X%u",
+                  assembler->offset * sizeof(uint32_t),
+                  instruction,
+                  mnemonic,
+                  rn);
+
+    // This function argument isn't used in the log trace above on release builds because the log
+    // trace is optimized out, making the compiler mark this variable as unused.
+    (void)mnemonic;
+
+    assembler->buffer[assembler->offset++] = instruction;
+}
+
 static bool
 can_emit(bal_assembler_t *assembler)
 {

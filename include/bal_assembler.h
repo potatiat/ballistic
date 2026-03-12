@@ -152,6 +152,24 @@ void bal_emit_movn(bal_assembler_t     *assembler,
                    uint16_t             imm,
                    uint8_t              shift);
 
+/// Emits a `RET` instruction.
+///
+/// Returns from subroutine branches unconditionally to an address in a register with a hint that
+/// this is a subroutine return.
+///
+/// # Safety
+///
+/// * `rn` must be between 0-31 inclusive.
+/// * Does not emit if `assembler->status != BAL_SUCCESS`.
+///
+/// # Errors
+///
+/// Modifies `assembler->status` to the following if an error occurs:
+///
+/// * [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if `assembler->offset >= assembler->capacity`.
+/// * [`BAL_ERROR_INVALID_ARGUMENT`] if function arguments are invalid.
+void bal_emit_ret(bal_assembler_t *assembler, bal_register_index_t rn);
+
 #endif /* BALLISTIC_ASSEMBLER_H */
 
 /*** end of file ***/
