@@ -97,6 +97,7 @@ void bal_emit_add_immediate(bal_assembler_t     *assembler,
 /// # Safety
 ///
 /// * `shift` must be 0, 16, 32, or 48.
+/// * Does not emit if `assembler->status != BAL_SUCCESS`.
 ///
 /// # Errors
 ///
@@ -117,6 +118,7 @@ void bal_emit_movz(bal_assembler_t     *assembler,
 /// # Safety
 ///
 /// * `shift` must be 0, 16, 32, or 48.
+/// * Does not emit if `assembler->status != BAL_SUCCESS`.
 ///
 /// # Errors
 ///
@@ -137,6 +139,7 @@ void bal_emit_movk(bal_assembler_t     *assembler,
 /// # Safety
 ///
 /// * `shift` must be 0, 16, 32, or 48.
+/// * Does not emit if `assembler->status != BAL_SUCCESS`.
 ///
 /// # Errors
 ///

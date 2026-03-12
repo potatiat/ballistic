@@ -43,6 +43,11 @@ bal_emit_add_immediate(bal_assembler_t           *assembler,
                        const uint16_t             imm12,
                        const uint8_t              shift)
 {
+    if (NULL == assembler)
+    {
+        return;
+    }
+
     if (assembler->status != BAL_SUCCESS)
     {
         return;
@@ -147,8 +152,21 @@ emit_mov(bal_assembler_t *assembler,
          const uint8_t    shift,
          const uint32_t   opcode)
 {
+    if (NULL == assembler)
+    {
+        return;
+    }
+
+    if (NULL == assembler->buffer)
+    {
+        BAL_LOG_ERROR(&assembler->logger, "assembler->buffer is NULL, aborting emission");
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
     if (assembler->status != BAL_SUCCESS)
     {
+        BAL_LOG_ERROR(&assembler->logger, "assembler->status != BAL_SUCCESS, aborting emission");
         return;
     }
 
