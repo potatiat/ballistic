@@ -186,13 +186,14 @@ bal_engine_translate(bal_engine_t *BAL_RESTRICT                 engine,
             ++operands_cursor;
         }
 
-        operands_cursor = metadata->operands;
-
         switch (metadata->ir_opcode)
         {
             case OPCODE_CONST:
                 translate_const(&context, metadata, arm_registers);
                 break;
+            case OPCODE_RETURN:
+                // TODO: This only terminates the loop early. Add proper IR translation.
+                goto end;
             default:
                 BAL_LOG_DEBUG(context.logger,
                               "  SKIPPED: Opcode %s not implemented in IR layer.",
@@ -210,7 +211,7 @@ bal_engine_translate(bal_engine_t *BAL_RESTRICT                 engine,
         ++context.bit_width_cursor;
         ++arm_instruction_cursor;
     }
-
+end:
     engine->instruction_count = context.instruction_count;
     engine->constant_count    = context.constant_count;
     engine->status            = context.status;
