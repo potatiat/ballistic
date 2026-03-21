@@ -287,7 +287,8 @@ intern_constant(bal_translation_context_t *BAL_RESTRICT context, const bal_const
 
     context->constants[index] = constant;
     context->constant_count++;
-    BAL_LOG_TRACE(context->logger, "  0X%08X -> Pool Index %u", constant, index);
+    BAL_LOG_TRACE(
+        context->logger, "  0X%016llX -> Pool Index %u", (unsigned long long)constant, index);
     return index | BAL_IS_CONSTANT_BIT_POSITION;
 }
 
