@@ -51,10 +51,11 @@ main(void)
                 return 1;
             }
 
+            uint16_t bucket_index = bucket->index;
             for (size_t i = 0; i < bucket->count; ++i)
             {
                 const bal_decoder_instruction_metadata_t *metadata
-                    = g_decoder_hash_candidates[bucket->index];
+                    = g_decoder_hash_candidates[bucket_index++];
                 local_candidates[i].mask     = metadata->mask;
                 local_candidates[i].expected = metadata->expected;
                 local_candidates[i].priority = POPCOUNT(metadata->mask);
