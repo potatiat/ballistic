@@ -1,5 +1,4 @@
 #include "bal_errors.h"
-#include <stdio.h>
 
 const char *
 bal_error_to_string(const bal_error_t error)
@@ -21,9 +20,6 @@ bal_error_to_string(const bal_error_t error)
             break;
         case BAL_ERROR_MEMORY_FAULT:
             string = "accessed invalid memory";
-            break;
-        case BAL_ERROR_ENGINE_STATE_INVALID:
-            string = "the ballistic engine != BAL_SUCCESS";
             break;
         case BAL_ERROR_UNKNOWN_INSTRUCTION:
             string = "failed to decode arm instruction";

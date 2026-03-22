@@ -21,9 +21,8 @@ typedef enum
     BAL_ERROR_MEMORY_ALIGNMENT = -4,
 
     /// Ballistic tried to access memory it was not allowed to access.
-    BAL_ERROR_MEMORY_FAULT         = -5,
-    BAL_ERROR_ENGINE_STATE_INVALID = -6,
-    BAL_ERROR_UNKNOWN_INSTRUCTION  = -7,
+    BAL_ERROR_MEMORY_FAULT        = -5,
+    BAL_ERROR_UNKNOWN_INSTRUCTION = -6,
 
     // IR Errors.
     //
