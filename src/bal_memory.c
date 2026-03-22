@@ -11,7 +11,7 @@ BAL_HOT static const uint8_t *bal_flat_translation_interface_translate(void *,
 
 typedef struct
 {
-    uint8_t     *host_base;
+    uint8_t     *host;
     size_t       size;
     bal_logger_t logger;
     char         _pad[8];
@@ -31,8 +31,8 @@ BAL_COLD bal_error_t
 bal_flat_translation_interface_init(bal_allocator_t *BAL_RESTRICT        allocator,
                                     bal_memory_interface_t *BAL_RESTRICT interface,
                                     void *BAL_RESTRICT                   buffer,
-                                    size_t                               size,
-                                    bal_logger_t                         logger)
+                                    const size_t                         size,
+                                    const bal_logger_t                   logger)
 
 {
     if (NULL == allocator || NULL == interface || NULL == buffer || 0 == size)
@@ -72,11 +72,11 @@ bal_flat_translation_interface_init(bal_allocator_t *BAL_RESTRICT        allocat
         return BAL_ERROR_ALLOCATION_FAILED;
     }
 
-    flat_interface->host_base = (uint8_t *)buffer;
-    flat_interface->size      = size;
-    flat_interface->logger    = logger;
-    interface->context        = flat_interface;
-    interface->translate      = bal_flat_translation_interface_translate;
+    flat_interface->host   = (uint8_t *)buffer;
+    flat_interface->size   = size;
+    flat_interface->logger = logger;
+    interface->context     = flat_interface;
+    interface->translate   = bal_flat_translation_interface_translate;
 
     BAL_LOG_INFO(&logger, "Flat interface created successfully at %p.", (void *)flat_interface);
 
@@ -168,7 +168,7 @@ bal_flat_translation_interface_translate(void *BAL_RESTRICT   interface,
                                          bal_guest_address_t  guest_address,
                                          size_t *BAL_RESTRICT max_readable_size)
 {
-    if (BAL_UNLIKELY(NULL == interface || 0 == guest_address || NULL == max_readable_size))
+    if (BAL_UNLIKELY(NULL == interface || NULL == max_readable_size))
     {
         return NULL;
     }
@@ -188,7 +188,7 @@ bal_flat_translation_interface_translate(void *BAL_RESTRICT   interface,
     }
 
     *max_readable_size          = context->size - guest_address;
-    const uint8_t *host_address = context->host_base + guest_address;
+    const uint8_t *host_address = context->host + guest_address;
 
     BAL_LOG_TRACE(&context->logger,
                   "Translate 0x%llx -> Host %p",

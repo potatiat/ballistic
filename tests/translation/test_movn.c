@@ -1,5 +1,6 @@
 #include "setup.h"
 #include <inttypes.h>
+#include <stdlib.h>
 
 static int
 test_movn(test_context_t *context)
@@ -11,10 +12,10 @@ test_movn(test_context_t *context)
     const uint16_t immediates[] = { 0, 1, 0xFFFF, 0xAAAA, 0x5555, 0x1234 };
     const uint8_t  shifts[]     = { 0, 16, 32, 48 };
 
-    size_t registers_count        = sizeof(registers) / sizeof(registers[0]);
-    size_t immediates_count       = sizeof(immediates) / sizeof(immediates[0]);
-    size_t shifts_count           = sizeof(shifts) / sizeof(shifts[0]);
-    size_t assembler_buffer_index = 0;
+    const size_t registers_count        = sizeof(registers) / sizeof(registers[0]);
+    const size_t immediates_count       = sizeof(immediates) / sizeof(immediates[0]);
+    const size_t shifts_count           = sizeof(shifts) / sizeof(shifts[0]);
+    size_t       assembler_buffer_index = 0;
 
     for (size_t r = 0; r < registers_count; ++r)
     {
@@ -28,12 +29,13 @@ test_movn(test_context_t *context)
         }
     }
 
-    bal_engine_translate(&context->engine,
-                         &context->interface,
-                         context->code_buffer,
-                         context->assembler.offset * sizeof(uint32_t));
-    bal_instruction_t *BAL_RESTRICT ir       = context->engine.instructions;
-    size_t                          ir_index = 0;
+    bal_emit_ret(&context->assembler, BAL_REGISTER_X0);
+
+    bal_guest_address_t entry_point = 0x0;
+    bal_engine_translate(
+        &context->engine, &context->interface, &entry_point, context->assembler.offset);
+    const bal_instruction_t *BAL_RESTRICT ir       = context->engine.instructions;
+    size_t                                ir_index = 0;
 
     for (size_t r = 0; r < registers_count; ++r)
     {

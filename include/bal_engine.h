@@ -132,22 +132,26 @@ BAL_COLD bal_error_t bal_engine_init(const bal_allocator_t *allocator,
                                      bal_engine_t          *engine,
                                      bal_logger_t           logger);
 
-/// Translates machine code starting at `arm_instruction_cursor` into the engine's
+/// Translates machine code starting at `guest_address_start` into the engine's
 /// internal IR. `interface` provides memory access handling (like instruction
 /// fetching).
 ///
 /// Returns [`BAL_SUCCESS`] on success.
 ///
+/// # Safety
+///
+/// If `guest_address_staart` is `NULL`, we assume the entry point is 0x0.
+///
 /// # Errors
 ///
-/// Returns [`BAL_ERROR_ENGINE_STATE_INVALID`] if `engine` is not initialized
+/// Returns [`BAL_ERROR_INVALID_ARGUMENT`] if functino arguments are invalid or
 /// or `engine->status != BAL_SUCCESS`.
 ///
 /// Returns [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if the array `engine->constants` overflows.
 BAL_HOT bal_error_t bal_engine_translate(bal_engine_t *BAL_RESTRICT                 engine,
                                          const bal_memory_interface_t *BAL_RESTRICT interface,
-                                         const uint32_t *BAL_RESTRICT arm_instruction_cursor,
-                                         size_t                       arm_size_bytes);
+                                         bal_guest_address_t *guest_address_start,
+                                         size_t               max_instructions);
 
 /// Resets `engine` for the next compilation unit. This is a low-cost memory
 /// operation designed to be called between translation units.

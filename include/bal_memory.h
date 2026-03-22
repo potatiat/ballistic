@@ -103,7 +103,7 @@ BAL_COLD void bal_allocator_default_init(bal_allocator_t *out_allocator);
 ///
 /// The internal interface is allocated with `allocator`. `interface` is
 /// populated with the resulting context and translation callbacks. `buffer`
-/// must be a  pre-allocated block of host memory of at least `size bytes.
+/// must be a  pre-allocated block of host memory of at least `size` bytes.
 ///
 /// Returns [`BAL_SUCCESS`] on success.
 ///

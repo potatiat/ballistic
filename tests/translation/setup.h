@@ -2,13 +2,10 @@
 #define TEST_SETUP_H
 
 #include "bal_assembler.h"
-#include "bal_attributes.h"
 #include "bal_engine.h"
 #include "bal_memory.h"
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 #define TEST_BUFFER_SIZE 4096
 
@@ -22,15 +19,15 @@ typedef struct
     uint32_t              *code_buffer;
 } test_context_t;
 
-static inline void
+static void
 test_setup(test_context_t *context)
 {
     bal_allocator_default_init(&context->allocator);
     bal_logger_init_default(&context->logger);
-    context->logger.min_level = BAL_LOG_LEVEL_WARN;
+    context->logger.min_level = BAL_LOG_LEVEL_TRACE;
 
-    size_t memory_alignment = 16;
-    context->code_buffer    = context->allocator.allocate(
+    const size_t memory_alignment = 16;
+    context->code_buffer          = context->allocator.allocate(
         context->allocator.handle, memory_alignment, TEST_BUFFER_SIZE * sizeof(uint32_t));
     bal_flat_translation_interface_init(&context->allocator,
                                         &context->interface,
@@ -42,7 +39,7 @@ test_setup(test_context_t *context)
         &context->assembler, context->code_buffer, TEST_BUFFER_SIZE, context->logger);
 }
 
-static inline void
+static void
 test_teardown(test_context_t *context)
 {
     bal_engine_destroy(&context->allocator, &context->engine);

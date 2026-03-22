@@ -1,6 +1,7 @@
 #include "bal_engine.h"
 #include "bal_decoder.h"
 #include "bal_logging.h"
+#include <stdbool.h>
 #include <stddef.h>
 #include <string.h>
 
@@ -9,6 +10,9 @@
 // Not sure what exact value to put here.
 //
 #define MAX_GUEST_REGISTERS 128
+
+/// The size of an ARM Instruction in bytes.
+#define ARM_INSTRUCTION_SIZE_BYTES 4
 
 /// Helper macro to align `x` UP to the nearest memory alignment.
 #define BAL_ALIGN_UP(x, memory_alignment) \
@@ -113,20 +117,44 @@ bal_engine_init(const bal_allocator_t *allocator, bal_engine_t *engine, bal_logg
 bal_error_t
 bal_engine_translate(bal_engine_t *BAL_RESTRICT                 engine,
                      const bal_memory_interface_t *BAL_RESTRICT interface,
-                     const uint32_t *BAL_RESTRICT               arm_instruction_cursor,
-                     size_t                                     arm_size_bytes)
+                     bal_guest_address_t                       *guest_address_start,
+                     const size_t                               max_instructions)
 {
-    (void)interface;
-
-    if (BAL_UNLIKELY(NULL == engine || NULL == arm_instruction_cursor))
+    if (BAL_UNLIKELY(NULL == engine))
     {
-        return BAL_ERROR_ENGINE_STATE_INVALID;
+        return BAL_ERROR_INVALID_ARGUMENT;
     }
 
-    BAL_LOG_INFO(&(engine->logger),
+    if (BAL_UNLIKELY(engine->status != BAL_SUCCESS))
+    {
+        BAL_LOG_ERROR(&engine->logger, "Engine != BAL_SUCCESS, aborting translation");
+        return BAL_ERROR_INVALID_ARGUMENT;
+    }
+
+    if (BAL_UNLIKELY(NULL == interface))
+    {
+        BAL_LOG_ERROR(&engine->logger, "Interface is NULL, aborting translation");
+        engine->status = BAL_ERROR_INVALID_ARGUMENT;
+        return engine->status;
+    }
+
+    if (BAL_UNLIKELY(0 == max_instructions))
+    {
+        BAL_LOG_INFO(&engine->logger, "Max Instructions is 0, aborting translation");
+        engine->status = BAL_ERROR_INVALID_ARGUMENT;
+        return engine->status;
+    }
+
+    if (BAL_UNLIKELY(NULL == &guest_address_start))
+    {
+        BAL_LOG_INFO(&engine->logger, "Guest Address is NULL, assuming entry point is 0x0");
+    }
+
+    const size_t max_instructions_size_bytes = max_instructions * ARM_INSTRUCTION_SIZE_BYTES;
+    BAL_LOG_INFO(&engine->logger,
                  "Starting JIT unit. GVA: %p, Size: %zu bytes ",
-                 (void *)arm_instruction_cursor,
-                 arm_size_bytes);
+                 (void *)*guest_address_start,
+                 max_instructions_size_bytes);
 
     bal_translation_context_t context
         = { .ir_instruction_cursor = engine->instructions + engine->instruction_count,
@@ -139,84 +167,130 @@ bal_engine_translate(bal_engine_t *BAL_RESTRICT                 engine,
             .status                = engine->status,
             .logger                = &engine->logger };
 
-    const bal_instruction_t *BAL_RESTRICT ir_instruction_end
-        = engine->instructions + engine->instructions_size;
-    const uint32_t *arm_start                        = arm_instruction_cursor;
-    size_t          arm_size                         = arm_size_bytes / sizeof(uint32_t);
-    const uint32_t *arm_end                          = arm_instruction_cursor + arm_size;
-    uint32_t        arm_registers[BAL_OPERANDS_SIZE] = { 0 };
+    bool     is_block_terminated                         = false;
+    uint32_t arm_instruction_operands[BAL_OPERANDS_SIZE] = { 0 };
 
-    while (context.ir_instruction_cursor < ir_instruction_end && arm_instruction_cursor < arm_end)
+    while (false == is_block_terminated)
     {
-        if (BAL_UNLIKELY(context.instruction_count >= (MAX_INSTRUCTIONS - 128)))
+        size_t                            max_readable_instructions_bytes = 0;
+        bal_guest_address_t *BAL_RESTRICT guest_address_current           = guest_address_start;
+
+        if (BAL_UNLIKELY((uintptr_t)guest_address_current % 4 != 0))
         {
-            BAL_LOG_WARN(context.logger,
-                         "Critical buffer pressure. Inst:  %u/%d",
-                         context.instruction_count,
-                         MAX_INSTRUCTIONS);
-        }
-
-        const bal_decoder_instruction_metadata_t *metadata
-            = bal_decode_arm64(*arm_instruction_cursor);
-
-        const size_t relative_offset = (uintptr_t)arm_instruction_cursor - (uintptr_t)arm_start;
-        if (BAL_UNLIKELY(NULL == metadata))
-        {
-
             BAL_LOG_ERROR(context.logger,
-                          "Decode failed for opcode 0x%08x at offset +0x%zx",
-                          arm_instruction_cursor,
-                          relative_offset);
-            context.status = BAL_ERROR_UNKNOWN_INSTRUCTION;
+                          "Guest Virtual Address 0x%016llX is not 4-byte aligned",
+                          (unsigned long long)guest_address_current);
+            context.status = BAL_ERROR_MEMORY_ALIGNMENT;
+            break;
+        }
+        const uint32_t *host_address_base = (const uint32_t *)interface->translate(
+            (void *)interface, *guest_address_current, &max_readable_instructions_bytes);
+
+        if (BAL_UNLIKELY(NULL == host_address_base))
+        {
+            BAL_LOG_ERROR(context.logger,
+                          "Memory translation fault at GVA 0x%016llX, aborting translation block",
+                          (unsigned long long)*guest_address_start);
+            context.status = BAL_ERROR_MEMORY_FAULT;
             break;
         }
 
-        BAL_LOG_DEBUG(context.logger,
-                      "  [+0x%04zx] 0x%08x: %-8s (SSA ID: %u)",
-                      relative_offset,
-                      arm_instruction_cursor,
-                      metadata->name,
-                      context.instruction_count);
+        const uint32_t *BAL_RESTRICT host_address_current = host_address_base;
+        const size_t max_readable_instructions = max_readable_instructions_bytes / sizeof(uint32_t);
 
-        const bal_decoder_operand_t *BAL_RESTRICT operands_cursor = metadata->operands;
-
-        for (size_t i = 0; i < BAL_OPERANDS_SIZE; ++i)
+        // Has the remaining instructions crossed a memory page boundary? This should not happen on
+        // ARM64 since instructions are strictly 4 byte aligned. So throw an error if this
+        // happens.
+        //
+        if (BAL_UNLIKELY(0 == max_readable_instructions))
         {
-            arm_registers[i] = extract_operand_value(*arm_instruction_cursor, operands_cursor);
-            ++operands_cursor;
-        }
-
-        switch (metadata->ir_opcode)
-        {
-            case OPCODE_CONST:
-                translate_const(&context, metadata, arm_registers);
-                break;
-            case OPCODE_RETURN:
-                // TODO: This only terminates the loop early. Add proper IR translation.
-                goto end;
-            default:
-                BAL_LOG_DEBUG(context.logger,
-                              "  SKIPPED: Opcode %s not implemented in IR layer.",
-                              metadata->name);
-                break;
-        }
-
-        if (BAL_UNLIKELY(context.status != BAL_SUCCESS))
-        {
-            BAL_LOG_ERROR(context.logger, "  Status failure: %d", context.status);
+            BAL_LOG_ERROR(context.logger,
+                          "Insufficient memory at GVA 0x%016llX. Need 4 bytes for an instruction, "
+                          "but only %zu bytes are readable",
+                          (unsigned long long)guest_address_current,
+                          max_readable_instructions_bytes);
+            context.status = BAL_ERROR_PC_ALIGNMENT;
             break;
         }
 
-        ++context.ir_instruction_cursor;
-        ++context.bit_width_cursor;
-        ++arm_instruction_cursor;
+        for (size_t i = 0; i < max_readable_instructions; ++i)
+        {
+            if (BAL_UNLIKELY(context.instruction_count >= (MAX_INSTRUCTIONS - 128)))
+            {
+                BAL_LOG_WARN(context.logger,
+                             "Critical buffer pressure. Inst:  %u/%d",
+                             context.instruction_count,
+                             MAX_INSTRUCTIONS);
+            }
+
+            const bal_decoder_instruction_metadata_t *metadata
+                = bal_decode_arm64(*host_address_current);
+
+            const size_t relative_offset
+                = (uintptr_t)host_address_current - (uintptr_t)host_address_base;
+
+            if (BAL_UNLIKELY(NULL == metadata))
+            {
+                BAL_LOG_ERROR(context.logger,
+                              "Decode failed for GVA 0x%08x at offset +0x%zx",
+                              *guest_address_start,
+                              relative_offset);
+                context.status      = BAL_ERROR_UNKNOWN_INSTRUCTION;
+                is_block_terminated = true;
+                break;
+            }
+
+            BAL_LOG_DEBUG(context.logger,
+                          "  [+0x%04zx] 0x%08x: %-8s (SSA ID: %u)",
+                          relative_offset,
+                          *guest_address_start,
+                          metadata->name,
+                          context.instruction_count);
+
+            const bal_decoder_operand_t *BAL_RESTRICT operands_cursor = metadata->operands;
+
+            for (size_t ii = 0; ii < BAL_OPERANDS_SIZE; ++ii)
+            {
+                arm_instruction_operands[ii]
+                    = extract_operand_value(*host_address_current, operands_cursor);
+                ++operands_cursor;
+            }
+
+            switch (metadata->ir_opcode)
+            {
+                case OPCODE_CONST:
+                    translate_const(&context, metadata, arm_instruction_operands);
+                    break;
+                case OPCODE_RETURN:
+                    // TODO: This only terminates the loop early. Add proper IR translation.
+                    goto end;
+                default:
+                    BAL_LOG_DEBUG(context.logger,
+                                  "  SKIPPED: Opcode %s not implemented in IR layer.",
+                                  metadata->name);
+                    break;
+            }
+
+            if (BAL_UNLIKELY(context.status != BAL_SUCCESS))
+            {
+                BAL_LOG_ERROR(context.logger, "  Status failure: %d", context.status);
+                is_block_terminated = true;
+                break;
+            }
+
+            ++context.ir_instruction_cursor;
+            ++context.bit_width_cursor;
+            *guest_address_current += 4;
+            ++host_address_current;
+        }
     }
+
 end:
     engine->instruction_count = context.instruction_count;
     engine->constant_count    = context.constant_count;
     engine->status            = context.status;
 
-    BAL_LOG_INFO(&(engine->logger),
+    BAL_LOG_INFO(&engine->logger,
                  "Finished. Produced %u instructions, %u constants.",
                  engine->instruction_count,
                  engine->constant_count);

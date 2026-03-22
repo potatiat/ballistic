@@ -53,40 +53,45 @@ main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    size_t count = 1;
-
     for (;;)
     {
-        size_t bytes_read = fread(buffer, sizeof(buffer), count, file);
+        const size_t              count       = 1;
+        const bal_guest_address_t entry_point = 0x0;
+        const size_t              bytes_read  = fread(buffer, sizeof(buffer), count, file);
 
         if (0 == bytes_read)
         {
             break;
         }
 
-        bool is_end_of_file = (feof(file) != 0);
+        const bool is_end_of_file = (feof(file) != 0);
 
         if (true == is_end_of_file)
         {
             break;
         }
 
-        bool error_reading_file = (ferror(file) != 0);
+        const bool error_reading_file = (ferror(file) != 0);
 
         if (true == error_reading_file)
         {
             (void)fprintf(stderr, "Error reading binary file.\n");
         }
 
-        error = bal_engine_translate(&engine, &interface, &buffer, BUFFER_SIZE);
+        bal_guest_address_t guest_address_cursor = entry_point;
 
-        if (error != BAL_SUCCESS)
+        while (guest_address_cursor < entry_point + bytes_read)
         {
-            (void)fprintf(stderr, "bal_engine_translate() failed.\n");
-            return EXIT_FAILURE;
-        }
+            error = bal_engine_translate(&engine, &interface, &guest_address_cursor, BUFFER_SIZE);
 
-        bal_engine_reset(&engine);
+            if (error != BAL_SUCCESS)
+            {
+                (void)fprintf(stderr, "bal_engine_translate() failed.\n");
+                return EXIT_FAILURE;
+            }
+
+            bal_engine_reset(&engine);
+        }
     }
 
     return EXIT_SUCCESS;
