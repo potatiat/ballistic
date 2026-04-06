@@ -354,7 +354,10 @@ intern_constant(bal_translation_context_t *BAL_RESTRICT context, const bal_const
 
     if (BAL_UNLIKELY(index >= context->constants_size))
     {
-        BAL_LOG_ERROR(context->logger, "Constant pool overflow.");
+        BAL_LOG_ERROR(context->logger,
+                      "Constant Pool Overflow at index %u (Max %u)",
+                      index,
+                      context->constants_size);
         context->status = BAL_ERROR_INSTRUCTION_OVERFLOW;
         return 0;
     }
