@@ -1,6 +1,7 @@
 #include "bal_memory.h"
 #include <assert.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 static void                  *default_allocate(bal_allocator_handle_t, size_t, size_t);
@@ -173,17 +174,23 @@ bal_flat_translation_interface_translate(void *BAL_RESTRICT   interface,
         return NULL;
     }
 
-    flat_translation_interface_t *BAL_RESTRICT context
+    const flat_translation_interface_t *BAL_RESTRICT context
         = ((bal_memory_interface_t *)interface)->context;
+
+    if (NULL == context)
+    {
+        fprintf(stderr, "Casting memory interface returned NULL\n");
+        return NULL;
+    }
 
     // Is address out of bounds.
     //
     if (guest_address >= context->size)
     {
         BAL_LOG_ERROR(&context->logger,
-                      "GVA 0x%llx Out of bounds (Limit: 0x%zx)",
+                      "GVA 0x%llX Out of bounds (Limit: 0x%llX)",
                       (unsigned long long)guest_address,
-                      context->size);
+                      (unsigned long long)context->size);
         return NULL;
     }
 
