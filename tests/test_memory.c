@@ -52,13 +52,12 @@ test_teardown(test_context_t *context)
 // -----------------------------------------------------------------------------
 
 static int test_memory__default_allocate__invalid_size_returns_nullptr(test_context_t *context);
-static int test_memory__default_flat_translation_init__success(test_context_t *context);
-static int test_memory__default_flat_translation_init__invalid_arguments_returns_error(
+static int test_memory__flat_translation_init__success(test_context_t *context);
+static int test_memory__flat_translation_init__invalid_arguments_returns_error(
     test_context_t *context);
-static int
-tests_memory__default_flat_translation_interface_init__failed_interface_allocation_returns_error(
+static int test_memory__flat_translation_interface_init__failed_interface_allocation_returns_error(
     test_context_t *context);
-static int tests_memory__default_flat_translation_interface_destroy__invalid_argument_returns_error(
+static int tests_memory__flat_translation_interface_destroy__invalid_argument_returns_error(
     test_context_t *context);
 static int test_memory__flat_translation_interface_translate__invalid_arguments_returns_error(
     test_context_t *);
@@ -75,12 +74,12 @@ main(void)
     test_context_t context      = { 0 };
     int            return_value = EXIT_SUCCESS;
     BAL_TEST_FUNCTION(test_memory__default_allocate__invalid_size_returns_nullptr);
-    BAL_TEST_FUNCTION(test_memory__default_flat_translation_init__success);
-    BAL_TEST_FUNCTION(test_memory__default_flat_translation_init__invalid_arguments_returns_error);
+    BAL_TEST_FUNCTION(test_memory__flat_translation_init__success);
+    BAL_TEST_FUNCTION(test_memory__flat_translation_init__invalid_arguments_returns_error);
     BAL_TEST_FUNCTION(
-        tests_memory__default_flat_translation_interface_init__failed_interface_allocation_returns_error);
+        test_memory__flat_translation_interface_init__failed_interface_allocation_returns_error);
     BAL_TEST_FUNCTION(
-        tests_memory__default_flat_translation_interface_destroy__invalid_argument_returns_error);
+        tests_memory__flat_translation_interface_destroy__invalid_argument_returns_error);
     BAL_TEST_FUNCTION(
         test_memory__flat_translation_interface_translate__invalid_arguments_returns_error);
     BAL_TEST_FUNCTION(
@@ -110,7 +109,7 @@ test_memory__default_allocate__invalid_size_returns_nullptr(test_context_t *cont
 }
 
 static int
-test_memory__default_flat_translation_init__success(test_context_t *context)
+test_memory__flat_translation_init__success(test_context_t *context)
 {
     const size_t memory_alignment = 16U;
     context->code_buffer          = context->allocator.allocate(
@@ -141,7 +140,7 @@ test_memory__default_flat_translation_init__success(test_context_t *context)
 }
 
 static int
-test_memory__default_flat_translation_init__invalid_arguments_returns_error(test_context_t *context)
+test_memory__flat_translation_init__invalid_arguments_returns_error(test_context_t *context)
 {
     int return_code = EXIT_SUCCESS;
     for (int i = 0; i < 1; ++i)
@@ -248,7 +247,7 @@ test_memory__default_flat_translation_init__invalid_arguments_returns_error(test
 }
 
 static int
-tests_memory__default_flat_translation_interface_init__failed_interface_allocation_returns_error(
+test_memory__flat_translation_interface_init__failed_interface_allocation_returns_error(
     test_context_t *context)
 {
     int          return_code = EXIT_SUCCESS;
@@ -274,7 +273,7 @@ tests_memory__default_flat_translation_interface_init__failed_interface_allocati
 }
 
 static int
-tests_memory__default_flat_translation_interface_destroy__invalid_argument_returns_error(
+tests_memory__flat_translation_interface_destroy__invalid_argument_returns_error(
     test_context_t *context)
 {
     int return_code = EXIT_SUCCESS;
