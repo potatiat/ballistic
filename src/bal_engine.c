@@ -342,12 +342,26 @@ extract_operand_value(const uint32_t instruction, const bal_decoder_operand_t *o
     return bits;
 }
 
+// If `constant` exists in the constants array return its index, if not, add it and then return
+// its index
 BAL_HOT static uint32_t
 intern_constant(bal_translation_context_t *BAL_RESTRICT context, const bal_constant_t constant)
 {
     if (BAL_UNLIKELY(context->status != BAL_SUCCESS))
     {
         return 0;
+    }
+
+    // This can be upgraded to a hash map later on if it causes performance loss.
+    //
+    for (uint32_t i = 0; i < context->constant_count; ++i)
+    {
+        if (context->constants[i] == constant)
+        {
+            BAL_LOG_TRACE(
+                context->logger, "  0X%016llX -> Pool Index %u", (unsigned long long)constant, i);
+            return i | BAL_IS_CONSTANT_BIT_POSITION;
+        }
     }
 
     const uint32_t index = context->constant_count;
