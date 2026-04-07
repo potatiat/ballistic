@@ -412,7 +412,7 @@ get_or_create_ssa_index(bal_translation_context_t *context, const uint64_t regis
     context->source_variables[register_index].current_ssa_index = ssa_index;
 
     BAL_LOG_DEBUG(context->logger,
-                  "  EMIT: v%lu = GET_REGISTER X%lu",
+                  "  EMIT: v%u = GET_REGISTER X%u",
                   context->instruction_count,
                   register_index);
 
@@ -476,7 +476,7 @@ translate_const(bal_translation_context_t                *context,
         {
             old_ssa_with_flag = get_or_create_ssa_index(context, rd);
             old_ssa           = old_ssa_with_flag & ~BAL_IS_CONSTANT_BIT_POSITION;
-            BAL_LOG_TRACE(context->logger, "  MOVK Source: Reg X%lu -> SSA v%lu", rd, old_ssa);
+            BAL_LOG_TRACE(context->logger, "  MOVK Source: Reg X%u -> SSA v%u", rd, old_ssa);
         }
 
         const uint64_t clear_mask = (~(0xFFFFULL << shift)) & mask;
@@ -492,7 +492,7 @@ translate_const(bal_translation_context_t                *context,
                                           | mask_index << BAL_SOURCE2_SHIFT_POSITION;
 
         BAL_LOG_DEBUG(context->logger,
-                      "  EMIT: v%lu = AND v%lu, c%lu (Mask: 0x%llX)",
+                      "  EMIT: v%u = AND v%u, c%u (Mask: 0x%llX)",
                       context->instruction_count,
                       old_ssa,
                       mask_index & ~BAL_IS_CONSTANT_BIT_POSITION,
@@ -522,7 +522,7 @@ translate_const(bal_translation_context_t                *context,
                                                 << BAL_SOURCE2_SHIFT_POSITION;
 
         BAL_LOG_DEBUG(context->logger,
-                      "  EMIT: v%lu = ADD v%lu, c%lu (Val: 0x%llX)",
+                      "  EMIT: v%u = ADD v%u, c%u (Val: 0x%llX)",
                       context->instruction_count,
                       cleared_ssa,
                       value_index & ~BAL_IS_CONSTANT_BIT_POSITION,
@@ -542,7 +542,7 @@ translate_const(bal_translation_context_t                *context,
               | (bal_instruction_t)constant_index << BAL_SOURCE1_SHIFT_POSITION;
 
         BAL_LOG_DEBUG(context->logger,
-                      "  EMIT: v%lu = CONST %lu (0x%llX)",
+                      "  EMIT: v%u = CONST %u (0x%llX)",
                       context->instruction_count,
                       constant_index & ~BAL_IS_CONSTANT_BIT_POSITION,
                       value);
@@ -554,7 +554,7 @@ translate_const(bal_translation_context_t                *context,
     {
         context->source_variables[rd].current_ssa_index = context->instruction_count;
         BAL_LOG_TRACE(
-            (context)->logger, "  SSA UPDATE: X%lu -> v%lu", rd, context->instruction_count);
+            (context)->logger, "  SSA UPDATE: X%u -> v%u", rd, context->instruction_count);
     }
     else
     {
@@ -572,6 +572,6 @@ translate_return(bal_translation_context_t *context, const uint32_t *arm_registe
     *context->ir_instruction_cursor = (bal_instruction_t)OPCODE_RETURN << BAL_OPCODE_SHIFT_POSITION
                                       | rn_ssa_index << BAL_SOURCE1_SHIFT_POSITION;
     BAL_LOG_DEBUG(
-        context->logger, "   EMIT: v%u = RET v%lu", context->instruction_count, rn_ssa_index);
+        context->logger, "   EMIT: v%u = RET v%u", context->instruction_count, rn_ssa_index);
     context->instruction_count++;
 }
