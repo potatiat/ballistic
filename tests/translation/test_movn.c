@@ -82,6 +82,13 @@ end:
     return return_code;
 }
 
-BAL_TEST_MAIN(test_movn)
+int
+main(void)
+{
+    test_context_t context      = { 0 };
+    int            return_value = 0;
+    BAL_TEST_FUNCTION(test_movn);
+    return return_value;
+}
 
 /*** end of file ***/

@@ -1,5 +1,6 @@
 #include "bal_logging.h"
 #include "bal_memory.h"
+#include <stdio.h>
 #include <stdlib.h>
 
 // -----------------------------------------------------------------------------
@@ -33,18 +34,20 @@ test_teardown(test_context_t *context)
         context->allocator.handle, context->code_buffer, TEST_BUFFER_SIZE_BYTES);
 }
 
-#define BAL_TEST_FUNCTION(test_function_name)          \
-    do                                                 \
-    {                                                  \
-        test_setup(&context);                          \
-        return_value = (test_function_name(&context)); \
-        test_teardown(&context);                       \
-        context.code_buffer = NULL;                    \
-                                                       \
-        if (return_value != EXIT_SUCCESS)              \
-        {                                              \
-            return return_value;                       \
-        }                                              \
+#define BAL_TEST_FUNCTION(test_function_name)                               \
+    do                                                                      \
+    {                                                                       \
+        fprintf(stderr, "\n-------------------------------------------\n"); \
+        fprintf(stderr, "Starting %s()...\n", #test_function_name);         \
+        test_setup(&context);                                               \
+        return_value = (test_function_name(&context));                      \
+        test_teardown(&context);                                            \
+        context.code_buffer = NULL;                                         \
+                                                                            \
+        if (return_value != EXIT_SUCCESS)                                   \
+        {                                                                   \
+            return return_value;                                            \
+        }                                                                   \
     } while (0)
 
 // -----------------------------------------------------------------------------
