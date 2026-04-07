@@ -36,6 +36,7 @@ static uint32_t intern_constant(bal_translation_context_t *, bal_constant_t);
 static void     translate_const(bal_translation_context_t *,
                                 const bal_decoder_instruction_metadata_t *,
                                 const uint32_t *);
+static void     translate_return(bal_translation_context_t *, const uint32_t *);
 BAL_COLD bal_error_t
 bal_engine_init(const bal_allocator_t *allocator, bal_engine_t *engine, bal_logger_t logger)
 {
@@ -262,8 +263,9 @@ bal_engine_translate(bal_engine_t *BAL_RESTRICT                 engine,
                     translate_const(&context, metadata, arm_instruction_operands);
                     break;
                 case OPCODE_RETURN:
-                    // TODO: This only terminates the loop early. Add proper IR translation.
-                    goto end;
+                    translate_return(&context, arm_instruction_operands);
+                    is_block_terminated = true;
+                    break;
                 default:
                     BAL_LOG_DEBUG(context.logger,
                                   "  SKIPPED: Opcode %s not implemented in IR layer.",
@@ -278,6 +280,11 @@ bal_engine_translate(bal_engine_t *BAL_RESTRICT                 engine,
                 break;
             }
 
+            if (true == is_block_terminated)
+            {
+                break;
+            }
+
             ++context.ir_instruction_cursor;
             ++context.bit_width_cursor;
             *guest_address_current += 4;
@@ -285,7 +292,6 @@ bal_engine_translate(bal_engine_t *BAL_RESTRICT                 engine,
         }
     }
 
-end:
     engine->instruction_count = context.instruction_count;
     engine->constant_count    = context.constant_count;
     engine->status            = context.status;
@@ -390,6 +396,8 @@ get_or_create_ssa_index(bal_translation_context_t *context, const uint64_t regis
 
     const uint32_t invalid_ssa_index = 0xFFFFFFFF;
 
+    // Checks if the ssa index is not initialized.
+    //
     if (ssa_index != invalid_ssa_index)
     {
         return ssa_index;
@@ -553,5 +561,17 @@ translate_const(bal_translation_context_t                *context,
         BAL_LOG_TRACE(context->logger, "    SSA NO-OP: Destination is XZR");
     }
 
+    context->instruction_count++;
+}
+
+BAL_HOT static void
+translate_return(bal_translation_context_t *context, const uint32_t *arm_registers)
+{
+    const uint64_t rn               = arm_registers[0];
+    const uint64_t rn_ssa_index     = get_or_create_ssa_index(context, rn);
+    *context->ir_instruction_cursor = (bal_instruction_t)OPCODE_RETURN << BAL_OPCODE_SHIFT_POSITION
+                                      | rn_ssa_index << BAL_SOURCE1_SHIFT_POSITION;
+    BAL_LOG_DEBUG(
+        context->logger, "   EMIT: v%u = RET v%lu", context->instruction_count, rn_ssa_index);
     context->instruction_count++;
 }
