@@ -37,7 +37,6 @@ bal_assembler_init(bal_assembler_t *assembler, void *buffer, const size_t size, 
 
 void
 bal_emit_add_immediate(bal_assembler_t           *assembler,
-                       const char                *mnemonic,
                        const bal_register_index_t rd,
                        const uint8_t              rn,
                        const uint16_t             imm12,
@@ -90,6 +89,7 @@ bal_emit_add_immediate(bal_assembler_t           *assembler,
     instruction |= rn_uint32 << 5;
     instruction |= rd;
 
+    const char *mnemonic = "ADD (Imm)";
     BAL_LOG_TRACE(&assembler->logger,
                   "[+0x%04zx] %08x %s X%u, #0x%04x, LSL #%u",
                   assembler->offset * sizeof(uint32_t),
