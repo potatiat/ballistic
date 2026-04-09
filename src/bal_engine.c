@@ -364,8 +364,7 @@ intern_constant(bal_translation_context_t *BAL_RESTRICT context, const bal_const
     {
         if (context->constants[i] == constant)
         {
-            BAL_LOG_TRACE(
-                context->logger, "  0X%016llX -> Pool Index %u", (unsigned long long)constant, i);
+            BAL_LOG_TRACE(context->logger, "  0X%016llX -> c%u", (unsigned long long)constant, i);
             return i | BAL_IS_CONSTANT_BIT_POSITION;
         }
     }
@@ -384,8 +383,7 @@ intern_constant(bal_translation_context_t *BAL_RESTRICT context, const bal_const
 
     context->constants[index] = constant;
     context->constant_count++;
-    BAL_LOG_TRACE(
-        context->logger, "  0X%016llX -> Pool Index %u", (unsigned long long)constant, index);
+    BAL_LOG_TRACE(context->logger, "  0X%016llX -> c%u", (unsigned long long)constant, index);
     return index | BAL_IS_CONSTANT_BIT_POSITION;
 }
 
@@ -415,6 +413,8 @@ get_or_create_ssa_index(bal_translation_context_t *context, const uint64_t regis
                   "  EMIT: v%u = GET_REGISTER X%u",
                   context->instruction_count,
                   register_index);
+    BAL_LOG_TRACE(
+        context->logger, "  SSA UPDATE: X%lu -> v%lu", register_index, context->instruction_count);
 
     context->instruction_count++;
     context->ir_instruction_cursor++;
