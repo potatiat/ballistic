@@ -12,7 +12,7 @@ project(Ballistic LANGUAGES C VERSION 0.4.0)
 
 # option(BALLISTIC_ENABLE_CPU_FEATURE_DETECTION "Makes Ballistic able to detect CPU features of the host" ON)
 option(BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION "Enables LTO for Ballistic (improves performance)" ON)
-option(BALLISTIC_ENABLE_BUILD_TESTS "Enables Ballistic tests" ON)
+option(BALLISTIC_BUILD_TESTS "Enables Ballistic tests" ON)
 
 # -----------------------------------------------------------------------------
 # Compile Ballistic
@@ -128,7 +128,7 @@ endif ()
 # -----------------------------------------------------------------------------
 # Compile Tests
 # -----------------------------------------------------------------------------
-if (BALLISTIC_ENABLE_BUILD_TESTS)
+if (BALLISTIC_BUILD_TESTS)
     enable_testing()
     set(MEMORY_TEST_NAME test_memory)
     add_executable(${MEMORY_TEST_NAME} tests/test_memory.c)
