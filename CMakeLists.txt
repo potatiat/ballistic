@@ -3,12 +3,15 @@ cmake_minimum_required(VERSION 3.25)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF) # Strict ISO C
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif ()
 
-project(Ballistic LANGUAGES C VERSION 0.4.0)
+project(Ballistic LANGUAGES C CXX VERSION 0.4.0)
 
 # option(BALLISTIC_ENABLE_CPU_FEATURE_DETECTION "Makes Ballistic able to detect CPU features of the host" ON)
 option(BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION "Enables LTO for Ballistic (improves performance)" ON)
@@ -129,6 +132,10 @@ endif ()
 # Compile Tests
 # -----------------------------------------------------------------------------
 if (BALLISTIC_BUILD_TESTS)
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+    add_subdirectory(extern/googletest-1.17.0)
+    target_compile_options(gtest PUBLIC -Wno-error -w)
+    include(GoogleTest)
     enable_testing()
     set(MEMORY_TEST_NAME test_memory)
     add_executable(${MEMORY_TEST_NAME} tests/test_memory.c)
