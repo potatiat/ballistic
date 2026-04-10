@@ -32,10 +32,12 @@ endif ()
 set(SCRIPT_GENERATE_DECODER_TABLE ${CMAKE_SOURCE_DIR}/tools/generate_a64_table.py)
 set(GENERATED_DECODER_TABLE_HEADER ${CMAKE_SOURCE_DIR}/src/bal_decoder_table_gen.h)
 set(GENERATED_DECODER_TABLE_SOURCE ${CMAKE_SOURCE_DIR}/src/bal_decoder_table_gen.c)
+set(ARM_SPECIFICATION_PATH ${CMAKE_SOURCE_DIR}/spec/arm64_xml)
+set(OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/src/)
 
 add_custom_command(
         OUTPUT ${GENERATED_DECODER_TABLE_HEADER} ${GENERATED_DECODER_TABLE_SOURCE}
-        COMMAND Python3::Interpreter ${SCRIPT_GENERATE_DECODER_TABLE}
+        COMMAND Python3::Interpreter ${SCRIPT_GENERATE_DECODER_TABLE} --xml-directory ${ARM_SPECIFICATION_PATH} --output-directory ${OUTPUT_DIRECTORY}
         DEPENDS ${SCRIPT_GENERATE_DECODER_TABLE}
         COMMENT "Generating ARM64 Decoder Tables"
 )
