@@ -2,10 +2,10 @@
 
 #include "bal_attributes.h"
 #include "bal_decoder_table_gen.h"
+#include <gtest/gtest.h>
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #if defined(_MSC_VER)
