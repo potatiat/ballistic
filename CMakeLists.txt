@@ -38,10 +38,10 @@ add_custom_command(
 )
 
 if (MSVC)
-    add_compile_options(/W4 /WX)
+    set(BALLISTIC_COMPILER_OPTIONS_WINDOWS /W4 /WX)
     add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 else ()
-    add_compile_options(
+    set(BALLISTIC_COMPILER_OPTIONS_UNIX
             -Wall -Wextra -Werror
             -Wconversion -Wsign-conversion -Wshadow
             -Wstrict-prototypes -Wmissing-prototypes
@@ -79,6 +79,9 @@ endif ()
 if (WIN32)
     # Disable some Windows SDK deprecation warnings
     target_compile_options(Ballistic PRIVATE -DNOMINMAX -DWIN32_LEAN_AND_MEAN)
+    target_compile_options(Ballistic PRIVATE ${BALLISTIC_COMPILER_OPTIONS_WINDOWS})
+else ()
+    target_compile_options(Ballistic PRIVATE ${BALLISTIC_COMPILER_OPTIONS_UNIX})
 endif ()
 
 
@@ -106,9 +109,6 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     find_path(CLANG_INCLUDE_DIR NAMES clang-c/Index.h REQUIRED)
 
     add_executable(${CDOC_NAME} tools/cdoc.c)
-    target_compile_options(${CDOC_NAME} PRIVATE -Wno-missing-prototypes
-            -Wno-sign-conversion -Wno-int-conversion -Wno-unused-parameter
-            -Wno-implicit-function-declaration -Wno-shorten-64-to-32)
     target_include_directories(${CDOC_NAME} PRIVATE ${CLANG_INCLUDE_DIR}
             ${CMAKE_CURRENT_SOURCE_DIR}/extern/cmark/src
             ${CMAKE_CURRENT_BINARY_DIR}/extern/cmark/src/)
