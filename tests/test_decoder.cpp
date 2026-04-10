@@ -50,7 +50,7 @@ TEST(Arm64Decoder, DecodeFailsImmediately)
         }
     }
 
-    uint32_t                                  dummy_instruction = empty_bucket_index << 21;
+    const uint32_t                            dummy_instruction = empty_bucket_index << 21;
     const bal_decoder_instruction_metadata_t *metadata = bal_decode_arm64(dummy_instruction);
     ASSERT_EQ(metadata, nullptr);
 }
@@ -76,9 +76,9 @@ TEST(Arm64Decoder, HashTableIntegrity)
         // The last thread picks up any remaining buckets it doesn't divide perfectly.
         //
         uint32_t end_index
-            = (i == thread_count - 1) ? DECODER_HASH_TABLE_SIZE : start_index + chunk_size;
+            = i == thread_count - 1 ? DECODER_HASH_TABLE_SIZE : start_index + chunk_size;
 
-        threads.emplace_back([start_index, end_index, &total_collisions, &total_errors]() {
+        threads.emplace_back([start_index, end_index, &total_collisions, &total_errors] {
             for (uint32_t hash_index = start_index; hash_index < end_index; ++hash_index)
             {
                 const decoder_bucket_t *bucket = &g_decoder_lookup_table[hash_index];
@@ -92,14 +92,14 @@ TEST(Arm64Decoder, HashTableIntegrity)
                         << " items. Increase MAX_LOCAL_CANDIDATES.\n";
 
                     uint16_t bucket_index = bucket->index;
-                    for (size_t i = 0; i < bucket->count; ++i)
+                    for (size_t ii = 0; ii < bucket->count; ++ii)
                     {
                         const bal_decoder_instruction_metadata_t *metadata
                             = g_decoder_hash_candidates[bucket_index++];
-                        local_candidates[i].mask     = metadata->mask;
-                        local_candidates[i].expected = metadata->expected;
-                        local_candidates[i].priority = POPCOUNT(metadata->mask);
-                        local_candidates[i].metadata = metadata;
+                        local_candidates[ii].mask     = metadata->mask;
+                        local_candidates[ii].expected = metadata->expected;
+                        local_candidates[ii].priority = POPCOUNT(metadata->mask);
+                        local_candidates[ii].metadata = metadata;
                     }
 
                     candidate_count = bucket->count;

@@ -43,7 +43,6 @@ add_custom_command(
 )
 
 if (MSVC)
-    set(BALLISTIC_COMPILER_OPTIONS_WINDOWS /W4 /WX)
     add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 else ()
     set(BALLISTIC_COMPILER_OPTIONS_UNIX
@@ -84,7 +83,6 @@ endif ()
 if (WIN32)
     # Disable some Windows SDK deprecation warnings
     target_compile_options(Ballistic PRIVATE -DNOMINMAX -DWIN32_LEAN_AND_MEAN)
-    target_compile_options(Ballistic PRIVATE ${BALLISTIC_COMPILER_OPTIONS_WINDOWS})
 else ()
     target_compile_options(Ballistic PRIVATE ${BALLISTIC_COMPILER_OPTIONS_UNIX})
 endif ()
