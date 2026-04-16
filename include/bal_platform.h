@@ -1,6 +1,11 @@
 #ifndef BALLISTIC_PLATFORM_H
 #define BALLISTIC_PLATFORM_H
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif /* __cplusplus */
+
 #if defined(_WIN32) || defined(_WIN64)
 
 #define BAL_PLATFORM_WINDOWS 1
@@ -49,4 +54,10 @@
 
 #endif
 
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
 #endif /* BALLISTIC_PLATFORM_H */
+
+/*** end of file ***/

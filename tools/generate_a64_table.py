@@ -10,17 +10,17 @@ Generated ARM decoder table header file -> ../src/decoder_table_gen.h
 Generated ARM decoder table source file -> ../src/decoder_table_gen.c
 """
 
+import argparse
+import glob
 import io
 import os
 import re
 import sys
-import glob
-import argparse
 import xml.etree.ElementTree as ET
-from xml.etree.ElementTree import ElementTree
-from xml.etree.ElementTree import Element
 from dataclasses import dataclass
 from typing import List, Dict, Tuple, Optional
+from xml.etree.ElementTree import Element
+from xml.etree.ElementTree import ElementTree
 
 DEFAULT_DECODER_GENERATED_HEADER_NAME = "bal_decoder_table_gen.h"
 DEFAULT_DECODER_GENERATED_SOURCE_NAME = "bal_decoder_table_gen.c"
@@ -182,7 +182,7 @@ def derive_operand_type(text: str, hover: str) -> str:
     h = hover.lower()
     # Immediate checks
     if any(
-        k in h for k in ["immediate", "amount", "offset", "index", "label", "shift", "option"]
+            k in h for k in ["immediate", "amount", "offset", "index", "label", "shift", "option"]
     ) or t.startswith("#"):
         return "BAL_OPERAND_TYPE_IMMEDIATE"
 
@@ -227,9 +227,9 @@ def derive_operand_type(text: str, hover: str) -> str:
 
 
 def parse_operands(
-    asmtemplate: ET.Element,
-    field_map: Dict[str, Tuple[int, int]],
-    explanation_map: Dict[str, str],
+        asmtemplate: ET.Element,
+        field_map: Dict[str, Tuple[int, int]],
+        explanation_map: Dict[str, str],
 ) -> List[Operand]:
     """
     Parses `asmtemplate` to find operands and map them to bit fields.
@@ -265,8 +265,6 @@ def parse_operands(
 
             if operand_type == "BAL_OPERAND_TYPE_NONE":
                 continue
-
-
 
             operand: Operand = Operand(operand_type, bit_position, bit_width)
 
@@ -454,7 +452,7 @@ def derive_opcode(mnemonic: str) -> str:
 
 
 def generate_hash_table(
-    instructions: List[A64Instruction],
+        instructions: List[A64Instruction],
 ) -> Dict[int, List[A64Instruction]]:
     buckets: Dict[int, List[A64Instruction]] = {
         i: [] for i in range(DECODER_HASH_TABLE_SIZE)
@@ -569,9 +567,14 @@ if __name__ == "__main__":
     # -------------------------------------------------------------------------
     with open(output_header_path, "w", encoding="utf-8") as f:
         f.write(f"{GENERATED_FILE_WARNING}\n\n")
+        f.write("#ifndef BAL_DECODER_TABLE_GENERATED\n")
+        f.write("#define BAL_DECODER_TABLE_GENERATED\n\n")
         f.write(f'#include "{DECODER_HEADER_NAME}"\n')
         f.write("#include <stdint.h>\n")
-        f.write("#include <stddef.h>\n\n")
+        f.write("#ifdef __cplusplus\n")
+        f.write('extern "C"\n')
+        f.write("{\n")
+        f.write("#endif /* __cplusplus */\n\n")
         f.write(
             f"#define {DECODER_ARM64_INSTRUCTIONS_SIZE_NAME} {len(all_instructions)}\n\n"
         )
@@ -583,11 +586,16 @@ if __name__ == "__main__":
             f"extern const {DECODER_METADATA_STRUCT_NAME} {DECODER_ARM64_INSTRUCTIONS_ARRAY_NAME}[{DECODER_ARM64_INSTRUCTIONS_SIZE_NAME}];\n"
         )
         f.write(
-            f"extern const {DECODER_HASH_TABLE_BUCKET_STRUCT_NAME} g_decoder_lookup_table[{DECODER_HASH_TABLE_SIZE}];\n\n"
+            f"extern const {DECODER_HASH_TABLE_BUCKET_STRUCT_NAME} g_decoder_lookup_table[{DECODER_HASH_TABLE_SIZE}];\n"
         )
         f.write(
-                f"extern const {DECODER_METADATA_STRUCT_NAME} *const {DECODER_ARM64_CANDIDATES_ARRAY_NAME}[];\n\n"
+            f"extern const {DECODER_METADATA_STRUCT_NAME} *const {DECODER_ARM64_CANDIDATES_ARRAY_NAME}[];\n\n"
         )
+        f.write("#ifdef __cplusplus\n")
+        f.write("}\n")
+        f.write("#endif /* __cplusplus */\n")
+        f.write("#endif /* BAL_DECODER_TABLE_GENERATED */\n\n")
+        f.write("/*** end of file ***/\n\n")
     print(f"Generated ARM decoder table header file -> {output_header_path}")
 
     # -------------------------------------------------------------------------
@@ -605,7 +613,7 @@ if __name__ == "__main__":
     # (start_index, count)
     bucket_descriptors: List[Tuple[int, int]] = []
 
-    for i in range (DECODER_HASH_TABLE_SIZE):
+    for i in range(DECODER_HASH_TABLE_SIZE):
         candidate: List[A64Instruction] = buckets[i]
         count: int = len(candidate)
 
@@ -618,7 +626,7 @@ if __name__ == "__main__":
 
         if candidate_tuple in sequence_map:
             # Re-use existing sequence[candidate_tuple]
-            start_index: int  = sequence_map[candidate_tuple]
+            start_index: int = sequence_map[candidate_tuple]
         else:
             # Create new sequence
             start_index: int = len(flat_candidates)
@@ -630,7 +638,6 @@ if __name__ == "__main__":
             sys.exit(1)
 
         bucket_descriptors.append((start_index, count))
-
 
     if len(flat_candidates) >= 65535:
         printf("Total candidates {len(flat_candidates)} exceeds uint16_t limit.")

@@ -3,8 +3,17 @@
 
 #include <stddef.h>
 
-void bal_internal_assert_fail(
-    const char *file, int line, const char *func, const char *expr_str, const char *user_msg, ...);
+#ifdef __cplusplus
+extern "C"
+{
+#endif /* __cplusplus */
+
+    void bal_internal_assert_fail(const char *file,
+                                  int         line,
+                                  const char *func,
+                                  const char *expr_str,
+                                  const char *user_msg,
+                                  ...);
 
 #define BAL_ASSERT(expression)                                                               \
     do                                                                                       \
@@ -32,5 +41,9 @@ void bal_internal_assert_fail(
                              "BAL_UNREACHABLE()",         \
                              "Unreachable code executed", \
                              ##__VA_ARGS__);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif // BALLISTIC_COMMON_ASSERT_H

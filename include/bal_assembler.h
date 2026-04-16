@@ -28,143 +28,155 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/// This struct manages a linear buffer of 32-bit integers where ARM64 machine code is written.
-/// It tracks the current write position and handles boundary checking.
-typedef struct
+#ifdef __cplusplus
+extern "C"
 {
-    /// A pointer to the start of the code buffer.
-    uint32_t *buffer;
+#endif /* __cplusplus */
 
-    /// The maximum number of instructions that can fit in the buffer.
-    size_t capacity;
+    /// This struct manages a linear buffer of 32-bit integers where ARM64 machine code is written.
+    /// It tracks the current write position and handles boundary checking.
+    typedef struct
+    {
+        /// A pointer to the start of the code buffer.
+        uint32_t *buffer;
 
-    /// The current write index within the buffer.
-    size_t offset;
+        /// The maximum number of instructions that can fit in the buffer.
+        size_t capacity;
 
-    /// The logging context used to report details and errors.
-    bal_logger_t logger;
+        /// The current write index within the buffer.
+        size_t offset;
 
-    /// The current error state of the assembler.
+        /// The logging context used to report details and errors.
+        bal_logger_t logger;
+
+        /// The current error state of the assembler.
+        ///
+        /// Once this is set to anything other than [`BAL_SUCCESS`], all subsequent emit calls will
+        /// be ignored until the assembler is reset.
+        bal_error_t status;
+    } bal_assembler_t;
+
+    /// Initializes the assembler with a specific memory buffer and the size of the buffer in
+    /// `uint32_t` elements.
     ///
-    /// Once this is set to anything other than [`BAL_SUCCESS`], all subsequent emit calls will be
-    /// ignored until the assembler is reset.
-    bal_error_t status;
-} bal_assembler_t;
+    /// # Returns
+    ///
+    /// * [`BAL_SUCCESS`] on success.
+    /// * [`BAL_ERROR_INVALID_ARGUMENT`] if `assembler` or `buffer` is NULL.
+    /// * [`BAL_ERROR_MEMORY_ALIGNMENT`] if `buffer` is not 4-byte aligned.
+    bal_error_t bal_assembler_init(bal_assembler_t *assembler,
+                                   void            *buffer,
+                                   size_t           size,
+                                   bal_logger_t     logger);
 
-/// Initializes the assembler with a specific memory buffer and the size of the buffer in
-/// `uint32_t` elements.
-///
-/// # Returns
-///
-/// * [`BAL_SUCCESS`] on success.
-/// * [`BAL_ERROR_INVALID_ARGUMENT`] if `assembler` or `buffer` is NULL.
-/// * [`BAL_ERROR_MEMORY_ALIGNMENT`] if `buffer` is not 4-byte aligned.
-bal_error_t bal_assembler_init(bal_assembler_t *assembler,
-                               void            *buffer,
-                               size_t           size,
-                               bal_logger_t     logger);
+    /// Emit a `ADD` (Immediate) instruction.
+    ///
+    /// Adds a register value `rn` and 12 bit immediate value `imm12` with the optional left shift
+    /// `sh` to apply to the immediate, and writes the result to the destination register `rd`.
+    ///
+    /// # Safety
+    ///
+    /// * `rn` will be truncated if it exceeds 5 bits.
+    /// * `imm12` will be truncated if it exceeds 12 bits.
+    /// * `sh` must have the value `0`, or `1`
+    /// * Function does not emit instructions if `assembler->status != BALL_SUCCESS`.
+    ///
+    /// # Errors
+    ///
+    /// Modifies `assembler->status` to the following if an error occurs:
+    ///
+    /// * [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if `assembler->offset >= assembler->capacity`.
+    /// * [`BAL_ERROR_INVALID_ARGUMENT`] if function arguments are invalid.
+    void bal_emit_add_immediate(bal_assembler_t     *assembler,
+                                bal_register_index_t rd,
+                                uint8_t              rn,
+                                uint16_t             imm12,
+                                uint8_t              shift);
 
-/// Emit a `ADD` (Immediate) instruction.
-///
-/// Adds a register value `rn` and 12 bit immediate value `imm12` with the optional left shift `sh`
-/// to apply to the immediate, and writes the result to the destination register `rd`.
-///
-/// # Safety
-///
-/// * `rn` will be truncated if it exceeds 5 bits.
-/// * `imm12` will be truncated if it exceeds 12 bits.
-/// * `sh` must have the value `0`, or `1`
-/// * Function does not emit instructions if `assembler->status != BALL_SUCCESS`.
-///
-/// # Errors
-///
-/// Modifies `assembler->status` to the following if an error occurs:
-///
-/// * [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if `assembler->offset >= assembler->capacity`.
-/// * [`BAL_ERROR_INVALID_ARGUMENT`] if function arguments are invalid.
-void bal_emit_add_immediate(
-    bal_assembler_t *assembler, bal_register_index_t rd, uint8_t rn, uint16_t imm12, uint8_t shift);
+    /// Emit a `MOVZ` (Move Wide with Zero) instruction.
+    ///
+    /// Moves a 16-bit immediate into a register, shifting it left by 0, 16, 32, or 48 bits, and
+    /// the rest of the register to zero.
+    ///
+    /// # Safety
+    ///
+    /// * `shift` must be 0, 16, 32, or 48.
+    /// * Does not emit if `assembler->status != BAL_SUCCESS`.
+    ///
+    /// # Errors
+    ///
+    /// Modifies `assembler->status` to the following if an error occurs:
+    ///
+    /// * [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if `assembler->offset >= assembler->capacity`.
+    /// * [`BAL_ERROR_INVALID_ARGUMENT`] if function arguments are invalid.
+    void bal_emit_movz(bal_assembler_t     *assembler,
+                       bal_register_index_t rd,
+                       uint16_t             imm,
+                       uint8_t              shift);
 
-/// Emit a `MOVZ` (Move Wide with Zero) instruction.
-///
-/// Moves a 16-bit immediate into a register, shifting it left by 0, 16, 32, or 48 bits, and
-/// the rest of the register to zero.
-///
-/// # Safety
-///
-/// * `shift` must be 0, 16, 32, or 48.
-/// * Does not emit if `assembler->status != BAL_SUCCESS`.
-///
-/// # Errors
-///
-/// Modifies `assembler->status` to the following if an error occurs:
-///
-/// * [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if `assembler->offset >= assembler->capacity`.
-/// * [`BAL_ERROR_INVALID_ARGUMENT`] if function arguments are invalid.
-void bal_emit_movz(bal_assembler_t     *assembler,
-                   bal_register_index_t rd,
-                   uint16_t             imm,
-                   uint8_t              shift);
+    /// Emits a `MOVK` (Move Wide with Keep) instruction.
+    ///
+    /// Moves a 16-bit immediate into a specific 16-bit field of a register, leaving the other bits
+    /// unchanged.
+    ///
+    /// # Safety
+    ///
+    /// * `shift` must be 0, 16, 32, or 48.
+    /// * Does not emit if `assembler->status != BAL_SUCCESS`.
+    ///
+    /// # Errors
+    ///
+    /// Modifies `assembler->status` to the following if an error occurs:
+    ///
+    /// * [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if `assembler->offset >= assembler->capacity`.
+    /// * [`BAL_ERROR_INVALID_ARGUMENT`] if function arguments are invalid.
+    void bal_emit_movk(bal_assembler_t     *assembler,
+                       bal_register_index_t rd,
+                       uint16_t             imm,
+                       uint8_t              shift);
 
-/// Emits a `MOVK` (Move Wide with Keep) instruction.
-///
-/// Moves a 16-bit immediate into a specific 16-bit field of a register, leaving the other bits
-/// unchanged.
-///
-/// # Safety
-///
-/// * `shift` must be 0, 16, 32, or 48.
-/// * Does not emit if `assembler->status != BAL_SUCCESS`.
-///
-/// # Errors
-///
-/// Modifies `assembler->status` to the following if an error occurs:
-///
-/// * [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if `assembler->offset >= assembler->capacity`.
-/// * [`BAL_ERROR_INVALID_ARGUMENT`] if function arguments are invalid.
-void bal_emit_movk(bal_assembler_t     *assembler,
-                   bal_register_index_t rd,
-                   uint16_t             imm,
-                   uint8_t              shift);
+    /// Emits a `MOVN` (Move Wide with Not) instruction.
+    ///
+    /// Moves the bitwise inverse of a 16-bit immediate (shifted left) into a register, setting all
+    /// other bits to 1.
+    ///
+    /// # Safety
+    ///
+    /// * `shift` must be 0, 16, 32, or 48.
+    /// * Does not emit if `assembler->status != BAL_SUCCESS`.
+    ///
+    /// # Errors
+    ///
+    /// Modifies `assembler->status` to the following if an error occurs:
+    ///
+    /// * [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if `assembler->offset >= assembler->capacity`.
+    /// * [`BAL_ERROR_INVALID_ARGUMENT`] if function arguments are invalid.
+    void bal_emit_movn(bal_assembler_t     *assembler,
+                       bal_register_index_t rd,
+                       uint16_t             imm,
+                       uint8_t              shift);
 
-/// Emits a `MOVN` (Move Wide with Not) instruction.
-///
-/// Moves the bitwise inverse of a 16-bit immediate (shifted left) into a register, setting all
-/// other bits to 1.
-///
-/// # Safety
-///
-/// * `shift` must be 0, 16, 32, or 48.
-/// * Does not emit if `assembler->status != BAL_SUCCESS`.
-///
-/// # Errors
-///
-/// Modifies `assembler->status` to the following if an error occurs:
-///
-/// * [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if `assembler->offset >= assembler->capacity`.
-/// * [`BAL_ERROR_INVALID_ARGUMENT`] if function arguments are invalid.
-void bal_emit_movn(bal_assembler_t     *assembler,
-                   bal_register_index_t rd,
-                   uint16_t             imm,
-                   uint8_t              shift);
+    /// Emits a `RET` instruction.
+    ///
+    /// Returns from subroutine branches unconditionally to an address in a register with a hint
+    /// that this is a subroutine return.
+    ///
+    /// # Safety
+    ///
+    /// * `rn` must be between 0-31 inclusive.
+    /// * Does not emit if `assembler->status != BAL_SUCCESS`.
+    ///
+    /// # Errors
+    ///
+    /// Modifies `assembler->status` to the following if an error occurs:
+    ///
+    /// * [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if `assembler->offset >= assembler->capacity`.
+    /// * [`BAL_ERROR_INVALID_ARGUMENT`] if function arguments are invalid.
+    void bal_emit_ret(bal_assembler_t *assembler, bal_register_index_t rn);
 
-/// Emits a `RET` instruction.
-///
-/// Returns from subroutine branches unconditionally to an address in a register with a hint that
-/// this is a subroutine return.
-///
-/// # Safety
-///
-/// * `rn` must be between 0-31 inclusive.
-/// * Does not emit if `assembler->status != BAL_SUCCESS`.
-///
-/// # Errors
-///
-/// Modifies `assembler->status` to the following if an error occurs:
-///
-/// * [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if `assembler->offset >= assembler->capacity`.
-/// * [`BAL_ERROR_INVALID_ARGUMENT`] if function arguments are invalid.
-void bal_emit_ret(bal_assembler_t *assembler, bal_register_index_t rn);
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* BALLISTIC_ASSEMBLER_H */
 

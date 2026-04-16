@@ -17,7 +17,7 @@
 #ifdef __cplusplus
 extern "C"
 {
-#endif
+#endif /* __cplusplus */
 
 #define BAL_OPERANDS_SIZE     5
 #define BAL_OPERAND_BIT_WIDTH 5
@@ -91,5 +91,5 @@ extern "C"
 
 #ifdef __cplusplus
 }
-#endif
+#endif /* __cplusplus */
 #endif // BAL_DECODER_H

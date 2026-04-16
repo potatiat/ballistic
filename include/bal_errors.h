@@ -8,32 +8,41 @@
 
 #include "bal_attributes.h"
 
-typedef enum
+#ifdef __cplusplus
+extern "C"
 {
-    // General Errors.
-    //
-    BAL_SUCCESS                 = 0,
-    BAL_ERROR_INVALID_ARGUMENT  = -1,
-    BAL_ERROR_ALLOCATION_FAILED = -2,
+#endif /* __cplusplus */
 
-    /// Guest code tried to execute an unaligned instruction.
-    BAL_ERROR_PC_ALIGNMENT     = -3,
-    BAL_ERROR_MEMORY_ALIGNMENT = -4,
+    typedef enum
+    {
+        // General Errors.
+        //
+        BAL_SUCCESS                 = 0,
+        BAL_ERROR_INVALID_ARGUMENT  = -1,
+        BAL_ERROR_ALLOCATION_FAILED = -2,
 
-    /// Ballistic tried to access memory it was not allowed to access.
-    BAL_ERROR_MEMORY_FAULT        = -5,
-    BAL_ERROR_UNKNOWN_INSTRUCTION = -6,
+        /// Guest code tried to execute an unaligned instruction.
+        BAL_ERROR_PC_ALIGNMENT     = -3,
+        BAL_ERROR_MEMORY_ALIGNMENT = -4,
 
-    // IR Errors.
-    //
-    BAL_ERROR_INSTRUCTION_OVERFLOW = -100,
+        /// Ballistic tried to access memory it was not allowed to access.
+        BAL_ERROR_MEMORY_FAULT        = -5,
+        BAL_ERROR_UNKNOWN_INSTRUCTION = -6,
 
-    /// The decoded register type does not match the expected type.
-    BAL_ERROR_INCORRECT_REGISTER_TYPE = -101,
-} bal_error_t;
+        // IR Errors.
+        //
+        BAL_ERROR_INSTRUCTION_OVERFLOW = -100,
 
-/// Converts the enum into a readable string for error handling.
-BAL_COLD const char *bal_error_to_string(bal_error_t error);
+        /// The decoded register type does not match the expected type.
+        BAL_ERROR_INCORRECT_REGISTER_TYPE = -101,
+    } bal_error_t;
+
+    /// Converts the enum into a readable string for error handling.
+    BAL_COLD const char *bal_error_to_string(bal_error_t error);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* BAL_ERRORS_H */
 

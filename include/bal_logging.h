@@ -58,69 +58,74 @@
 #include "bal_attributes.h"
 #include <stdarg.h>
 
-/// Defines the severity of a log message.
-typedef enum
+#ifdef __cplusplus
+extern "C"
 {
-    /// Logging is disabled.
-    BAL_LOG_LEVEL_NONE = -1,
+#endif /* __cplusplus */
 
-    /// Critical errors that likely result in immediate termination or undefined behaviour.
-    BAL_LOG_LEVEL_ERROR = 0,
+    /// Defines the severity of a log message.
+    typedef enum
+    {
+        /// Logging is disabled.
+        BAL_LOG_LEVEL_NONE = -1,
 
-    /// Non-critical issues that may result in degraded performance or functionality loss.
-    BAL_LOG_LEVEL_WARN = 1,
+        /// Critical errors that likely result in immediate termination or undefined behaviour.
+        BAL_LOG_LEVEL_ERROR = 0,
 
-    /// General operational events.
-    BAL_LOG_LEVEL_INFO = 2,
+        /// Non-critical issues that may result in degraded performance or functionality loss.
+        BAL_LOG_LEVEL_WARN = 1,
 
-    /// Information useful for debugging logic errors.
-    BAL_LOG_LEVEL_DEBUG = 3,
+        /// General operational events.
+        BAL_LOG_LEVEL_INFO = 2,
 
-    /// Extreme verbose output.
-    BAL_LOG_LEVEL_TRACE = 4,
-} bal_log_level_t;
+        /// Information useful for debugging logic errors.
+        BAL_LOG_LEVEL_DEBUG = 3,
 
-/// Metadata associated with a specific log event.
-typedef struct
-{
-    /// Source file where the log occurred.
-    const char *filename;
+        /// Extreme verbose output.
+        BAL_LOG_LEVEL_TRACE = 4,
+    } bal_log_level_t;
 
-    /// The function name where the log occurred.
-    const char *function;
+    /// Metadata associated with a specific log event.
+    typedef struct
+    {
+        /// Source file where the log occurred.
+        const char *filename;
 
-    /// The log level.
-    bal_log_level_t level;
+        /// The function name where the log occurred.
+        const char *function;
 
-    /// The line number where the log occurred
-    int line;
-} bal_log_data_t;
+        /// The log level.
+        bal_log_level_t level;
 
-/// A function pointer defining a custom logging backend.
-///
-/// Implementations of this function are responsible for formatting and persisting the  log
-/// message. The `user_data` pointer is passed through from the `bal_logger_t` context. The
-/// `bal_data` struct contains metadata about the event, while `format`, and `args` provide the
-/// standard printf-style message content.
-typedef void (*bal_log_function_t)(void           *user_data,
-                                   bal_log_data_t *bal_data,
-                                   const char     *format,
-                                   va_list         args);
+        /// The line number where the log occurred
+        int line;
+    } bal_log_data_t;
 
-/// The main logging context.
-typedef struct
-{
-    /// An opaque pointer passed to the log callback. This can be used to store file handles or
-    /// other context-specific data.
-    void *user_data;
+    /// A function pointer defining a custom logging backend.
+    ///
+    /// Implementations of this function are responsible for formatting and persisting the  log
+    /// message. The `user_data` pointer is passed through from the `bal_logger_t` context. The
+    /// `bal_data` struct contains metadata about the event, while `format`, and `args` provide the
+    /// standard printf-style message content.
+    typedef void (*bal_log_function_t)(void           *user_data,
+                                       bal_log_data_t *bal_data,
+                                       const char     *format,
+                                       va_list         args);
 
-    /// The callback invoked when a message needs to be logged. If this is `NULL`, logging is
-    /// disabled for this context.
-    bal_log_function_t log;
+    /// The main logging context.
+    typedef struct
+    {
+        /// An opaque pointer passed to the log callback. This can be used to store file handles or
+        /// other context-specific data.
+        void *user_data;
 
-    /// The minimum severity level required for a message to be processed.
-    bal_log_level_t min_level;
-} bal_logger_t;
+        /// The callback invoked when a message needs to be logged. If this is `NULL`, logging is
+        /// disabled for this context.
+        bal_log_function_t log;
+
+        /// The minimum severity level required for a message to be processed.
+        bal_log_level_t min_level;
+    } bal_logger_t;
 
 // Remove all log code if log level not defined.
 //
@@ -130,33 +135,34 @@ typedef struct
 
 #endif
 
-/// Dispatches a log message to the configured backend.
-///
-/// This is the entry point into the logging system. It invokes the callback defined in `logger`.
-///
-/// # Warning
-///
-/// Do not call this function directly. Use our logging macros like `BAL_LOG_INFO`.
-///
-/// # Safety
-///
-/// The `format` string must match the arguments provided in the variadic list, following standard
-/// `printf`.
+    /// Dispatches a log message to the configured backend.
+    ///
+    /// This is the entry point into the logging system. It invokes the callback defined in
+    /// `logger`.
+    ///
+    /// # Warning
+    ///
+    /// Do not call this function directly. Use our logging macros like `BAL_LOG_INFO`.
+    ///
+    /// # Safety
+    ///
+    /// The `format` string must match the arguments provided in the variadic list, following
+    /// standard `printf`.
 
-BAL_COLD void bal_log_message(const bal_logger_t *logger,
-                              bal_log_level_t     log_level,
-                              const char         *filename,
-                              const char         *function,
-                              int                 line,
-                              const char         *format,
-                              ...);
+    BAL_COLD void bal_log_message(const bal_logger_t *logger,
+                                  bal_log_level_t     log_level,
+                                  const char         *filename,
+                                  const char         *function,
+                                  int                 line,
+                                  const char         *format,
+                                  ...);
 
-/// Populates `logger` with Ballistic's default logging implementation.
-///
-/// # Safety
-///
-/// `logger` must NOT be `NULL`.
-BAL_COLD void bal_logger_init_default(bal_logger_t *logger);
+    /// Populates `logger` with Ballistic's default logging implementation.
+    ///
+    /// # Safety
+    ///
+    /// `logger` must NOT be `NULL`.
+    BAL_COLD void bal_logger_init_default(bal_logger_t *logger);
 
 #define BAL_LOG_ERROR(logger, format, ...)       \
     bal_log_message((logger),                    \
@@ -211,6 +217,10 @@ BAL_COLD void bal_logger_init_default(bal_logger_t *logger);
     {                                      \
     } while (0)
 #endif
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* BALLISTIC_LOGGING_H */
 

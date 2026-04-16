@@ -8,6 +8,11 @@
 
 #include "bal_platform.h"
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif /* __cplusplus */
+
 /// BAL_HOT()/BAL_COLD()
 /// Marks a function as hot or cold. Hot makes the compiler optimize it more
 /// aggressively. Cold marks the function as rarely executed.
@@ -76,6 +81,10 @@
 #define BAL_RESTRICT
 
 #endif
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* BALLISTIC_ATTRIBUTES_H */
 
