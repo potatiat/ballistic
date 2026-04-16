@@ -137,15 +137,14 @@ if (BALLISTIC_BUILD_TESTS)
     target_compile_options(gtest PUBLIC -Wno-error -w)
     include(GoogleTest)
     enable_testing()
-    set(MEMORY_TEST_NAME test_memory)
-    add_executable(${MEMORY_TEST_NAME} tests/test_memory.c)
-    target_link_libraries(${MEMORY_TEST_NAME} PRIVATE ${PROJECT_NAME})
+    set(MEMORY_TEST test_memory)
+    add_executable(${MEMORY_TEST} tests/test_memory.cpp)
+    target_include_directories(${MEMORY_TEST} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src extern/googletest-1.17.0/googletest/include)
+    target_link_libraries(${MEMORY_TEST} PRIVATE ${PROJECT_NAME} gtest gtest_main)
 
     if (NOT MSVC)
-        target_compile_options(${MEMORY_TEST_NAME} PRIVATE -Wall -Wextra -Werror)
+        target_compile_options(${MEMORY_TEST} PRIVATE -Wall -Wextra -Werror)
     endif ()
-
-    add_test(NAME ${MEMORY_TEST_NAME} COMMAND ${MEMORY_TEST_NAME} tests/test_memory.c)
 
     add_test(
             NAME doc_test
@@ -165,7 +164,7 @@ if (BALLISTIC_BUILD_TESTS)
         target_include_directories(${target_name} PRIVATE tests/translation)
 
         if (NOT MSVC)
-            target_compile_options(${MEMORY_TEST_NAME} PRIVATE -Wall -Wextra -Werror)
+            target_compile_options(${MEMORY_TEST} PRIVATE -Wall -Wextra -Werror)
         endif ()
 
         add_test(NAME ${target_name} COMMAND ${target_name})
@@ -177,8 +176,9 @@ if (BALLISTIC_BUILD_TESTS)
     target_link_libraries(${DECODER_NAME} PRIVATE ${PROJECT_NAME} gtest gtest_main)
 
     if (NOT MSVC)
-        target_compile_options(${MEMORY_TEST_NAME} PRIVATE -Wall -Wextra -Werror)
+        target_compile_options(${MEMORY_TEST} PRIVATE -Wall -Wextra -Werror)
     endif ()
 
     gtest_discover_tests(${DECODER_NAME})
+    gtest_discover_tests(${MEMORY_TEST})
 endif ()
