@@ -145,7 +145,14 @@ test_memory__flat_translation_init__success(test_context_t *context)
 static int
 test_memory__flat_translation_init__invalid_arguments_returns_error(test_context_t *context)
 {
-    int return_code = EXIT_SUCCESS;
+    int                    return_code             = EXIT_SUCCESS;
+    bal_memory_interface_t valid_interface         = { 0 };
+    const size_t           valid_memory_alignment  = 16;
+    const uint32_t         valid_buffer_size_bytes = TEST_BUFFER_SIZE_BYTES;
+    uint32_t              *valid_code_buffer       = context->allocator.allocate(
+        context->allocator.handle, valid_memory_alignment, valid_buffer_size_bytes);
+    uint32_t *invalid_code_buffer = NULL;
+
     for (int i = 0; i < 1; ++i)
     {
         bal_logger_t logger = { 0 };
@@ -154,18 +161,11 @@ test_memory__flat_translation_init__invalid_arguments_returns_error(test_context
         // Disable logging because Ballistic will output error logs (which is a good thing since
         // we're testing errors).
         //
-        logger.min_level = BAL_LOG_LEVEL_NONE;
-
-        bal_allocator_t       *valid_allocator         = &context->allocator;
-        bal_memory_interface_t valid_interface         = { 0 };
-        const size_t           valid_memory_alignment  = 16;
-        const uint32_t         valid_buffer_size_bytes = TEST_BUFFER_SIZE_BYTES;
-        uint32_t              *valid_code_buffer       = context->allocator.allocate(
-            context->allocator.handle, valid_memory_alignment, valid_buffer_size_bytes);
+        logger.min_level                 = BAL_LOG_LEVEL_NONE;
+        bal_allocator_t *valid_allocator = &context->allocator;
 
         bal_allocator_t        *invalid_allocator         = NULL;
         bal_memory_interface_t *invalid_interface         = NULL;
-        uint32_t               *invalid_code_buffer       = NULL;
         const uint32_t          invalid_buffer_size_bytes = 0;
 
         bal_error_t error = bal_flat_translation_interface_init(invalid_allocator,
@@ -237,14 +237,22 @@ test_memory__flat_translation_init__invalid_arguments_returns_error(test_context
                                                     invalid_code_buffer,
                                                     valid_buffer_size_bytes,
                                                     logger);
+        invalid_code_buffer -= 1;
 
         if (error != BAL_ERROR_MEMORY_ALIGNMENT)
         {
             BAL_LOG_ERROR(&logger, "Expected BAL_ERROR_MEMORY_ALIGNMENT");
+            context->allocator.free(
+                context->allocator.handle, invalid_code_buffer, valid_buffer_size_bytes);
             return_code = EXIT_FAILURE;
             break;
         }
+
+        context->allocator.free(
+            context->allocator.handle, invalid_code_buffer, valid_buffer_size_bytes);
     }
+
+    context->allocator.free(context->allocator.handle, valid_code_buffer, valid_buffer_size_bytes);
 
     return return_code;
 }
@@ -312,10 +320,13 @@ static int
 test_memory__flat_translation_interface_translate__invalid_arguments_returns_error(
     test_context_t *context)
 {
-    int return_code = EXIT_SUCCESS;
+    int          return_code      = EXIT_SUCCESS;
+    const size_t memory_alignment = 16;
+    context->code_buffer          = context->allocator.allocate(
+        context->allocator.handle, memory_alignment, TEST_BUFFER_SIZE);
     bal_flat_translation_interface_init(&context->allocator,
                                         &context->interface,
-                                        &context->code_buffer,
+                                        context->code_buffer,
                                         TEST_BUFFER_SIZE,
                                         context->logger);
 
@@ -357,10 +368,13 @@ static int
 test_memory__flat_translation_interface_translate__returns_valid_pointer_within_bounds(
     test_context_t *context)
 {
-    int return_code = EXIT_SUCCESS;
+    int          return_code      = EXIT_SUCCESS;
+    const size_t memory_alignment = 16;
+    context->code_buffer          = context->allocator.allocate(
+        context->allocator.handle, memory_alignment, TEST_BUFFER_SIZE);
     bal_flat_translation_interface_init(&context->allocator,
                                         &context->interface,
-                                        &context->code_buffer,
+                                        context->code_buffer,
                                         TEST_BUFFER_SIZE,
                                         context->logger);
     const bal_guest_address_t valid_gvas[4]           = { 0x0, 0xF, 0x100, 0xFFC };
@@ -388,10 +402,13 @@ test_memory__flat_translation_interface_translate__returns_valid_pointer_within_
 static int
 test_memory__flat_translation_interface__out_of_bounds_returns_null(test_context_t *context)
 {
-    int return_code = EXIT_SUCCESS;
+    int          return_code      = EXIT_SUCCESS;
+    const size_t memory_alignment = 16;
+    context->code_buffer          = context->allocator.allocate(
+        context->allocator.handle, memory_alignment, TEST_BUFFER_SIZE);
     bal_flat_translation_interface_init(&context->allocator,
                                         &context->interface,
-                                        &context->code_buffer,
+                                        context->code_buffer,
                                         TEST_BUFFER_SIZE,
                                         context->logger);
     const bal_guest_address_t invalid_gvas[3]
@@ -420,10 +437,13 @@ static int
 test_memory__flat_translation_interface__unaligned_guest_address_returns_correct_offset(
     test_context_t *context)
 {
-    int return_code = EXIT_SUCCESS;
+    int          return_code      = EXIT_SUCCESS;
+    const size_t memory_alignment = 16;
+    context->code_buffer          = context->allocator.allocate(
+        context->allocator.handle, memory_alignment, TEST_BUFFER_SIZE);
     bal_flat_translation_interface_init(&context->allocator,
                                         &context->interface,
-                                        &context->code_buffer,
+                                        context->code_buffer,
                                         TEST_BUFFER_SIZE,
                                         context->logger);
     const bal_guest_address_t valid_gvas[3]           = { 0x1, 0x2, 0x3 };
@@ -433,7 +453,7 @@ test_memory__flat_translation_interface__unaligned_guest_address_returns_correct
     {
         const uint8_t *host_address = context->interface.translate(
             &context->interface, valid_gvas[i], &max_readable_size_bytes);
-        const uint8_t *expected_host_address = (uint8_t *)&context->code_buffer + valid_gvas[i];
+        const uint8_t *expected_host_address = (uint8_t *)context->code_buffer + valid_gvas[i];
 
         if (host_address != expected_host_address)
         {
