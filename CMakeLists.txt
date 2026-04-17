@@ -156,18 +156,18 @@ if (BALLISTIC_BUILD_TESTS)
             --includes ${CMAKE_CURRENT_SOURCE_DIR}/include
     )
 
-    set(TRANSLATION_TESTS ret movz movn movk)
+    set(TRANSLATION_TESTS movk)
     foreach (test_name ${TRANSLATION_TESTS})
         set(target_name "test_${test_name}")
-        add_executable(${target_name} "tests/translation/${target_name}.c")
-        target_link_libraries(${target_name} PRIVATE Ballistic)
+        add_executable(${target_name} "tests/translation/${target_name}.cpp")
+        target_link_libraries(${target_name} PRIVATE Ballistic gtest gtest_main)
         target_include_directories(${target_name} PRIVATE tests/translation)
 
         if (NOT MSVC)
             target_compile_options(${MEMORY_TEST} PRIVATE -Wall -Wextra -Werror)
         endif ()
 
-        add_test(NAME ${target_name} COMMAND ${target_name})
+        gtest_discover_tests(${target_name})
     endforeach ()
 
     set(DECODER_NAME test_decoder)

@@ -26,9 +26,9 @@ test_setup(test_context_t *context)
     bal_logger_init_default(&context->logger);
     context->logger.min_level = BAL_LOG_LEVEL_TRACE;
 
-    const size_t memory_alignment = 16;
-    context->code_buffer          = context->allocator.allocate(
-        context->allocator.handle, memory_alignment, TEST_BUFFER_SIZE * sizeof(uint32_t));
+    constexpr size_t memory_alignment = 16;
+    context->code_buffer              = static_cast<uint32_t *>(context->allocator.allocate(
+        context->allocator.handle, memory_alignment, TEST_BUFFER_SIZE * sizeof(uint32_t)));
     bal_flat_translation_interface_init(&context->allocator,
                                         &context->interface,
                                         context->code_buffer,
