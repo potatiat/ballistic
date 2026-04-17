@@ -156,7 +156,7 @@ if (BALLISTIC_BUILD_TESTS)
             --includes ${CMAKE_CURRENT_SOURCE_DIR}/include
     )
 
-    set(TRANSLATION_TESTS movk)
+    set(TRANSLATION_TESTS movk movn)
     foreach (test_name ${TRANSLATION_TESTS})
         set(target_name "test_${test_name}")
         add_executable(${target_name} "tests/translation/${target_name}.cpp")
