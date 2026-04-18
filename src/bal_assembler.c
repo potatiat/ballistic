@@ -21,7 +21,7 @@ bal_assembler_init(bal_assembler_t *assembler, void *buffer, const size_t size, 
 
     if ((uintptr_t)buffer % 4 != 0)
     {
-        BAL_LOG_ERROR(&logger, "Buffer %p is not 4-byte aligned.");
+        BAL_LOG_ERROR(&logger, "Buffer %p is not 4-byte aligned.", buffer);
         return BAL_ERROR_MEMORY_ALIGNMENT;
     }
 
