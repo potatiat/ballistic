@@ -16,6 +16,7 @@ bal_assembler_init(bal_assembler_t *assembler, void *buffer, const size_t size, 
     if (NULL == buffer)
     {
         BAL_LOG_ERROR(&logger, "Buffer is NULL.");
+        return BAL_ERROR_INVALID_ARGUMENT;
     }
 
     if ((uintptr_t)buffer % 4 != 0)
