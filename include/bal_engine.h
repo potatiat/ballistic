@@ -140,7 +140,7 @@ BAL_COLD bal_error_t bal_engine_init(const bal_allocator_t *allocator,
 ///
 /// # Safety
 ///
-/// If `guest_address_staart` is `NULL`, we assume the entry point is 0x0.
+/// `guest_address_start` must be non-NULL.
 ///
 /// # Errors
 ///
