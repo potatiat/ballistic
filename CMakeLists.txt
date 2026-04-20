@@ -137,6 +137,7 @@ if (BALLISTIC_BUILD_TESTS)
     target_compile_options(gtest PUBLIC -Wno-error -w)
     include(GoogleTest)
     enable_testing()
+
     set(MEMORY_TEST test_memory)
     add_executable(${MEMORY_TEST} tests/test_memory.cpp)
     target_include_directories(${MEMORY_TEST} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src extern/googletest-1.17.0/googletest/include)
@@ -146,15 +147,17 @@ if (BALLISTIC_BUILD_TESTS)
         target_compile_options(${MEMORY_TEST} PRIVATE -Wall -Wextra -Werror)
     endif ()
 
-    add_test(
-            NAME doc_test
-            COMMAND Python3::Interpreter ${CMAKE_SOURCE_DIR}/tools/doctest.py
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/bal_logging.h
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/bal_assembler.h
-            --sources ${CMAKE_CURRENT_SOURCE_DIR}/src/bal_logging.c
-            ${CMAKE_CURRENT_SOURCE_DIR}/src/bal_assembler.c
-            --includes ${CMAKE_CURRENT_SOURCE_DIR}/include
-    )
+    set(DECODER_TEST test_decoder)
+    add_executable(${DECODER_TEST} tests/test_decoder.cpp)
+    target_include_directories(${DECODER_TEST} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src extern/googletest-1.17.0/googletest/include)
+    target_link_libraries(${DECODER_TEST} PRIVATE ${PROJECT_NAME} gtest gtest_main)
+
+    if (NOT MSVC)
+        target_compile_options(${MEMORY_TEST} PRIVATE -Wall -Wextra -Werror)
+    endif ()
+
+    gtest_discover_tests(${DECODER_TEST})
+    gtest_discover_tests(${MEMORY_TEST})
 
     set(TRANSLATION_TESTS movk movn movz ret)
     foreach (test_name ${TRANSLATION_TESTS})
@@ -170,15 +173,13 @@ if (BALLISTIC_BUILD_TESTS)
         gtest_discover_tests(${target_name})
     endforeach ()
 
-    set(DECODER_NAME test_decoder)
-    add_executable(${DECODER_NAME} tests/test_decoder.cpp)
-    target_include_directories(${DECODER_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src extern/googletest-1.17.0/googletest/include)
-    target_link_libraries(${DECODER_NAME} PRIVATE ${PROJECT_NAME} gtest gtest_main)
-
-    if (NOT MSVC)
-        target_compile_options(${MEMORY_TEST} PRIVATE -Wall -Wextra -Werror)
-    endif ()
-
-    gtest_discover_tests(${DECODER_NAME})
-    gtest_discover_tests(${MEMORY_TEST})
+    add_test(
+            NAME doc_test
+            COMMAND Python3::Interpreter ${CMAKE_SOURCE_DIR}/tools/doctest.py
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/bal_logging.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/bal_assembler.h
+            --sources ${CMAKE_CURRENT_SOURCE_DIR}/src/bal_logging.c
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/bal_assembler.c
+            --includes ${CMAKE_CURRENT_SOURCE_DIR}/include
+    )
 endif ()
