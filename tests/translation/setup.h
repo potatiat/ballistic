@@ -4,8 +4,6 @@
 #include "bal_assembler.h"
 #include "bal_engine.h"
 #include "bal_memory.h"
-#include <stdint.h>
-#include <stdio.h>
 
 #define TEST_BUFFER_SIZE 4096
 
@@ -47,22 +45,5 @@ test_teardown(test_context_t *context)
     context->allocator.free(
         context->allocator.handle, context->code_buffer, TEST_BUFFER_SIZE * sizeof(uint32_t));
 }
-
-#define BAL_TEST_FUNCTION(test_function_name)                               \
-    do                                                                      \
-    {                                                                       \
-        fprintf(stderr, "\n-------------------------------------------\n"); \
-        fprintf(stderr, "Starting %s()...\n", #test_function_name);         \
-        test_setup(&context);                                               \
-        return_value = (test_function_name(&context));                      \
-        test_teardown(&context);                                            \
-        context.code_buffer = NULL;                                         \
-                                                                            \
-        if (return_value != EXIT_SUCCESS)                                   \
-        {                                                                   \
-            return return_value;                                            \
-        }                                                                   \
-                                                                            \
-    } while (0)
 
 #endif // TEST_SETUP_H
