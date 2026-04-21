@@ -2521,7 +2521,7 @@ const bal_decoder_instruction_metadata_t
         { "BL",
           0xFC000000,
           0x94000000,
-          OPCODE_CALL,
+          OPCODE_CALL_HOST,
           {
               { BAL_OPERAND_TYPE_IMMEDIATE, 0, 26 },
               { BAL_OPERAND_TYPE_NONE, 0, 0 },

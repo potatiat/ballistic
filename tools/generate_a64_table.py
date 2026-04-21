@@ -441,7 +441,7 @@ def derive_opcode(mnemonic: str) -> str:
     if m == "B":
         return "OPCODE_JUMP"
     if m == "BL":
-        return "OPCODE_CALL"
+        return "OPCODE_CALL_HOST"
     if m == "RET":
         return "OPCODE_RETURN"
     if m.startswith("CMP"):

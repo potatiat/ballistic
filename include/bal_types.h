@@ -37,7 +37,7 @@ extern "C"
         OPCODE_LOAD,
         OPCODE_STORE,
         OPCODE_JUMP,
-        OPCODE_CALL,
+        OPCODE_CALL_HOST,
         OPCODE_RETURN,
         OPCODE_BRANCH_ZERO,
         OPCODE_BRANCH_NOT_ZERO,
