@@ -9,7 +9,6 @@
 * [Tiered Compilation Strategy](#tiered-compilation-strategy)
 * [Proof of Concept](#proof-of-concept)
 
-
 # Structured SSA Model
 
 This replicates [Dynarmic's](https://github.com/pound-emu/dynarmic) IR layer
@@ -71,7 +70,7 @@ uint32_t instruction_count;
 ### Operational Information
 
 If Bit[16] in `src1`, `src2`, or `src` is 1, the operand is a index into
-`constant_pool[]`.  It has no SSA index. It has no entry in `ssa` arrays.
+`constant_pool[]`. It has no SSA index. It has no entry in `ssa` arrays.
 
 ## Block Scope
 
@@ -81,7 +80,7 @@ This was created to find out how many variables will be modified in
 ```c
 typedef struct
 {
-    uint32_t type;          // BLOCK_TYPE_IF, BLOCK_TYPE_LOOP
+    uint32_t type;          // OPCODE_IF, OPCODE_LOOP.
     uint32_t start_index;
     int32_t  yield_arity;   // How many SSA variables to create when merging.
                             // -1 = Unknown (First branch).
@@ -96,7 +95,7 @@ int stack_depth = 0;
 ### Scenario
 
 ```text
-// Some instructions have been ommited to keep this example simple.
+// Some instructions have been omitted to keep this example simple.
 //
 IF (A)
     IF(B)
@@ -194,8 +193,7 @@ variables. These will replace phi-nodes and terminals.
 2. `OPCODE_LOOP`
     * **Input**: Initial loop arguments (optional).
     * **Structure**: Creates a "Body" block.
-    * **Output**: Defines SSA variables representing the state when the loop
-      terminates. 
+    * **Output**: None.
 
 3. `OPCODE_BLOCK_ARG`
     * **Input**: Immediate Index.
@@ -205,7 +203,7 @@ variables. These will replace phi-nodes and terminals.
     * On the first iteration, it takes the input value from `OPCODE_LOOP`.
       On subsequent iterations, it takes the input value from `OPCODE_CONTINUE`.
 
-4. `OPCODE_MERGE` 
+4. `OPCODE_MERGE`
     * **Input**: None. Implicitly pops values from `block_scope_stack[]`.
     * **Output**: Defines the merged SSA variable.
 
@@ -244,10 +242,10 @@ We cannot fit 5 operands into one `instruction_t`. We split them.
 
 Memory Layout in `instructions[]`
 
-| Index | Opcode               | src1 | src2 | src3 | SSA Def | Comment                    |
-|-------|----------------------|------|------|------|---------|----------------------------|
-| 100   | OPCODE_ARG_EXTENSION | v4   | v5   | NULL | v100    | Carries args 4 and 5       |
-| 101   | OPCODE_YIELD         | v1   | v2   | v3   | v101    | Carries args 1-3 & Executes|
+| Index | Opcode               | src1 | src2 | src3 | SSA Def | Comment                     |
+|-------|----------------------|------|------|------|---------|-----------------------------|
+| 100   | OPCODE_ARG_EXTENSION | v4   | v5   | NULL | v100    | Carries args 4 and 5        |
+| 101   | OPCODE_YIELD         | v1   | v2   | v3   | v101    | Carries args 1-3 & Executes |
 
 # Static Assumptions
 
@@ -298,20 +296,14 @@ In general we use `OPCODE_IF` for side-effect heavy operations, and use
 
 ### Rule 1.4: Loop Positional Mapping
 
-Loop arguments map strictly 1-to-1 based on their position in the instruction
-stream.
-
-1. **Definitions**: `OPCODE_LOOP` defines the 1st Phi variable. The following
-   `OPCODE_DEF_EXTENSION instruction defines the 2nd, 3rd... Nth Phi variables.
-
-2. **Arguments**: If the loop or if block require more than 3 initial values, 
+1. **Arguments**: If the loop or if block require more than 3 initial values,
    `OPCODE_ARG_EXTENSION` must be inserted immediately before `OPCODE_LOOP` or
    `OPCODE_IF`.
 
-3. **Continue**: The operands passed to `OPCODE_CONTINUE` update the  1st,
+2. **Continue**: The operands passed to `OPCODE_CONTINUE` update the 1st,
    2nd, 3rd... Nth Phi variables for next iteration.
 
-Example: If `LOOP_OPCODE` defines `[v1, v2]`, and `OPCODE_CONTINUE` passes 
+Example: If `LOOP_OPCODE` defines `[v1, v2]`, and `OPCODE_CONTINUE` passes
 `[v8, v9]`, then `v8` flows into `v1`, and `v9` flows into `v2`.
 
 ### Rule 1.5: Block Termination
@@ -336,7 +328,7 @@ multiple return values and instruction arguments are handled via
 
 ### Rule 2.2: Contiguous Extension Instructions
 
-Extention Instructions must be physically contiguous to their parent
+Extension Instructions must be physically contiguous to their parent
 instruction. No other instruction can exist between them.
 
 ### Rule 2.3: Constants
@@ -347,10 +339,10 @@ operands.
 ### Rule 2.4: Immutable SSA
 
 Once an instruction is written and the `instruction_count` increments, that SSA
-definition is immutable. You cannot change the opcode of v100 from `ADD` to 
+definition is immutable. You cannot change the opcode of v100 from `ADD` to
 `SUB`.
 
-If the logic needs to be changed during optomization, you must append a new
+If the logic needs to be changed during optimization, you must append a new
 instruction and update and update the users to point to the new index.
 
 You can **only** change an instruction to `OPCODE_NOP` to kill it.
@@ -359,23 +351,23 @@ You can **only** change an instruction to `OPCODE_NOP` to kill it.
 
 ### Rule 3.1: Typed Definitions
 
-The type of a variable is defined by the opcode.
+The type of variable is defined by the opcode.
 
 ### Rule 3.2: Void Type
 
 Any instructions that do not produce a value must define a variable with
-`TYPE_VOID`. No other instruction can reference this variable as a source
+`OPCODE_VOID`. No other instruction can reference this variable as a source
 operand.
 
 ## 4. Memory Bandwidth Rules
 
-All memory will be allocated from a contiguous memory arena before the pass 
+All memory will be allocated from a contiguous memory arena before the pass
 begins. No `malloc` calls during construction.
 
 ### Rule 4.1: Deleted Instructions
 
 Since we are using implicit indexing, we cannot easily delete instructions.
-Therefore we replace dead code with `NOP`. If the ratio of `NOP`'s to 
+Therefore, we replace dead code with `NOP`. If the ratio of `NOP`'s to
 `instructions` exceed a threshold (like 25%), we must trigger a Compaction Pass.
 
 The Compaction Pass will create a new `instructions[]`, remmaping all SSA
@@ -558,7 +550,6 @@ We switch to tier 2 when a basic block turns hot.
 * Run all required optimizations passes.
 * During code generation, if a basic block is deemed cold, it should move to a
   separate buffer in a memory region far away.
-
 
 ## Required Optimization Passes
 
