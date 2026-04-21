@@ -45,6 +45,7 @@ extern "C"
         OPCODE_CMP,
         OPCODE_CONDITIONAL_SELECT,
         OPCODE_TRAP,
+        OPCODE_VOID,
         OPCODE_ENUM_END = 0x7FF, // Force enum to 2 bytes.
     } bal_opcode_t;
 
