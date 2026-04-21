@@ -43,7 +43,7 @@ extern "C"
         OPCODE_BRANCH_NOT_ZERO,
         OPCODE_TEST_BIT_ZERO,
         OPCODE_CMP,
-        OPCODE_CMP_COND,
+        OPCODE_CONDITIONAL_SELECT,
         OPCODE_TRAP,
         OPCODE_ENUM_END = 0x7FF, // Force enum to 2 bytes.
     } bal_opcode_t;
