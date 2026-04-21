@@ -47,7 +47,7 @@ extern "C"
         OPCODE_TRAP,
         OPCODE_VOID,
         OPCODE_NOP,
-        OPCODE_ENUM_END = 0x7FF, // Force enum to 2 bytes.
+        OPCODE_ENUM_END = 0x7FF
     } bal_opcode_t;
 
     typedef enum
