@@ -146,9 +146,11 @@ bal_engine_translate(bal_engine_t *BAL_RESTRICT                 engine,
         return engine->status;
     }
 
-    if (BAL_UNLIKELY(NULL == &guest_address_start))
+    if (BAL_UNLIKELY(NULL == guest_address_start))
     {
-        BAL_LOG_INFO(&engine->logger, "Guest Address is NULL, assuming entry point is 0x0");
+        BAL_LOG_ERROR(&engine->logger, "Guest Address is NULL, aborting translation");
+        engine->status = BAL_ERROR_INVALID_ARGUMENT;
+        return engine->status;
     }
 
     const size_t max_instructions_size_bytes = max_instructions * ARM_INSTRUCTION_SIZE_BYTES;

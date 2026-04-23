@@ -145,7 +145,7 @@ extern "C"
     ///
     /// # Safety
     ///
-    /// If `guest_address_staart` is `NULL`, we assume the entry point is 0x0.
+    /// `guest_address_start` must be non-NULL.
     ///
     /// # Errors
     ///
