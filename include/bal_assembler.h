@@ -93,6 +93,30 @@ extern "C"
                                 uint16_t             imm12,
                                 uint8_t              shift);
 
+    /// Emit a `SUB` (Immediate) instruction.
+    ///
+    /// Subtracts a 12 bit immediate value `imm12` with the optional left shift `sh` from register
+    /// value `rn`, and writes the result to the destination register `rd`.
+    ///
+    /// # Safety
+    ///
+    /// * `rn` will be truncated if it exceeds 5 bits.
+    /// * `imm12` will be truncated if it exceeds 12 bits.
+    /// * `sh` must have the value `0`, or `1`
+    /// * Function does not emit instructions if `assembler->status != BAL_SUCCESS`.
+    ///
+    /// # Errors
+    ///
+    /// Modifies `assembler->status` to the following if an error occurs:
+    ///
+    /// * [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if `assembler->offset >= assembler->capacity`.
+    /// * [`BAL_ERROR_INVALID_ARGUMENT`] if function arguments are invalid.
+    void bal_emit_sub_immediate(bal_assembler_t     *assembler,
+                                bal_register_index_t rd,
+                                uint8_t              rn,
+                                uint16_t             imm12,
+                                uint8_t              shift);
+
     /// Emit a `MOVZ` (Move Wide with Zero) instruction.
     ///
     /// Moves a 16-bit immediate into a register, shifting it left by 0, 16, 32, or 48 bits, and

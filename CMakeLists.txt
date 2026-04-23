@@ -159,7 +159,7 @@ if (BALLISTIC_BUILD_TESTS)
     gtest_discover_tests(${DECODER_TEST})
     gtest_discover_tests(${MEMORY_TEST})
 
-    set(TRANSLATION_TESTS movk movn movz ret)
+    set(TRANSLATION_TESTS movk movn movz ret sub)
     foreach (test_name ${TRANSLATION_TESTS})
         set(target_name "test_${test_name}")
         add_executable(${target_name} "tests/translation/${target_name}.cpp")
