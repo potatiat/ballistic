@@ -40,7 +40,7 @@ TEST(Translation, SubImmediate)
                          &entry_point,
                          context.assembler.offset * sizeof(uint32_t));
 
-    const bal_instruction_t *BAL_RESTRICT ir       = context.engine.instructions;
+    const bal_instruction_t *BAL_RESTRICT ir = bal_engine_get_ir_instructions(&context.engine);
     size_t                                ir_index = 0;
 
     // First IR instruction: GET_REGISTER v0 = X5 (lazy load of Rn on its
@@ -107,10 +107,12 @@ TEST(Translation, SubImmediate)
                 }
 
                 const uint32_t pool_index   = src2_with_flag & BAL_SOURCE_MASK;
-                const uint64_t expected_val = static_cast<uint64_t>(immediate) << (shift * 12U);
-                const uint64_t actual_val   = context.engine.constants[pool_index];
+                const uint64_t expected_val = static_cast<bal_constant_t>(immediate)
+                                              << (shift * 12U);
+                const bal_constant_t *actual_val
+                    = bal_engine_get_constant(&context.engine, pool_index);
 
-                if (actual_val != expected_val)
+                if (*actual_val != expected_val)
                 {
                     fprintf(stderr,
                             "FAIL: IR Inst %zu constant c%u mismatch. Expected 0x%" PRIX64
@@ -118,7 +120,7 @@ TEST(Translation, SubImmediate)
                             ir_index,
                             pool_index,
                             expected_val,
-                            actual_val);
+                            *actual_val);
                     GTEST_FAIL();
                 }
                 ++ir_index;

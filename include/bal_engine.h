@@ -6,6 +6,7 @@
 #include "bal_logging.h"
 #include "bal_memory.h"
 #include "bal_types.h"
+#include <assert.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -61,31 +62,11 @@ extern "C"
     /// Holds the Intermediate Representation buffers, SSA state, and other
     /// important metadata. The structure is divided into hot and cold data aligned
     /// to 64 bytes. Both hot and cold data lives on their own cache lines.
-    typedef struct
+    BAL_ALIGNED(64) typedef struct
     {
-        /* Hot Data */
-
-        /// Map of ARM registers to their current SSA definitions.
-        bal_source_variable_t *source_variables;
-
-        /// The linear buffer of generated IR instructions for the current
-        /// compilation unit.
-        bal_instruction_t *instructions;
-
-        /// Metadata tracking the bit-width (32 or 64 bit) for each variable.
-        bal_bit_width_t *ssa_bit_widths;
-
-        /// Linear buffer of constants generated in the current compilation unit.
-        bal_constant_t *constants;
-
-        /// The size of the `source_variables` array.
-        size_t source_variables_size;
-
-        /// The size of the `instructions` array.
-        size_t instructions_size;
-
-        /// The size of the `constants` array.
-        size_t constants_size;
+        /// The base pointer returned during the underlying heap allocation. This
+        /// is required to correctly free the engine's internal arrays.
+        void *arena_base;
 
         /// The current number of instructions emitted.
         ///
@@ -105,19 +86,12 @@ extern "C"
         /// on this engine will silently fail until [`bal_engine_reset`] is called.
         bal_error_t status;
 
-        /* Cold Data */
-
-        /// The base pointer returned during the underlying heap allocation. This
-        /// is required to correctly free the engine's internal arrays.
-        void *arena_base;
-
-        /// The total size of the allocated arena.
-        size_t arena_size;
-
         /// Handles logging for this engine.
         bal_logger_t logger;
 
     } bal_engine_t;
+
+    static_assert(sizeof(bal_engine_t) <= 64, "Engine must fit in a L1 Cache line");
 
     /// Initializes a Ballistic engine.
     ///
@@ -175,6 +149,20 @@ extern "C"
     /// This function does not free the [`bal_engine_t`] struct itself, as the
     /// caller may have allocated it on the stack.
     BAL_COLD void bal_engine_destroy(const bal_allocator_t *allocator, bal_engine_t *engine);
+
+    /// Returns the IR instructions array.
+    ///
+    /// # Safety
+    ///
+    /// Returns `NULl` if `engine` or `engine->arena_base` is `NULL`.
+    const bal_instruction_t *bal_engine_get_ir_instructions(const bal_engine_t *engine);
+
+    /// Returns the constant generated from the IR layer at `index`.
+    ///
+    /// # Safety
+    ///
+    /// Returns `NULL` if `engine` or `engine->arena_base` is `NULL`.
+    const bal_constant_t *bal_engine_get_constant(const bal_engine_t *engine, bal_constant_t index);
 
 #ifdef __cplusplus
 }

@@ -33,7 +33,7 @@ TEST(Translation, Movn)
     bal_guest_address_t entry_point = 0x0;
     bal_engine_translate(
         &context.engine, &context.interface, &entry_point, context.assembler.offset);
-    const bal_instruction_t *BAL_RESTRICT ir       = context.engine.instructions;
+    const bal_instruction_t *BAL_RESTRICT ir = bal_engine_get_ir_instructions(&context.engine);
     size_t                                ir_index = 0;
 
     for (size_t r = 0; r < registers_count; ++r)
@@ -57,17 +57,21 @@ TEST(Translation, Movn)
                 // We inverse the expected immediate. This is the only important difference
                 // between test_movz.c and test_movn.cpp.
                 //
-                const uint64_t expected_immediate = ~(static_cast<uint64_t>(immediate) << shift);
-                const uint64_t actual_immediate   = context.engine.constants[pool_index];
+                const bal_constant_t expected_immediate
+                    = ~(static_cast<uint64_t>(immediate) << shift);
+                const bal_constant_t *actual_immediate
+                    = bal_engine_get_constant(&context.engine, pool_index);
 
-                if (expected_immediate != actual_immediate)
+                GTEST_ASSERT_NE(actual_immediate, nullptr);
+
+                if (expected_immediate != *actual_immediate)
                 {
                     fprintf(stderr,
                             "FAIL: ARM Inst %08X value mismatch. Expected %" PRIX64 ", Got %" PRIX64
                             "\n",
                             context.assembler.buffer[assembler_buffer_index],
                             expected_immediate,
-                            actual_immediate);
+                            *actual_immediate);
                     fprintf(stderr, "   Pool Index: %u\n", pool_index);
                     GTEST_FAIL();
                 }

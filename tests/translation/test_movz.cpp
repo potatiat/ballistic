@@ -31,7 +31,7 @@ TEST(Translation, Movz)
                          &context.interface,
                          &entry_point,
                          context.assembler.offset * sizeof(uint32_t));
-    const bal_instruction_t *BAL_RESTRICT ir       = context.engine.instructions;
+    const bal_instruction_t *BAL_RESTRICT ir = bal_engine_get_ir_instructions(&context.engine);
     size_t                                ir_index = 0;
 
     for (size_t r = 0; r < registers_count; ++r)
@@ -51,17 +51,19 @@ TEST(Translation, Movz)
 
                 const uint32_t pool_index
                     = ir[ir_index] >> BAL_SOURCE1_SHIFT_POSITION & BAL_SOURCE_MASK;
-                const uint64_t expected_immediate = static_cast<uint64_t>(immediate) << shift;
-                const uint64_t actual_immediate   = context.engine.constants[pool_index];
+                const bal_constant_t expected_immediate = static_cast<bal_constant_t>(immediate)
+                                                          << shift;
+                const bal_constant_t *actual_immediate
+                    = bal_engine_get_constant(&context.engine, pool_index);
 
-                if (expected_immediate != actual_immediate)
+                if (expected_immediate != *actual_immediate)
                 {
                     fprintf(stderr,
                             "FAIL: ARM Inst %08X value mismatch. Expected %" PRIX64 ", Got %" PRIX64
                             "\n",
                             context.assembler.buffer[ir_index],
                             expected_immediate,
-                            actual_immediate);
+                            *actual_immediate);
                     fprintf(stderr, "   Pool Index: %u\n", pool_index);
                     GTEST_FAIL();
                 }

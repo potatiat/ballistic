@@ -10,8 +10,9 @@ TEST(Translation, RetAsFirstInstruction)
     bal_guest_address_t entry_point = 0x0;
     bal_engine_translate(
         &context.engine, &context.interface, &entry_point, context.assembler.offset);
-    const bal_instruction_t *BAL_RESTRICT instructions = context.engine.instructions;
-    const auto                            opcode_get_register
+    const bal_instruction_t *BAL_RESTRICT instructions
+        = bal_engine_get_ir_instructions(&context.engine);
+    const auto opcode_get_register
         = static_cast<bal_opcode_t>(instructions[0] >> BAL_OPCODE_SHIFT_POSITION);
 
     if (opcode_get_register != OPCODE_GET_REGISTER)
@@ -48,8 +49,9 @@ TEST(Translation, RetAsSecondInstruction)
     bal_guest_address_t entry_point = 0x0;
     bal_engine_translate(
         &context.engine, &context.interface, &entry_point, context.assembler.offset);
-    const bal_instruction_t *BAL_RESTRICT instructions = context.engine.instructions;
-    const auto                            opcode_const
+    const bal_instruction_t *BAL_RESTRICT instructions
+        = bal_engine_get_ir_instructions(&context.engine);
+    const auto opcode_const
         = static_cast<bal_opcode_t>(instructions[0] >> BAL_OPCODE_SHIFT_POSITION);
 
     if (opcode_const != OPCODE_CONST)
