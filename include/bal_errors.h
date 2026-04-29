@@ -29,6 +29,9 @@ extern "C"
         BAL_ERROR_MEMORY_FAULT        = -5,
         BAL_ERROR_UNKNOWN_INSTRUCTION = -6,
 
+        /// Error when creating a thread.
+        BAL_ERROR_THREAD_CREATION = -7,
+
         // IR Errors.
         //
         BAL_ERROR_INSTRUCTION_OVERFLOW = -100,
