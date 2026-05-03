@@ -1,0 +1,112 @@
+#ifndef BALLISTIC_BAL_X86_ASSEMBLER_H
+#define BALLISTIC_BAL_X86_ASSEMBLER_H
+
+#include "bal_errors.h"
+#include "bal_logging.h"
+#include <stddef.h>
+#include <stdint.h>
+
+typedef enum
+{
+    /// Accumulator Register.
+    BAL_X86_RAX = 0,
+
+    /// Base register.
+    BAL_X86_RBX,
+
+    /// Counter Register.
+    BAL_X86_RCX,
+
+    /// Data Register.
+    BAL_X86_RDX,
+
+    /// Source Index.
+    BAL_X86_RSI,
+
+    /// Destination Index.
+    BAL_X86_RDI,
+
+    /// Stack pointer.
+    BAL_X86_RSP,
+
+    /// Base pointer.
+    BAL_X86_RBP,
+
+    /// Extended Register 8.
+    BAL_X86_R8,
+
+    /// Extended Register 9.
+    BAL_X86_R9,
+
+    /// Extended Register 10.
+    BAL_X86_R10,
+
+    /// Extended Register 11.
+    BAL_X86_R11,
+
+    /// Extended Register 12.
+    BAL_X86_R12,
+
+    /// Extended Register 13.
+    BAL_X86_R13,
+
+    /// Extended Register 14.
+    BAL_X86_R14,
+
+    /// Extended Register 15.
+    BAL_X86_R15,
+} bal_x86_register_t;
+
+/// The x86-64 assembler state.
+typedef struct
+{
+    /// Memory buffer where machine code bytes are written.
+    uint8_t *buffer;
+
+    /// Maximum number of bytes this assembler can write.
+    size_t capacity;
+
+    /// Current byte index in the buffer.
+    size_t offset;
+    /// Logger instance.
+    bal_logger_t logger;
+
+    /// Current error state. If this is not [`BAL_SUCCESS`], all emit calls will fail.
+    bal_error_t status;
+} bal_x86_assembler_t;
+
+/// Initializes the x86-64 assembler with `executable_buffer`.
+///
+/// # Safety
+///
+/// `executable_buffer` must point to a valid allocation of at least `size` bytes. The buffer must
+/// also be configured with executable page permissions by the host OS.
+///
+/// # Errors
+///
+/// Returns [`BAL_SUCCESS`] on success.
+///
+/// Returns [`BAL_ERROR_INVALID_ARGUMENT`] if `assembler` or `executable_buffer` is `NULL` or `size`
+/// is 0.
+bal_error_t bal_x86_assembler_init(bal_x86_assembler_t *assembler,
+                                   void                *executable_buffer,
+                                   size_t               size,
+                                   bal_logger_t         logger);
+
+/// Emits an instruction to move a 64-bit immediate value into a 64-bit register.
+///
+/// Assembly equivalent: `mov destination, immediate`
+///
+/// # Errors
+///
+/// Returns [`BAL_SUCCESS`] on success.
+///
+/// Returns [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if the assembler buffer overflows after calling this
+/// function.
+void bal_x86_emit_mov_r64_imm64(bal_x86_assembler_t *assembler,
+                                bal_x86_register_t   destination,
+                                uint64_t             immediate);
+
+#endif // BALLISTIC_BAL_X86_ASSEMBLER_H
+
+/*** end of file ***/
