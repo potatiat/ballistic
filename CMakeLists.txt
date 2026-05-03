@@ -120,7 +120,7 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     target_link_libraries(${CDOC_NAME} PRIVATE ${CLANG_LIBRARY} cmark)
     set(PROJECT_HEADERS include/bal_engine.h include/bal_decoder.h
             include/bal_memory.h include/bal_types.h include/bal_errors.h include/bal_logging.h
-            include/bal_assembler.h include/bal_tier2_worker.h include/bal_spsc_queue.h)
+            include/bal_assembler.h include/bal_tier2_worker.h include/bal_spsc_queue.h include/bal_cpu.h)
 
     add_custom_target(doc ALL
             COMMAND ${CMAKE_CURRENT_BINARY_DIR}/cdoc docs/cdoc ${PROJECT_HEADERS}
