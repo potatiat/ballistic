@@ -27,9 +27,9 @@ TEST(Translation, Movz)
 
     bal_emit_ret(&context.assembler, BAL_REGISTER_X0);
     bal_guest_address_t entry_point = 0x0;
-    bal_engine_translate(&context.engine,
-                         &context.interface,
-                         &entry_point,
+    bal_engine_translate_tier2(&context.engine,
+                               &context.interface,
+                               &entry_point,
                          context.assembler.offset * sizeof(uint32_t));
     const bal_instruction_t *BAL_RESTRICT ir = bal_engine_get_ir_instructions(&context.engine);
     size_t                                ir_index = 0;

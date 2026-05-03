@@ -127,10 +127,11 @@ extern "C"
     /// or `engine->status != BAL_SUCCESS`.
     ///
     /// Returns [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if the array `engine->constants` overflows.
-    BAL_HOT bal_error_t bal_engine_translate(bal_engine_t *BAL_RESTRICT                 engine,
-                                             const bal_memory_interface_t *BAL_RESTRICT interface,
-                                             bal_guest_address_t *guest_address_start,
-                                             size_t               max_instructions);
+    BAL_HOT bal_error_t
+    bal_engine_translate_tier2(bal_engine_t *BAL_RESTRICT                 engine,
+                               const bal_memory_interface_t *BAL_RESTRICT interface,
+                               bal_guest_address_t                       *guest_address_start,
+                               size_t                                     max_instructions);
 
     /// Resets `engine` for the next compilation unit. This is a low-cost memory
     /// operation designed to be called between translation units.

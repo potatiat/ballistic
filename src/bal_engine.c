@@ -107,10 +107,10 @@ bal_engine_init(const bal_allocator_t *allocator, bal_engine_t *engine, bal_logg
 }
 
 bal_error_t
-bal_engine_translate(bal_engine_t *BAL_RESTRICT                 engine,
-                     const bal_memory_interface_t *BAL_RESTRICT interface,
-                     bal_guest_address_t                       *guest_address_start,
-                     const size_t                               max_instructions)
+bal_engine_translate_tier2(bal_engine_t *BAL_RESTRICT                 engine,
+                           const bal_memory_interface_t *BAL_RESTRICT interface,
+                           bal_guest_address_t                       *guest_address_start,
+                           const size_t                               max_instructions)
 {
     if (BAL_UNLIKELY(NULL == engine))
     {
@@ -656,6 +656,7 @@ translate_sub(bal_translation_context_t                *context,
     *context->ir_instruction_cursor = (bal_instruction_t)OPCODE_SUB << BAL_OPCODE_SHIFT_POSITION
                                       | rn_ssa_index << BAL_SOURCE1_SHIFT_POSITION
                                       | value_const_index << BAL_SOURCE2_SHIFT_POSITION;
+
     *context->bit_width_cursor = bit_width;
 
     BAL_LOG_DEBUG(context->logger,
