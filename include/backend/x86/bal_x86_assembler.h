@@ -8,6 +8,8 @@
 
 typedef enum
 {
+    BAL_X86_INVALID = -1,
+
     /// Accumulator Register.
     BAL_X86_RAX = 0,
 
