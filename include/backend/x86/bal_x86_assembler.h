@@ -107,6 +107,18 @@ void bal_x86_emit_mov_r64_imm64(bal_x86_assembler_t *assembler,
                                 bal_x86_register_t   destination,
                                 uint64_t             immediate);
 
+/// Emits a near return instruction.
+///
+/// Assembly equivalent: `ret`
+///
+/// # Errors
+///
+/// Returns [`BAL_SUCCESS`] on success.
+///
+/// Returns [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if the assembler buffer overflows after calling this
+/// function.
+void bal_x86_emit_ret(bal_x86_assembler_t *assembler);
+
 #endif // BALLISTIC_BAL_X86_ASSEMBLER_H
 
 /*** end of file ***/

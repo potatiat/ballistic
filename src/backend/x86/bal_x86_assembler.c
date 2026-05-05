@@ -59,8 +59,8 @@ bal_x86_emit_mov_r64_imm64(bal_x86_assembler_t     *assembler,
         return;
     }
 
-    const size_t instruction_size = 10;
-    const bool   can_emit_status  = can_emit(assembler, instruction_size);
+    const size_t instruction_size_bytes = 10;
+    const bool   can_emit_status        = can_emit(assembler, instruction_size_bytes);
 
     if (false == can_emit_status)
     {
@@ -78,6 +78,28 @@ bal_x86_emit_mov_r64_imm64(bal_x86_assembler_t     *assembler,
     emit_rex(assembler, w, r, b);
     emit8(assembler, 0xB8 + (destination & 7));
     emit64(assembler, immediate);
+}
+
+void
+bal_x86_emit_ret(bal_x86_assembler_t *assembler)
+{
+    if (assembler->status != BAL_SUCCESS)
+    {
+        BAL_LOG_ERROR(&assembler->logger, "Assembler status != BAL_SUCCESS, aborting function");
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    const size_t instruction_size_bytes = 1;
+    const bool   can_emit_status        = can_emit(assembler, instruction_size_bytes);
+
+    if (false == can_emit_status)
+    {
+        return;
+    }
+
+    BAL_LOG_DEBUG(&assembler->logger, "[+0x%04zx] ret", assembler->offset);
+    emit8(assembler, 0XC3);
 }
 
 static bool
