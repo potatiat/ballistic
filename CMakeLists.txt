@@ -68,6 +68,7 @@ add_library(Ballistic STATIC
         src/bal_spsc_queue.c
         src/bal_tier2_worker.c
         src/backend/x86/bal_x86_assembler.c
+        src/backend/x86/bal_x86_sliding_window.c
 )
 
 target_include_directories(Ballistic PUBLIC include)
@@ -119,9 +120,19 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
             ${CMAKE_CURRENT_SOURCE_DIR}/extern/cmark/src
             ${CMAKE_CURRENT_BINARY_DIR}/extern/cmark/src/)
     target_link_libraries(${CDOC_NAME} PRIVATE ${CLANG_LIBRARY} cmark)
-    set(PROJECT_HEADERS include/bal_engine.h include/bal_decoder.h
-            include/bal_memory.h include/bal_types.h include/bal_errors.h include/bal_logging.h
-            include/bal_assembler.h include/bal_tier2_worker.h include/bal_spsc_queue.h include/bal_cpu.h)
+    set(PROJECT_HEADERS
+            include/bal_engine.h
+            include/bal_decoder.h
+            include/bal_memory.h
+            include/bal_types.h
+            include/bal_errors.h
+            include/bal_logging.h
+            include/bal_assembler.h
+            include/bal_tier2_worker.h
+            include/bal_spsc_queue.h
+            include/backend/bal_cpu.h
+            include/backend/x86/bal_x86_sliding_window.h
+    )
 
     add_custom_target(doc ALL
             COMMAND ${CMAKE_CURRENT_BINARY_DIR}/cdoc docs/cdoc ${PROJECT_HEADERS}
