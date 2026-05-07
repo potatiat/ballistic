@@ -9,6 +9,11 @@ BAL_HOT static void emit64(bal_x86_assembler_t *assembler, uint64_t value);
 BAL_HOT static void emit_rex(bal_x86_assembler_t *assembler, uint8_t w, uint8_t r, uint8_t b);
 BAL_HOT static void emit8(uint8_t **cursor, uint8_t value);
 
+/// Emits the ModR/M byte for Register-to-Register operations.
+BAL_HOT static void emit_modrm_register(bal_x86_assembler_t *assembler,
+                                        bal_x86_register_t   reg,
+                                        bal_x86_register_t   rm);
+
 /// Emits the ModR/M byte for Memory Addressing: [RBP + disp32].
 BAL_HOT static void emit_modrm_memory_disp32_rbp(bal_x86_assembler_t *assembler,
                                                  bal_x86_register_t   reg);
@@ -124,6 +129,42 @@ bal_x86_emit_store_r64_rbp_offset(bal_x86_assembler_t     *assembler,
     emit8(assembler, opcode);
     emit_modrm_memory_disp32_rbp(assembler, source);
     emit32(assembler, (uint32_t)offset);
+}
+
+void
+bal_x86_emit_mov_r64_r64(bal_x86_assembler_t *assembler,
+                         bal_x86_register_t   destination,
+                         bal_x86_register_t   source)
+{
+    if (NULL == assembler)
+    {
+        return;
+    }
+
+    if (assembler->status != BAL_SUCCESS)
+    {
+        BAL_LOG_ERROR(&assembler->logger, "Assembler status != BAL_SUCCESS, aborting function");
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    const size_t instruction_size_bytes = 10;
+    const bool   can_emit_status        = can_emit(assembler, instruction_size_bytes);
+
+    if (false == can_emit_status)
+    {
+        return;
+    }
+
+    BAL_LOG_DEBUG(
+        &assembler->logger, "[+0x%04zx] mov r%d, r%d", assembler->offset, destination, source);
+    const uint8_t w      = 1;
+    const uint8_t r      = (uint8_t)destination >> 3;
+    const uint8_t b      = (uint8_t)source >> 3;
+    const uint8_t opcode = 0x8BU;
+    emit_rex(assembler, w, r, b);
+    emit8(assembler, opcode);
+    emit_modrm_register(assembler, destination, source);
 }
 
 void
@@ -311,6 +352,15 @@ emit_rex(bal_x86_assembler_t *assembler, const uint8_t w, const uint8_t r, const
 {
     const uint8_t rex = (uint8_t)(0x40U | (unsigned)w << 3U | (unsigned)r << 2U | b);
     emit8(assembler, rex);
+}
+
+void
+emit_modrm_register(bal_x86_assembler_t     *assembler,
+                    const bal_x86_register_t reg,
+                    const bal_x86_register_t rm)
+{
+    uint8_t const modrm = (uint8_t)(0xC0U | ((unsigned)reg & 7U) << 3U | (rm & 7));
+    emit8(assembler, modrm);
 }
 
 void
