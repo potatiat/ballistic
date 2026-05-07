@@ -152,7 +152,7 @@ bal_x86_emit_mov_r64_r64(bal_x86_assembler_t     *assembler,
         return;
     }
 
-    const size_t instruction_size_bytes = 10;
+    const size_t instruction_size_bytes = 3;
     const bool   can_emit_status        = can_emit(assembler, instruction_size_bytes);
 
     if (false == can_emit_status)
@@ -257,7 +257,7 @@ bal_x86_emit_push_r64(bal_x86_assembler_t *assembler, const bal_x86_register_t r
         return;
     }
 
-    const size_t instruction_size_bytes = 10;
+    const size_t instruction_size_bytes = 2;
     const bool   can_emit_status        = can_emit(assembler, instruction_size_bytes);
 
     if (false == can_emit_status)
