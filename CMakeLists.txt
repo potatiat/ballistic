@@ -69,6 +69,7 @@ add_library(Ballistic STATIC
         src/bal_tier2_worker.c
         src/backend/x86/bal_x86_assembler.c
         src/backend/x86/bal_x86_sliding_window.c
+        src/backend/x86/bal_x86_tier1_compiler.c
 )
 
 target_include_directories(Ballistic PUBLIC include)
@@ -132,6 +133,7 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
             include/bal_spsc_queue.h
             include/backend/bal_cpu.h
             include/backend/x86/bal_x86_sliding_window.h
+            include/backend/x86/bal_x86_tier1_compiler.h
     )
 
     add_custom_target(doc ALL
