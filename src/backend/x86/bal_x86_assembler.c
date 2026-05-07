@@ -53,9 +53,9 @@ bal_x86_assembler_init(bal_x86_assembler_t *assembler,
 }
 
 void
-bal_x86_emit_load_r64_rbp_offset(bal_x86_assembler_t *assembler,
-                                 bal_x86_register_t   destination,
-                                 int32_t              offset)
+bal_x86_emit_load_r64_rbp_offset(bal_x86_assembler_t     *assembler,
+                                 const bal_x86_register_t destination,
+                                 const int32_t            offset)
 {
     if (BAL_UNLIKELY(NULL == assembler))
     {
