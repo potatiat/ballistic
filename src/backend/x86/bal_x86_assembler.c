@@ -92,6 +92,41 @@ bal_x86_emit_load_r64_rbp_offset(bal_x86_assembler_t     *assembler,
 }
 
 void
+bal_x86_emit_store_r64_rbp_offset(bal_x86_assembler_t     *assembler,
+                                  const bal_x86_register_t source,
+                                  const int32_t            offset)
+{
+    if (BAL_UNLIKELY(NULL == assembler))
+    {
+        return;
+    }
+
+    if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler status != BAL_SUCCESS");
+        return;
+    }
+
+    const bool can_emit_status = can_emit(assembler, 7);
+
+    if (BAL_UNLIKELY(false == can_emit_status))
+    {
+        return;
+    }
+
+    BAL_LOG_DEBUG(
+        &assembler->logger, "[0x%04zx] mov[rbp + 0x%X], r%d", assembler->offset, offset, source);
+    const uint8_t w      = 1;
+    const uint8_t r      = (uint8_t)source >> 3;
+    const uint8_t b      = 0;
+    const uint8_t opcode = 0X89;
+    emit_rex(assembler, w, r, b);
+    emit8(assembler, opcode);
+    emit_modrm_memory_disp32_rbp(assembler, source);
+    emit32(assembler, (uint32_t)offset);
+}
+
+void
 bal_x86_emit_mov_r64_imm64(bal_x86_assembler_t     *assembler,
                            const bal_x86_register_t destination,
                            const uint64_t           immediate)

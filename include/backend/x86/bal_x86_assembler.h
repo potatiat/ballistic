@@ -110,6 +110,21 @@ void bal_x86_emit_load_r64_rbp_offset(bal_x86_assembler_t *assembler,
                                       bal_x86_register_t   destination,
                                       int32_t              offset);
 
+/// Emits a memory store using a 32-bit displacement.
+///
+/// Assembly equivalent: `mov[rbp + offset], reg64`
+///
+/// # Warning
+///
+/// This function fails if:
+///
+/// - `assembler` is `NULL`.
+/// - `assembler->status != [`BAL_SUCCESS`]
+/// - `assembler->buffer` is full.
+void bal_x86_emit_store_r64_rbp_offset(bal_x86_assembler_t *assembler,
+                                       bal_x86_register_t   source,
+                                       int32_t              offset);
+
 /// Emits an instruction to move a 64-bit immediate value into a 64-bit register.
 ///
 /// Assembly equivalent: `mov destination, immediate`
