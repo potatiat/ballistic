@@ -228,6 +228,43 @@ bal_x86_emit_push_r64(bal_x86_assembler_t *assembler, const bal_x86_register_t r
     emit8(assembler, opcode + (reg & 7));
 }
 
+void
+bal_x86_emit_pop_r64(bal_x86_assembler_t *assembler, bal_x86_register_t reg)
+{
+    if (NULL == assembler)
+    {
+        return;
+    }
+
+    if (assembler->status != BAL_SUCCESS)
+    {
+        BAL_LOG_ERROR(&assembler->logger, "Assembler status != BAL_SUCCESS, aborting function");
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    const size_t instruction_size_bytes = 10;
+    const bool   can_emit_status        = can_emit(assembler, instruction_size_bytes);
+
+    if (false == can_emit_status)
+    {
+        return;
+    }
+
+    BAL_LOG_DEBUG(&assembler->logger, "[+0x%04zx] pop r%d", assembler->offset, reg);
+
+    if (reg > 7)
+    {
+        const uint8_t w = 0;
+        const uint8_t r = 0;
+        const uint8_t b = (uint8_t)reg >> 3;
+        emit_rex(assembler, w, r, b);
+    }
+
+    const uint8_t opcode = 0x58;
+    emit8(assembler, opcode + (reg & 7));
+}
+
 static bool
 can_emit(bal_x86_assembler_t *assembler, const size_t size)
 {

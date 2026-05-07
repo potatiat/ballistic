@@ -166,6 +166,19 @@ void bal_x86_emit_ret(bal_x86_assembler_t *assembler);
 /// - `assembler->buffer` is full.
 void bal_x86_emit_push_r64(bal_x86_assembler_t *assembler, bal_x86_register_t reg);
 
+/// Emits a Stack Pop instruction.
+///
+/// Assembly equivalent: `push reg64`
+///
+/// # Warning
+///
+/// This function fails if:
+///
+/// - `assembler` is `NULL`.
+/// - `assembler->status != [`BAL_SUCCESS`]
+/// - `assembler->buffer` is full.
+void bal_x86_emit_pop_r64(bal_x86_assembler_t *assembler, bal_x86_register_t reg);
+
 #endif // BALLISTIC_BAL_X86_ASSEMBLER_H
 
 /*** end of file ***/
