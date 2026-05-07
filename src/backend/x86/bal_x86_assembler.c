@@ -96,6 +96,11 @@ bal_x86_emit_mov_r64_imm64(bal_x86_assembler_t     *assembler,
                            const bal_x86_register_t destination,
                            const uint64_t           immediate)
 {
+    if (NULL == assembler)
+    {
+        return;
+    }
+
     if (assembler->status != BAL_SUCCESS)
     {
         BAL_LOG_ERROR(&assembler->logger, "Assembler status != BAL_SUCCESS, aborting function");
@@ -127,6 +132,11 @@ bal_x86_emit_mov_r64_imm64(bal_x86_assembler_t     *assembler,
 void
 bal_x86_emit_ret(bal_x86_assembler_t *assembler)
 {
+    if (NULL == assembler)
+    {
+        return;
+    }
+
     if (assembler->status != BAL_SUCCESS)
     {
         BAL_LOG_ERROR(&assembler->logger, "Assembler status != BAL_SUCCESS, aborting function");
