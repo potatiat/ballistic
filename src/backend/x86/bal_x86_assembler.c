@@ -44,7 +44,7 @@ bal_x86_assembler_init(bal_x86_assembler_t *assembler,
         return error;
     }
 
-    assembler->buffer   = executable_buffer;
+    assembler->buffer   = (uint8_t *)executable_buffer;
     assembler->capacity = size;
     assembler->offset   = 0;
     assembler->logger   = logger;
