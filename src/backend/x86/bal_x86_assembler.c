@@ -426,7 +426,7 @@ bal_x86_emit_pop_r64(bal_x86_assembler_t *assembler, const bal_x86_register_t re
 bool
 is_valid_register(const bal_x86_register_t reg)
 {
-    return reg >= BAL_X86_RAX && reg < BAL_X86_R15;
+    return reg >= BAL_X86_RAX && reg <= BAL_X86_R15;
 }
 
 static bool
