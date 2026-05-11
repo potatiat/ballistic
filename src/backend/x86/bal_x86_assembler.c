@@ -432,6 +432,27 @@ is_valid_register(const bal_x86_register_t reg)
 static bool
 can_emit(bal_x86_assembler_t *assembler, const size_t size)
 {
+    if (BAL_UNLIKELY(NULL == assembler))
+    {
+        return false;
+    }
+
+    if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "Aborting function: Assembler status != BAL_SUCCESS");
+        return false;
+    }
+
+    if (BAL_UNLIKELY(SIZE_MAX - assembler->offset < size))
+    {
+        BAL_LOG_ERROR(&assembler->logger,
+                      "x86 Assembler Integer Overflow. Current offset: %zu, Requested size: %zu",
+                      assembler->offset,
+                      size);
+        assembler->status = BAL_ERROR_INSTRUCTION_OVERFLOW;
+        return false;
+    }
+
     const size_t assembler_size = assembler->offset + size;
 
     if (assembler_size > assembler->capacity)
