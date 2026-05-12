@@ -47,20 +47,19 @@ bal_sliding_window_push(bal_sliding_window_t *window, const bal_x86_macro_t macr
     if (BAL_UNLIKELY(window->count == BAL_SLIDING_WINDOW_CAPACITY))
     {
         BAL_LOG_DEBUG(&window->assembler->logger,
-                      "Sliding window capacity reached (%d), flushing oldest macro",
+                      "Sliding window capacity reached (%d), flushing macros",
                       BAL_SLIDING_WINDOW_CAPACITY);
-        flush_single_macro(window->assembler, &window->macros[0]);
 
-        // Shift remaining instructions down by 1.
-        //
-        (void)memmove(&window->macros[0],
-                      &window->macros[1],
-                      sizeof(bal_x86_macro_t) * (BAL_SLIDING_WINDOW_CAPACITY - 1));
-        --window->count;
+        for (size_t i = 0; i < window->count; ++i)
+        {
+            flush_single_macro(window->assembler, &window->macros[i]);
+        }
+
+        window->count = 0;
     }
 
     BAL_LOG_DEBUG(&window->assembler->logger,
-                  "Pushing macro opcode %d (dest: r%d, src: r%d, imm/off: 0x%llX",
+                  "Pushing macro opcode %d (dest: r%d, src: r%d, imm/off: 0x%llX)",
                   macro.opcode,
                   macro.destination,
                   macro.source,
