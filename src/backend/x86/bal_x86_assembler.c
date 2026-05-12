@@ -8,6 +8,11 @@ BAL_HOT static bool can_emit(bal_x86_assembler_t *assembler, size_t size);
 BAL_HOT static void emit8(uint8_t *buffer, size_t *offset, uint8_t value);
 BAL_HOT static void emit32(uint8_t *buffer, size_t *offset, uint32_t value);
 BAL_HOT static void emit64(uint8_t *buffer, size_t *offset, uint64_t value);
+
+/// Emits the REX prefix.
+/// w = 1 for 64-bit operands.
+/// r = extension for the ModR/W `reg` field.
+/// b = extension for the ModR/W `r/m` field or opcode register.
 BAL_HOT static void emit_rex(uint8_t *buffer, size_t *offset, uint8_t w, uint8_t r, uint8_t b);
 
 /// Emits the ModR/M byte for Register-to-Register operations.
@@ -495,10 +500,6 @@ emit64(uint8_t *buffer, size_t *offset, uint64_t const value)
     *offset += sizeof(uint64_t);
 }
 
-/// Emits the REX prefix.
-/// w = 1 for 64-bit operands.
-/// r = extension for the ModR/W `reg` field.
-/// b = extension for the ModR/W `r/m` field or opcode register.
 static void
 emit_rex(uint8_t *buffer, size_t *offset, const uint8_t w, const uint8_t r, const uint8_t b)
 {
