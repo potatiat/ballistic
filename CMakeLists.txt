@@ -189,6 +189,19 @@ if (BALLISTIC_BUILD_TESTS)
         gtest_discover_tests(${target_name})
     endforeach ()
 
+    set(BACKEND_X86_TESTS x86_assembler)
+    foreach (test_name ${BACKEND_X86_TESTS})
+        set(target_name "test_${test_name}")
+        add_executable(${target_name} "tests/backend/x86/${target_name}.cpp")
+        target_link_libraries(${target_name} PRIVATE Ballistic gtest gtest_main)
+
+        if (NOT MSVC)
+            target_compile_options(${MEMORY_TEST} PRIVATE -Wall -Wextra -Werror)
+        endif ()
+
+        gtest_discover_tests(${target_name})
+    endforeach ()
+
     add_test(
             NAME doc_test
             COMMAND Python3::Interpreter ${CMAKE_SOURCE_DIR}/tools/doctest.py
