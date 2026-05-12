@@ -17,6 +17,7 @@ protected:
         memset(buffer, 0, sizeof(buffer));
         memset(&logger, 0, sizeof(bal_logger_t));
         memset(&assembler, 0, sizeof(bal_x86_assembler_t));
+        bal_logger_init_default(&logger);
         const bal_error_t error
             = bal_x86_assembler_init(&assembler, buffer, sizeof(buffer), logger);
         ASSERT_EQ(error, error);
