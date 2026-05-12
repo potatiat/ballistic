@@ -132,6 +132,7 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
             include/bal_tier2_worker.h
             include/bal_spsc_queue.h
             include/backend/bal_cpu.h
+            include/backend/x86/bal_x86_assembler.h
             include/backend/x86/bal_x86_sliding_window.h
             include/backend/x86/bal_x86_tier1_compiler.h
     )
