@@ -189,7 +189,7 @@ if (BALLISTIC_BUILD_TESTS)
         gtest_discover_tests(${target_name})
     endforeach ()
 
-    set(BACKEND_X86_TESTS x86_assembler)
+    set(BACKEND_X86_TESTS x86_assembler x86_sliding_window)
     foreach (test_name ${BACKEND_X86_TESTS})
         set(target_name "test_${test_name}")
         add_executable(${target_name} "tests/backend/x86/${target_name}.cpp")
