@@ -13,26 +13,26 @@ typedef enum
     /// Accumulator Register.
     BAL_X86_RAX = 0,
 
-    /// Base register.
-    BAL_X86_RBX,
-
     /// Counter Register.
     BAL_X86_RCX,
 
     /// Data Register.
     BAL_X86_RDX,
 
-    /// Source Index.
-    BAL_X86_RSI,
-
-    /// Destination Index.
-    BAL_X86_RDI,
+    /// Base register.
+    BAL_X86_RBX,
 
     /// Stack pointer.
     BAL_X86_RSP,
 
     /// Base pointer.
     BAL_X86_RBP,
+
+    /// Source Index.
+    BAL_X86_RSI,
+
+    /// Destination Index.
+    BAL_X86_RDI,
 
     /// Extended Register 8.
     BAL_X86_R8,
