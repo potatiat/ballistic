@@ -32,10 +32,10 @@ static uint32_t extract_operand_value(uint32_t instruction, const bal_decoder_op
 static void     translate_movz(bal_tier1_compiler_t *compiler, const uint32_t *arm_operands);
 
 bal_error_t
-bal_tier1_compiler_init(bal_tier1_compiler_t *compiler,
-                        void                 *executable_buffer,
-                        const size_t          buffer_size,
-                        const bal_logger_t    logger)
+bal_tier1_compiler_init(bal_tier1_compiler_t         *compiler,
+                        const bal_executable_buffer_t executable_buffer,
+                        const size_t                  buffer_size,
+                        const bal_logger_t            logger)
 {
     if (BAL_UNLIKELY(NULL == compiler))
     {
@@ -43,7 +43,8 @@ bal_tier1_compiler_init(bal_tier1_compiler_t *compiler,
         return BAL_ERROR_INVALID_ARGUMENT;
     }
 
-    if (BAL_UNLIKELY(NULL == executable_buffer))
+    if (BAL_UNLIKELY(NULL == executable_buffer.rw_pointer)
+        || BAL_UNLIKELY(NULL == executable_buffer.rx_pointer))
     {
         BAL_LOG_ERROR(&logger, "Aborting function: executable_buffer is NULL");
         compiler->status = BAL_ERROR_INVALID_ARGUMENT;
@@ -116,7 +117,7 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                  (unsigned long long)guest_address,
                  max_instructions);
     reset_register_allocator(compiler);
-    void *host_address = compiler->assembler.buffer + compiler->assembler.offset;
+    void *host_address = compiler->assembler.rx_buffer + compiler->assembler.offset;
 
     // Setup host frame pointer.
     //
@@ -180,10 +181,11 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
             }
 
             const bal_decoder_operand_t *BAL_RESTRICT operands_cursor = metadata->operands;
+            uint32_t *BAL_RESTRICT arm_operands_cursor                = arm_instruction_operands;
 
             for (size_t ii = 0; ii < BAL_OPERANDS_SIZE; ++ii)
             {
-                arm_instruction_operands[ii] = extract_operand_value(instruction, operands_cursor);
+                *arm_operands_cursor++ = extract_operand_value(instruction, operands_cursor);
                 ++operands_cursor;
             }
 

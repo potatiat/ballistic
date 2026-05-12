@@ -27,40 +27,43 @@ BAL_HOT static void emit_modrm_memory_disp32_rbp(uint8_t           *buffer,
                                                  bal_x86_register_t reg);
 
 bal_error_t
-bal_x86_assembler_init(bal_x86_assembler_t *assembler,
-                       void                *executable_buffer,
-                       const size_t         size,
-                       const bal_logger_t   logger)
+bal_x86_assembler_init(bal_x86_assembler_t    *assembler,
+                       bal_executable_buffer_t executable_buffer,
+                       const size_t            size,
+                       const bal_logger_t      logger)
 {
     const bal_error_t error = BAL_ERROR_INVALID_ARGUMENT;
 
     if (BAL_UNLIKELY(NULL == assembler))
     {
-        BAL_LOG_ERROR(&logger, "Assembler is NULL, aborting initialization");
+        BAL_LOG_ERROR(&logger, "Aborting function: Assembler is NULL");
         return error;
     }
 
-    if (BAL_UNLIKELY(NULL == executable_buffer))
+    if (BAL_UNLIKELY(NULL == executable_buffer.rx_pointer)
+        || BAL_UNLIKELY(NULL == executable_buffer.rw_pointer))
     {
-        BAL_LOG_ERROR(&logger, "Buffer is NULL, aborting initialization");
+        BAL_LOG_ERROR(&logger, "Aborting function: Buffer is NULL");
         return error;
     }
 
     if (BAL_UNLIKELY(0 == size))
     {
-        BAL_LOG_ERROR(&logger, "Size is 0, aborting initialization");
+        BAL_LOG_ERROR(&logger, "Aborting function: Size is 0");
         return error;
     }
 
-    assembler->buffer   = (uint8_t *)executable_buffer;
-    assembler->capacity = size;
-    assembler->offset   = 0;
-    assembler->logger   = logger;
-    assembler->status   = BAL_SUCCESS;
+    assembler->buffer    = (uint8_t *)executable_buffer.rw_pointer;
+    assembler->rx_buffer = (uint8_t *)executable_buffer.rx_pointer;
+    assembler->capacity  = size;
+    assembler->offset    = 0;
+    assembler->logger    = logger;
+    assembler->status    = BAL_SUCCESS;
 
     BAL_LOG_INFO(&logger,
-                 "x86 Assembler initialized. Buffer: %p, Capacity: %zu bytes",
-                 executable_buffer,
+                 "x86 Assembler initialized. RW Buffer: %p, RX Buffer: %p, Capacity: %zu bytes",
+                 executable_buffer.rw_pointer,
+                 executable_buffer.rx_pointer,
                  size);
     return BAL_SUCCESS;
 }

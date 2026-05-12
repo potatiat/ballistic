@@ -3,6 +3,7 @@
 
 #include "bal_errors.h"
 #include "bal_logging.h"
+#include "bal_memory.h"
 #include <stddef.h>
 #include <stdint.h>
 
@@ -70,6 +71,9 @@ extern "C"
         /// Memory buffer where machine code bytes are written.
         uint8_t *buffer;
 
+        /// Pointer to the executable view of the memory buffer.
+        uint8_t *rx_buffer;
+
         /// Maximum number of bytes this assembler can write.
         size_t capacity;
 
@@ -95,10 +99,10 @@ extern "C"
     ///
     /// Returns [`BAL_ERROR_INVALID_ARGUMENT`] if `assembler` or `executable_buffer` is `NULL` or
     /// `size` is 0.
-    bal_error_t bal_x86_assembler_init(bal_x86_assembler_t *assembler,
-                                       void                *executable_buffer,
-                                       size_t               size,
-                                       bal_logger_t         logger);
+    bal_error_t bal_x86_assembler_init(bal_x86_assembler_t    *assembler,
+                                       bal_executable_buffer_t executable_buffer,
+                                       size_t                  size,
+                                       bal_logger_t            logger);
 
     /// Emits a memory load using the 32-bit displacement `offset`.
     ///

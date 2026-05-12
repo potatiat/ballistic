@@ -34,10 +34,10 @@ extern "C"
     /// Returns [`BAL_SUCCESS`] on success.
     ///
     /// Returns [`BAL_ERROR_INVALID_ARGUMENT`] if passed pointers are NULL or `buffer_size` is 0.
-    BAL_COLD bal_error_t bal_tier1_compiler_init(bal_tier1_compiler_t *compiler,
-                                                 void                 *executable_buffer,
-                                                 size_t                buffer_size,
-                                                 bal_logger_t          logger);
+    BAL_COLD bal_error_t bal_tier1_compiler_init(bal_tier1_compiler_t   *compiler,
+                                                 bal_executable_buffer_t executable_buffer,
+                                                 size_t                  buffer_size,
+                                                 bal_logger_t            logger);
 
     BAL_HOT void *bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                                                const bal_memory_interface_t *memory_interface,
