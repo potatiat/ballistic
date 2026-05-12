@@ -45,15 +45,15 @@ typedef struct
 
 static_assert(sizeof(bal_translation_context_t) <= 64, "Context must fit in  1 cache line");
 
-static uint32_t extract_operand_value(uint32_t, const bal_decoder_operand_t *);
-static uint32_t intern_constant(bal_translation_context_t *, bal_constant_t);
-static void     translate_const(bal_translation_context_t *,
-                                const bal_decoder_instruction_metadata_t *,
-                                const uint32_t *);
-static void     translate_sub(bal_translation_context_t *,
-                              const bal_decoder_instruction_metadata_t *,
-                              const uint32_t *);
-static void     translate_return(bal_translation_context_t *, const uint32_t *);
+// static uint32_t extract_operand_value(uint32_t, const bal_decoder_operand_t *);
+// static uint32_t intern_constant(bal_translation_context_t *, bal_constant_t);
+// static void     translate_const(bal_translation_context_t *,
+// const bal_decoder_instruction_metadata_t *,
+// const uint32_t *);
+// static void     translate_sub(bal_translation_context_t *,
+// const bal_decoder_instruction_metadata_t *,
+// const uint32_t *);
+// static void     translate_return(bal_translation_context_t *, const uint32_t *);
 
 BAL_COLD bal_error_t
 bal_engine_init(const bal_allocator_t *allocator, bal_engine_t *engine, bal_logger_t logger)
@@ -106,6 +106,7 @@ bal_engine_init(const bal_allocator_t *allocator, bal_engine_t *engine, bal_logg
     return engine->status;
 }
 
+#if 0
 bal_error_t
 bal_engine_translate_tier2(bal_engine_t *BAL_RESTRICT                 engine,
                            const bal_memory_interface_t *BAL_RESTRICT interface,
@@ -671,3 +672,4 @@ translate_sub(bal_translation_context_t                *context,
 
     context->instruction_count++;
 }
+#endif

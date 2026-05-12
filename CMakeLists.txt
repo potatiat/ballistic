@@ -104,9 +104,9 @@ set(COVERAGE_CLI_NAME "coverage_cli")
 add_executable(${COVERAGE_CLI_NAME} tools/coverage_cli.c)
 target_link_libraries(${COVERAGE_CLI_NAME} PRIVATE ${PROJECT_NAME})
 
-set(BALLISTIC_CLI_NAME "ballistic_cli")
-add_executable(${BALLISTIC_CLI_NAME} tools/ballistic_cli.c)
-target_link_libraries(${BALLISTIC_CLI_NAME} PRIVATE ${PROJECT_NAME})
+#set(BALLISTIC_CLI_NAME "ballistic_cli")
+#add_executable(${BALLISTIC_CLI_NAME} tools/ballistic_cli.c)
+#target_link_libraries(${BALLISTIC_CLI_NAME} PRIVATE ${PROJECT_NAME})
 
 # Our documentation generator completely relies on Clang running on UNIX
 # compatable machines for parsing C code. I do not have a Windows machine to
@@ -176,19 +176,19 @@ if (BALLISTIC_BUILD_TESTS)
     gtest_discover_tests(${DECODER_TEST})
     gtest_discover_tests(${MEMORY_TEST})
 
-    set(TRANSLATION_TESTS movk movn movz ret sub)
-    foreach (test_name ${TRANSLATION_TESTS})
-        set(target_name "test_${test_name}")
-        add_executable(${target_name} "tests/translation/${target_name}.cpp")
-        target_link_libraries(${target_name} PRIVATE Ballistic gtest gtest_main)
-        target_include_directories(${target_name} PRIVATE tests/translation)
-
-        if (NOT MSVC)
-            target_compile_options(${MEMORY_TEST} PRIVATE -Wall -Wextra -Werror)
-        endif ()
-
-        gtest_discover_tests(${target_name})
-    endforeach ()
+    #    set(TRANSLATION_TESTS movk movn movz ret sub)
+    #    foreach (test_name ${TRANSLATION_TESTS})
+    #        set(target_name "test_${test_name}")
+    #        add_executable(${target_name} "tests/translation/${target_name}.cpp")
+    #        target_link_libraries(${target_name} PRIVATE Ballistic gtest gtest_main)
+    #        target_include_directories(${target_name} PRIVATE tests/translation)
+    #
+    #        if (NOT MSVC)
+    #            target_compile_options(${MEMORY_TEST} PRIVATE -Wall -Wextra -Werror)
+    #        endif ()
+    #
+    #        gtest_discover_tests(${target_name})
+    #    endforeach ()
 
     set(BACKEND_X86_TESTS x86_assembler x86_sliding_window)
     foreach (test_name ${BACKEND_X86_TESTS})
