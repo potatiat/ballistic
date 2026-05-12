@@ -90,23 +90,24 @@ TEST_F(Backendx86Assembler, Internal_CanEmit_BufferExhausted)
 // Test pass incorrect data to modrm/rex generators.
 TEST_F(Backendx86Assembler, Internal_BitwiseMasking)
 {
-    emit_rex(&assembler.buffer, 0xFF, 0xFF, 0xFF);
+    emit_rex(assembler.buffer, &assembler.offset, 0xFF, 0xFF, 0xFF);
 
     // w=1, r=1, b=1 -> 0x40 | 8 | 4 | 1 = 0x4D
     //
     EXPECT_EQ(buffer[0], 0x4D);
     assembler.offset = 0;
-    emit_modrm_register(&assembler.buffer, (bal_x86_register_t)0xFF, (bal_x86_register_t)0xFF);
+    emit_modrm_register(
+        assembler.buffer, &assembler.offset, (bal_x86_register_t)0xFF, (bal_x86_register_t)0xFF);
 
     // reg=7, rm=7 -> 0xC0 | 7 << 3 | 7 = 0xC0 | 0x38 | 0x07 = 0xFF
     //
-    EXPECT_EQ(buffer[1], 0xFF);
+    EXPECT_EQ(buffer[0], 0xFF);
     assembler.offset = 0;
-    emit_modrm_memory_disp32_rbp(&assembler.buffer, (bal_x86_register_t)0xFF);
+    emit_modrm_memory_disp32_rbp(assembler.buffer, &assembler.offset, (bal_x86_register_t)0xFF);
 
     // reg=7 -> 0x8D | 7 >> 3 | 0x05 = 0x80 | 0x38 | 0x05 = 0xBD
     //
-    EXPECT_EQ(buffer[2], 0xBD);
+    EXPECT_EQ(buffer[0], 0xBD);
 }
 
 /*** end of file ***/

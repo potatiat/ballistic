@@ -5,18 +5,21 @@
 
 BAL_HOT static bool is_valid_register(bal_x86_register_t reg);
 BAL_HOT static bool can_emit(bal_x86_assembler_t *assembler, size_t size);
-BAL_HOT static void emit8(uint8_t **cursor, uint8_t value);
-BAL_HOT static void emit32(uint8_t **cursor, uint32_t value);
-BAL_HOT static void emit64(uint8_t **cursor, uint64_t value);
-BAL_HOT static void emit_rex(uint8_t **cursor, uint8_t w, uint8_t r, uint8_t b);
+BAL_HOT static void emit8(uint8_t *buffer, size_t *offset, uint8_t value);
+BAL_HOT static void emit32(uint8_t *buffer, size_t *offset, uint32_t value);
+BAL_HOT static void emit64(uint8_t *buffer, size_t *offset, uint64_t value);
+BAL_HOT static void emit_rex(uint8_t *buffer, size_t *offset, uint8_t w, uint8_t r, uint8_t b);
 
 /// Emits the ModR/M byte for Register-to-Register operations.
-BAL_HOT static void emit_modrm_register(uint8_t          **cursor,
+BAL_HOT static void emit_modrm_register(uint8_t           *buffer,
+                                        size_t            *offset,
                                         bal_x86_register_t reg,
                                         bal_x86_register_t rm);
 
 /// Emits the ModR/M byte for Memory Addressing: [RBP + disp32].
-BAL_HOT static void emit_modrm_memory_disp32_rbp(uint8_t **cursor, bal_x86_register_t reg);
+BAL_HOT static void emit_modrm_memory_disp32_rbp(uint8_t           *buffer,
+                                                 size_t            *offset,
+                                                 bal_x86_register_t reg);
 
 bal_error_t
 bal_x86_assembler_init(bal_x86_assembler_t *assembler,
@@ -96,17 +99,15 @@ bal_x86_emit_load_r64_rbp_offset(bal_x86_assembler_t     *assembler,
                   destination,
                   offset);
 
-    uint8_t      *cursor     = assembler->buffer + assembler->offset;
     const uint8_t w          = 1;
     const uint8_t r          = (uint8_t)destination >> 3;
     const uint8_t b          = 0;
     const uint8_t opcode     = 0X8B;
     const size_t  old_offset = assembler->offset;
-    emit_rex(&cursor, w, r, b);
-    emit8(&cursor, opcode);
-    emit_modrm_memory_disp32_rbp(&cursor, destination);
-    emit32(&cursor, (uint32_t)offset);
-    assembler->offset          = (size_t)(cursor - assembler->buffer);
+    emit_rex(assembler->buffer, &assembler->offset, w, r, b);
+    emit8(assembler->buffer, &assembler->offset, opcode);
+    emit_modrm_memory_disp32_rbp(assembler->buffer, &assembler->offset, destination);
+    emit32(assembler->buffer, &assembler->offset, (uint32_t)offset);
     const size_t bytes_emitted = assembler->offset - old_offset;
     BAL_ASSERT_MSG(bytes_emitted == instruction_size_bytes,
                    "Bytes emitted %d does not match instruction size %d",
@@ -149,17 +150,15 @@ bal_x86_emit_store_r64_rbp_offset(bal_x86_assembler_t     *assembler,
 
     BAL_LOG_DEBUG(
         &assembler->logger, "[0x%04zx] mov[rbp + 0x%X], r%d", assembler->offset, offset, source);
-    const uint8_t w             = 1;
-    const uint8_t r             = (uint8_t)source >> 3;
-    const uint8_t b             = 0;
-    const uint8_t opcode        = 0X89;
-    uint8_t      *buffer_cursor = assembler->buffer + assembler->offset;
-    const size_t  old_offset    = assembler->offset;
-    emit_rex(&buffer_cursor, w, r, b);
-    emit8(&buffer_cursor, opcode);
-    emit_modrm_memory_disp32_rbp(&buffer_cursor, source);
-    emit32(&buffer_cursor, (uint32_t)offset);
-    assembler->offset          = (size_t)(buffer_cursor - assembler->buffer);
+    const uint8_t w          = 1;
+    const uint8_t r          = (uint8_t)source >> 3;
+    const uint8_t b          = 0;
+    const uint8_t opcode     = 0X89;
+    const size_t  old_offset = assembler->offset;
+    emit_rex(assembler->buffer, &assembler->offset, w, r, b);
+    emit8(assembler->buffer, &assembler->offset, opcode);
+    emit_modrm_memory_disp32_rbp(assembler->buffer, &assembler->offset, source);
+    emit32(assembler->buffer, &assembler->offset, (uint32_t)offset);
     const size_t bytes_emitted = assembler->offset - old_offset;
     BAL_ASSERT_MSG(bytes_emitted == instruction_size_bytes,
                    "Bytes emitted %d does not match instruction size %d",
@@ -212,16 +211,14 @@ bal_x86_emit_mov_r64_r64(bal_x86_assembler_t     *assembler,
 
     BAL_LOG_DEBUG(
         &assembler->logger, "[+0x%04zx] mov r%d, r%d", assembler->offset, destination, source);
-    const uint8_t w             = 1;
-    const uint8_t r             = (uint8_t)destination >> 3;
-    const uint8_t b             = (uint8_t)source >> 3;
-    const uint8_t opcode        = 0x8BU;
-    uint8_t      *buffer_cursor = assembler->buffer + assembler->offset;
-    emit_rex(&buffer_cursor, w, r, b);
-    const size_t old_offset = assembler->offset;
-    emit8(&buffer_cursor, opcode);
-    emit_modrm_register(&buffer_cursor, destination, source);
-    assembler->offset          = (size_t)(buffer_cursor - assembler->buffer);
+    const uint8_t w          = 1;
+    const uint8_t r          = (uint8_t)destination >> 3;
+    const uint8_t b          = (uint8_t)source >> 3;
+    const uint8_t opcode     = 0x8BU;
+    const size_t  old_offset = assembler->offset;
+    emit_rex(assembler->buffer, &assembler->offset, w, r, b);
+    emit8(assembler->buffer, &assembler->offset, opcode);
+    emit_modrm_register(assembler->buffer, &assembler->offset, destination, source);
     const size_t bytes_emitted = assembler->offset - old_offset;
     BAL_ASSERT_MSG(bytes_emitted == instruction_size_bytes,
                    "Bytes emitted %d does not match instruction size %d",
@@ -268,15 +265,13 @@ bal_x86_emit_mov_r64_imm64(bal_x86_assembler_t     *assembler,
                   assembler->offset,
                   destination,
                   (unsigned long long)immediate);
-    const uint8_t w             = 1;
-    const uint8_t r             = 0;
-    const uint8_t b             = (uint8_t)destination >> 3;
-    uint8_t      *buffer_cursor = assembler->buffer + assembler->offset;
-    const size_t  old_offset    = assembler->offset;
-    emit_rex(&buffer_cursor, w, r, b);
-    emit8(&buffer_cursor, 0xB8 + (destination & 7));
-    emit64(&buffer_cursor, immediate);
-    assembler->offset          = (size_t)(buffer_cursor - assembler->buffer);
+    const uint8_t w          = 1;
+    const uint8_t r          = 0;
+    const uint8_t b          = (uint8_t)destination >> 3;
+    const size_t  old_offset = assembler->offset;
+    emit_rex(assembler->buffer, &assembler->offset, w, r, b);
+    emit8(assembler->buffer, &assembler->offset, 0xB8 + (destination & 7));
+    emit64(assembler->buffer, &assembler->offset, immediate);
     const size_t bytes_emitted = assembler->offset - old_offset;
     BAL_ASSERT_MSG(bytes_emitted == instruction_size_bytes,
                    "Bytes emitted %d does not match instruction size %d",
@@ -308,9 +303,7 @@ bal_x86_emit_ret(bal_x86_assembler_t *assembler)
     }
 
     BAL_LOG_DEBUG(&assembler->logger, "[+0x%04zx] ret", assembler->offset);
-    uint8_t *buffer_cursor = assembler->buffer + assembler->offset;
-    emit8(&buffer_cursor, 0XC3);
-    assembler->offset = (size_t)(buffer_cursor - assembler->buffer);
+    emit8(assembler->buffer, &assembler->offset, 0XC3);
 }
 
 void
@@ -346,21 +339,19 @@ bal_x86_emit_push_r64(bal_x86_assembler_t *assembler, const bal_x86_register_t r
     }
 
     BAL_LOG_DEBUG(&assembler->logger, "[+0x%04zx] push r%d", assembler->offset, reg);
-    uint8_t *buffer_cursor = assembler->buffer + assembler->offset;
+    const size_t old_offset = assembler->offset;
 
     if (reg > 7)
     {
         const uint8_t w = 0;
         const uint8_t r = 0;
         const uint8_t b = (uint8_t)reg >> 3;
-        emit_rex(&buffer_cursor, w, r, b);
+        emit_rex(assembler->buffer, &assembler->offset, w, r, b);
         ++instruction_size_bytes;
     }
 
-    const size_t  old_offset = assembler->offset;
-    const uint8_t opcode     = 0x50;
-    emit8(&buffer_cursor, opcode + (reg & 7));
-    assembler->offset          = (size_t)(buffer_cursor - assembler->buffer);
+    const uint8_t opcode = 0x50;
+    emit8(assembler->buffer, &assembler->offset, opcode + (reg & 7));
     const size_t bytes_emitted = assembler->offset - old_offset;
     BAL_ASSERT_MSG(bytes_emitted <= instruction_size_bytes,
                    "Bytes emitted %d does not match instruction size %d",
@@ -401,21 +392,19 @@ bal_x86_emit_pop_r64(bal_x86_assembler_t *assembler, const bal_x86_register_t re
     }
 
     BAL_LOG_DEBUG(&assembler->logger, "[+0x%04zx] pop r%d", assembler->offset, reg);
-    uint8_t *buffer_cursor = assembler->buffer + assembler->offset;
+    const size_t old_offset = assembler->offset;
 
     if (reg > 7)
     {
         const uint8_t w = 0;
         const uint8_t r = 0;
         const uint8_t b = (uint8_t)reg >> 3;
-        emit_rex(&buffer_cursor, w, r, b);
+        emit_rex(assembler->buffer, &assembler->offset, w, r, b);
         ++instruction_size_bytes;
     }
 
-    const size_t  old_offset = assembler->offset;
-    const uint8_t opcode     = 0x58;
-    emit8(&buffer_cursor, opcode + (reg & 7));
-    assembler->offset          = (size_t)(buffer_cursor - assembler->buffer);
+    const uint8_t opcode = 0x58;
+    emit8(assembler->buffer, &assembler->offset, opcode + (reg & 7));
     const size_t bytes_emitted = assembler->offset - old_offset;
     BAL_ASSERT_MSG(bytes_emitted == instruction_size_bytes,
                    "Bytes emitted %d does not match instruction size %d",
@@ -468,53 +457,42 @@ can_emit(bal_x86_assembler_t *assembler, const size_t size)
 }
 
 static void
-emit8(uint8_t **cursor, uint8_t const value)
+emit8(uint8_t *buffer, size_t *offset, uint8_t const value)
 {
-    if (BAL_UNLIKELY(NULL == cursor))
+    if (BAL_UNLIKELY(NULL == buffer))
     {
         return;
     }
 
-    if (BAL_UNLIKELY(NULL == *cursor))
-    {
-        return;
-    }
-
-    *(*cursor)++ = value;
+    buffer += *offset;
+    *buffer = value;
+    *offset += 1;
 }
 
 static void
-emit32(uint8_t **cursor, const uint32_t value)
+emit32(uint8_t *buffer, size_t *offset, const uint32_t value)
 {
-    if (BAL_UNLIKELY(NULL == cursor))
+    if (BAL_UNLIKELY(NULL == buffer))
     {
         return;
     }
 
-    if (BAL_UNLIKELY(NULL == *cursor))
-    {
-        return;
-    }
-
-    memcpy(*cursor, &value, sizeof(uint32_t));
-    *cursor += sizeof(uint32_t);
+    buffer += *offset;
+    memcpy(buffer, &value, sizeof(uint32_t));
+    *offset += sizeof(uint32_t);
 }
 
 static void
-emit64(uint8_t **cursor, uint64_t const value)
+emit64(uint8_t *buffer, size_t *offset, uint64_t const value)
 {
-    if (BAL_UNLIKELY(NULL == cursor))
+    if (BAL_UNLIKELY(NULL == buffer))
     {
         return;
     }
 
-    if (BAL_UNLIKELY(NULL == *cursor))
-    {
-        return;
-    }
-
-    memcpy(*cursor, &value, sizeof(uint64_t));
-    *cursor += sizeof(uint64_t);
+    buffer += *offset;
+    memcpy(buffer, &value, sizeof(uint64_t));
+    *offset += sizeof(uint64_t);
 }
 
 /// Emits the REX prefix.
@@ -522,30 +500,33 @@ emit64(uint8_t **cursor, uint64_t const value)
 /// r = extension for the ModR/W `reg` field.
 /// b = extension for the ModR/W `r/m` field or opcode register.
 static void
-emit_rex(uint8_t **cursor, const uint8_t w, const uint8_t r, const uint8_t b)
+emit_rex(uint8_t *buffer, size_t *offset, const uint8_t w, const uint8_t r, const uint8_t b)
 {
     const uint8_t safe_w = w & 1U;
     const uint8_t safe_r = r & 1U;
     const uint8_t safe_b = b & 1U;
     const uint8_t rex = (uint8_t)(0x40U | (unsigned)safe_w << 3U | (unsigned)safe_r << 2U | safe_b);
-    emit8(cursor, rex);
+    emit8(buffer, offset, rex);
 }
 
 void
-emit_modrm_register(uint8_t **cursor, const bal_x86_register_t reg, const bal_x86_register_t rm)
+emit_modrm_register(uint8_t                 *buffer,
+                    size_t                  *offset,
+                    const bal_x86_register_t reg,
+                    const bal_x86_register_t rm)
 {
     const uint8_t safe_reg = (uint8_t)reg & 7;
     const uint8_t safe_rm  = (uint8_t)rm & 7U;
     const uint8_t modrm    = (uint8_t)(0xC0U | (unsigned)safe_reg << 3U | safe_rm);
-    emit8(cursor, modrm);
+    emit8(buffer, offset, modrm);
 }
 
 void
-emit_modrm_memory_disp32_rbp(uint8_t **cursor, const bal_x86_register_t reg)
+emit_modrm_memory_disp32_rbp(uint8_t *buffer, size_t *offset, const bal_x86_register_t reg)
 {
     const uint8_t safe_reg = (uint8_t)reg & 7;
     uint8_t const modrm    = (uint8_t)(0x80U | (unsigned)safe_reg << 3U | 0x05U);
-    emit8(cursor, modrm);
+    emit8(buffer, offset, modrm);
 }
 
 /*** end of file ***/
