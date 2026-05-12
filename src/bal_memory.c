@@ -4,11 +4,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static void                  *default_allocate(bal_allocator_handle_t, size_t, size_t);
-static void                   default_free(bal_allocator_handle_t, void *, size_t);
-BAL_HOT static const uint8_t *bal_flat_translation_interface_translate(void *,
-                                                                       bal_guest_address_t,
-                                                                       size_t *);
+static void                   *default_allocate(bal_allocator_handle_t, size_t, size_t);
+static void                    default_free(bal_allocator_handle_t, void *, size_t);
+static bal_executable_buffer_t default_allocate_executable(bal_allocator_handle_t handle,
+                                                           size_t                 alignment,
+                                                           size_t                 size);
+static bal_error_t             default_reprotect_executable(bal_allocator_handle_t  handle,
+                                                            bal_executable_buffer_t buffer,
+                                                            size_t                  size);
+static void                    default_free_executable(bal_allocator_handle_t  handle,
+                                                       bal_executable_buffer_t buffer,
+                                                       size_t                  size);
+BAL_HOT static const uint8_t  *bal_flat_translation_interface_translate(void *,
+                                                                        bal_guest_address_t,
+                                                                        size_t *);
 
 typedef struct
 {
@@ -23,9 +32,12 @@ static_assert(0 == sizeof(flat_translation_interface_t) % 16, "Struct must be al
 void
 bal_allocator_default_init(bal_allocator_t *out_allocator)
 {
-    out_allocator->handle   = NULL;
-    out_allocator->allocate = default_allocate;
-    out_allocator->free     = default_free;
+    out_allocator->handle               = NULL;
+    out_allocator->allocate             = default_allocate;
+    out_allocator->free                 = default_free;
+    out_allocator->allocate_executable  = default_allocate_executable;
+    out_allocator->reprotect_executable = default_reprotect_executable;
+    out_allocator->free_executable      = default_free_executable;
 }
 
 BAL_COLD bal_error_t
@@ -105,6 +117,7 @@ bal_flat_translation_interface_destroy(bal_allocator_t        *allocator,
 }
 
 #if BAL_PLATFORM_POSIX
+#include <sys/mman.h>
 
 static void *
 default_allocate(bal_allocator_handle_t handle, size_t alignment, size_t size)
@@ -134,11 +147,65 @@ default_free(bal_allocator_handle_t handle, void *pointer, size_t size)
     free(pointer);
 }
 
+bal_executable_buffer_t
+default_allocate_executable(bal_allocator_handle_t handle, size_t alignment, size_t size)
+{
+    (void)handle;
+    (void)alignment;
+
+    if (0 == size)
+    {
+        return (bal_executable_buffer_t) { NULL, NULL };
+    }
+
+    void *memory = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+
+    if (memory == MAP_FAILED)
+    {
+        return (bal_executable_buffer_t) { NULL, NULL };
+    }
+
+    return (bal_executable_buffer_t) { memory, memory };
+}
+
+bal_error_t
+default_reprotect_executable(bal_allocator_handle_t  handle,
+                             bal_executable_buffer_t buffer,
+                             size_t                  size)
+{
+    (void)handle;
+
+    if (NULL == buffer.rx_pointer)
+    {
+        return BAL_ERROR_INVALID_ARGUMENT;
+    }
+
+    if (mprotect(buffer.rx_pointer, size, PROT_READ | PROT_EXEC) != 0)
+    {
+        return BAL_ERROR_MEMORY_FAULT;
+    }
+
+    return BAL_SUCCESS;
+}
+void
+default_free_executable(bal_allocator_handle_t handle, bal_executable_buffer_t buffer, size_t size)
+{
+    (void)handle;
+
+    if (NULL == buffer.rx_pointer)
+    {
+        return;
+    }
+
+    munmap(buffer.rx_pointer, size);
+}
+
 #endif /* BAL_PLATFORM_POSIX */
 
 #if BAL_PLATFORM_WINDOWS
 
 #include <malloc.h>
+#include <windows.h>
 
 static void *
 default_allocate(bal_allocator_handle_t handle, size_t alignment, size_t size)
@@ -160,6 +227,55 @@ default_free(bal_allocator_handle_t handle, void *pointer, size_t size)
     (void)handle;
     (void)size;
     _aligned_free(pointer);
+}
+
+bal_executable_buffer_t
+default_allocate_executable(bal_allocator_handle_t handle, size_t alignment, size_t size)
+{
+    (void)handle;
+    (void)alignment;
+
+    if (0 == size)
+    {
+        return (bal_executable_buffer_t) { NULL, NULL };
+    }
+
+    void *memory = VirtualAlloc(NULL, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    return (bal_executable_buffer_t) { memory, memory };
+}
+
+bal_error_t
+default_reprotect_executable(bal_allocator_handle_t  handle,
+                             bal_executable_buffer_t buffer,
+                             size_t                  size)
+{
+    (void)handle;
+
+    if (NULL == buffer.rx_pointer)
+    {
+        return BAL_ERROR_INVALID_ARGUMENT;
+    }
+
+    DWORD old_protect;
+
+    if (!VirtualProtect(buffer.rx_pointer, size, PAGE_EXECUTE_READ, &old_protect))
+    {
+        return BAL_ERROR_MEMORY_FAULT;
+    }
+
+    return BAL_SUCCESS;
+}
+void
+default_free_executable(bal_allocator_handle_t handle, bal_executable_buffer_t buffer, size_t size)
+{
+    (void)handle;
+
+    if (NULL == buffer.rx_pointer)
+    {
+        return;
+    }
+
+    VirtualFree(buffer.rx_pointer, 0, MEM_RELEASE);
 }
 
 #endif /* BAL_PLATFORM_WINDOWS */
