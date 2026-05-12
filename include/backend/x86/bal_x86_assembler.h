@@ -6,193 +6,202 @@
 #include <stddef.h>
 #include <stdint.h>
 
-typedef enum
+#ifdef __cplusplus
+extern "C"
 {
-    BAL_X86_INVALID = -1,
+#endif /* __cplusplus */
 
-    /// Accumulator Register.
-    BAL_X86_RAX = 0,
+    typedef enum
+    {
+        BAL_X86_INVALID = -1,
 
-    /// Counter Register.
-    BAL_X86_RCX,
+        /// Accumulator Register.
+        BAL_X86_RAX = 0,
 
-    /// Data Register.
-    BAL_X86_RDX,
+        /// Counter Register.
+        BAL_X86_RCX,
 
-    /// Base register.
-    BAL_X86_RBX,
+        /// Data Register.
+        BAL_X86_RDX,
 
-    /// Stack pointer.
-    BAL_X86_RSP,
+        /// Base register.
+        BAL_X86_RBX,
 
-    /// Base pointer.
-    BAL_X86_RBP,
+        /// Stack pointer.
+        BAL_X86_RSP,
 
-    /// Source Index.
-    BAL_X86_RSI,
+        /// Base pointer.
+        BAL_X86_RBP,
 
-    /// Destination Index.
-    BAL_X86_RDI,
+        /// Source Index.
+        BAL_X86_RSI,
 
-    /// Extended Register 8.
-    BAL_X86_R8,
+        /// Destination Index.
+        BAL_X86_RDI,
 
-    /// Extended Register 9.
-    BAL_X86_R9,
+        /// Extended Register 8.
+        BAL_X86_R8,
 
-    /// Extended Register 10.
-    BAL_X86_R10,
+        /// Extended Register 9.
+        BAL_X86_R9,
 
-    /// Extended Register 11.
-    BAL_X86_R11,
+        /// Extended Register 10.
+        BAL_X86_R10,
 
-    /// Extended Register 12.
-    BAL_X86_R12,
+        /// Extended Register 11.
+        BAL_X86_R11,
 
-    /// Extended Register 13.
-    BAL_X86_R13,
+        /// Extended Register 12.
+        BAL_X86_R12,
 
-    /// Extended Register 14.
-    BAL_X86_R14,
+        /// Extended Register 13.
+        BAL_X86_R13,
 
-    /// Extended Register 15.
-    BAL_X86_R15,
-} bal_x86_register_t;
+        /// Extended Register 14.
+        BAL_X86_R14,
 
-/// The x86-64 assembler state.
-typedef struct
-{
-    /// Memory buffer where machine code bytes are written.
-    uint8_t *buffer;
+        /// Extended Register 15.
+        BAL_X86_R15,
+    } bal_x86_register_t;
 
-    /// Maximum number of bytes this assembler can write.
-    size_t capacity;
+    /// The x86-64 assembler state.
+    typedef struct
+    {
+        /// Memory buffer where machine code bytes are written.
+        uint8_t *buffer;
 
-    /// Current byte index in the buffer.
-    size_t offset;
-    /// Logger instance.
-    bal_logger_t logger;
+        /// Maximum number of bytes this assembler can write.
+        size_t capacity;
 
-    /// Current error state. If this is not [`BAL_SUCCESS`], all emit calls will fail.
-    bal_error_t status;
-} bal_x86_assembler_t;
+        /// Current byte index in the buffer.
+        size_t offset;
+        /// Logger instance.
+        bal_logger_t logger;
 
-/// Initializes the x86-64 assembler with `executable_buffer`.
-///
-/// # Safety
-///
-/// `executable_buffer` must point to a valid allocation of at least `size` bytes. The buffer must
-/// also be configured with executable page permissions by the host OS.
-///
-/// # Errors
-///
-/// Returns [`BAL_SUCCESS`] on success.
-///
-/// Returns [`BAL_ERROR_INVALID_ARGUMENT`] if `assembler` or `executable_buffer` is `NULL` or `size`
-/// is 0.
-bal_error_t bal_x86_assembler_init(bal_x86_assembler_t *assembler,
-                                   void                *executable_buffer,
-                                   size_t               size,
-                                   bal_logger_t         logger);
+        /// Current error state. If this is not [`BAL_SUCCESS`], all emit calls will fail.
+        bal_error_t status;
+    } bal_x86_assembler_t;
 
-/// Emits a memory load using the 32-bit displacement `offset`.
-///
-/// Assembler equivalent: `mov destination, [rbp + offset]`
-///
-/// # Warning
-///
-/// This function fails if:
-///
-/// - `assembler` is `NULL`.
-/// - `assembler->status != [`BAL_SUCCESS`]
-/// - `assembler->buffer` is full.
-void bal_x86_emit_load_r64_rbp_offset(bal_x86_assembler_t *assembler,
-                                      bal_x86_register_t   destination,
-                                      int32_t              offset);
+    /// Initializes the x86-64 assembler with `executable_buffer`.
+    ///
+    /// # Safety
+    ///
+    /// `executable_buffer` must point to a valid allocation of at least `size` bytes. The buffer
+    /// must also be configured with executable page permissions by the host OS.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BAL_SUCCESS`] on success.
+    ///
+    /// Returns [`BAL_ERROR_INVALID_ARGUMENT`] if `assembler` or `executable_buffer` is `NULL` or
+    /// `size` is 0.
+    bal_error_t bal_x86_assembler_init(bal_x86_assembler_t *assembler,
+                                       void                *executable_buffer,
+                                       size_t               size,
+                                       bal_logger_t         logger);
 
-/// Emits a memory store using a 32-bit displacement.
-///
-/// Assembly equivalent: `mov[rbp + offset], reg64`
-///
-/// # Warning
-///
-/// This function fails if:
-///
-/// - `assembler` is `NULL`.
-/// - `assembler->status != [`BAL_SUCCESS`]
-/// - `assembler->buffer` is full.
-void bal_x86_emit_store_r64_rbp_offset(bal_x86_assembler_t *assembler,
-                                       bal_x86_register_t   source,
-                                       int32_t              offset);
+    /// Emits a memory load using the 32-bit displacement `offset`.
+    ///
+    /// Assembler equivalent: `mov destination, [rbp + offset]`
+    ///
+    /// # Warning
+    ///
+    /// This function fails if:
+    ///
+    /// - `assembler` is `NULL`.
+    /// - `assembler->status != [`BAL_SUCCESS`]
+    /// - `assembler->buffer` is full.
+    void bal_x86_emit_load_r64_rbp_offset(bal_x86_assembler_t *assembler,
+                                          bal_x86_register_t   destination,
+                                          int32_t              offset);
 
-/// Emits an instruction to move 64-bit register `source` into `destination`.
-///
-/// Assembly equivalent: `mov reg64, reg64`
-///
-/// # Warning
-///
-/// This function fails if:
-///
-/// - `assembler` is `NULL`.
-/// - `assembler->status != [`BAL_SUCCESS`]
-/// - `assembler->buffer` is full.
-void bal_x86_emit_mov_r64_r64(bal_x86_assembler_t *assembler,
-                              bal_x86_register_t   destination,
-                              bal_x86_register_t   source);
+    /// Emits a memory store using a 32-bit displacement.
+    ///
+    /// Assembly equivalent: `mov[rbp + offset], reg64`
+    ///
+    /// # Warning
+    ///
+    /// This function fails if:
+    ///
+    /// - `assembler` is `NULL`.
+    /// - `assembler->status != [`BAL_SUCCESS`]
+    /// - `assembler->buffer` is full.
+    void bal_x86_emit_store_r64_rbp_offset(bal_x86_assembler_t *assembler,
+                                           bal_x86_register_t   source,
+                                           int32_t              offset);
 
-/// Emits an instruction to move a 64-bit immediate value into a 64-bit register.
-///
-/// Assembly equivalent: `mov destination, immediate`
-///
-/// # Warning
-///
-/// This function fails if:
-///
-/// - `assembler` is `NULL`.
-/// - `assembler->status != [`BAL_SUCCESS`]
-/// - `assembler->buffer` is full.
-void bal_x86_emit_mov_r64_imm64(bal_x86_assembler_t *assembler,
-                                bal_x86_register_t   destination,
-                                uint64_t             immediate);
+    /// Emits an instruction to move 64-bit register `source` into `destination`.
+    ///
+    /// Assembly equivalent: `mov reg64, reg64`
+    ///
+    /// # Warning
+    ///
+    /// This function fails if:
+    ///
+    /// - `assembler` is `NULL`.
+    /// - `assembler->status != [`BAL_SUCCESS`]
+    /// - `assembler->buffer` is full.
+    void bal_x86_emit_mov_r64_r64(bal_x86_assembler_t *assembler,
+                                  bal_x86_register_t   destination,
+                                  bal_x86_register_t   source);
 
-/// Emits a near return instruction.
-///
-/// Assembly equivalent: `ret`
-///
-/// # Warning
-///
-/// This function fails if:
-///
-/// - `assembler` is `NULL`.
-/// - `assembler->status != [`BAL_SUCCESS`]
-/// - `assembler->buffer` is full.
-void bal_x86_emit_ret(bal_x86_assembler_t *assembler);
+    /// Emits an instruction to move a 64-bit immediate value into a 64-bit register.
+    ///
+    /// Assembly equivalent: `mov destination, immediate`
+    ///
+    /// # Warning
+    ///
+    /// This function fails if:
+    ///
+    /// - `assembler` is `NULL`.
+    /// - `assembler->status != [`BAL_SUCCESS`]
+    /// - `assembler->buffer` is full.
+    void bal_x86_emit_mov_r64_imm64(bal_x86_assembler_t *assembler,
+                                    bal_x86_register_t   destination,
+                                    uint64_t             immediate);
 
-/// Emits a Stack Push instruction.
-///
-/// Assembly equivalent: `push reg64`
-///
-/// # Warning
-///
-/// This function fails if:
-///
-/// - `assembler` is `NULL`.
-/// - `assembler->status != [`BAL_SUCCESS`]
-/// - `assembler->buffer` is full.
-void bal_x86_emit_push_r64(bal_x86_assembler_t *assembler, bal_x86_register_t reg);
+    /// Emits a near return instruction.
+    ///
+    /// Assembly equivalent: `ret`
+    ///
+    /// # Warning
+    ///
+    /// This function fails if:
+    ///
+    /// - `assembler` is `NULL`.
+    /// - `assembler->status != [`BAL_SUCCESS`]
+    /// - `assembler->buffer` is full.
+    void bal_x86_emit_ret(bal_x86_assembler_t *assembler);
 
-/// Emits a Stack Pop instruction.
-///
-/// Assembly equivalent: `push reg64`
-///
-/// # Warning
-///
-/// This function fails if:
-///
-/// - `assembler` is `NULL`.
-/// - `assembler->status != [`BAL_SUCCESS`]
-/// - `assembler->buffer` is full.
-void bal_x86_emit_pop_r64(bal_x86_assembler_t *assembler, bal_x86_register_t reg);
+    /// Emits a Stack Push instruction.
+    ///
+    /// Assembly equivalent: `push reg64`
+    ///
+    /// # Warning
+    ///
+    /// This function fails if:
+    ///
+    /// - `assembler` is `NULL`.
+    /// - `assembler->status != [`BAL_SUCCESS`]
+    /// - `assembler->buffer` is full.
+    void bal_x86_emit_push_r64(bal_x86_assembler_t *assembler, bal_x86_register_t reg);
+
+    /// Emits a Stack Pop instruction.
+    ///
+    /// Assembly equivalent: `push reg64`
+    ///
+    /// # Warning
+    ///
+    /// This function fails if:
+    ///
+    /// - `assembler` is `NULL`.
+    /// - `assembler->status != [`BAL_SUCCESS`]
+    /// - `assembler->buffer` is full.
+    void bal_x86_emit_pop_r64(bal_x86_assembler_t *assembler, bal_x86_register_t reg);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif // BALLISTIC_BAL_X86_ASSEMBLER_H
 
