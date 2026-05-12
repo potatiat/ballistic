@@ -11,10 +11,11 @@ bal_spsc_queue_init(bal_spsc_queue_t *queue)
 
     atomic_init(&queue->head, 0);
     atomic_init(&queue->tail, 0);
+    bal_guest_address_t *address_cursor = queue->buffer;
 
     for (size_t i = 0; i < BAL_SPSC_QUEUE_CAPACITY; ++i)
     {
-        queue->buffer[i] = 0;
+        *address_cursor++ = 0;
     }
 }
 

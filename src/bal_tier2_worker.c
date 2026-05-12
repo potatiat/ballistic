@@ -1,9 +1,12 @@
+#define _POSIX_C_SOURCE 199309L // includes nanosleep()
+
 #include "bal_tier2_worker.h"
 #include <stdbool.h>
 
 #if BAL_PLATFORM_POSIX
 
 #include <errno.h>
+#include <time.h>
 
 #endif // BAL_PLATFORM_POSIX
 
@@ -20,7 +23,24 @@ tier2_worker_loop(void *context)
 #endif
 
 {
-    (void)context;
+    bal_tier2_worker_t *worker = context;
+    BAL_LOG_INFO(&worker->logger, "Tier 2 Background thread started");
+
+    while (true == atomic_load_explicit(&worker->is_running, memory_order_acquire))
+    {
+#if BAL_PLATFORM_WINDOWS
+
+        Sleep(1);
+
+#else
+
+        struct timespec ts = { .tv_sec = 0, .tv_nsec = 1000000 };
+        nanosleep(&ts, NULL);
+
+#endif
+    }
+
+    BAL_LOG_INFO(&worker->logger, "Tier 2 Background thread stopped");
 
 #if BAL_PLATFORM_WINDOWS
 
@@ -170,7 +190,7 @@ bal_tier2_worker_destroy(bal_tier2_worker_t *worker)
         {
             BAL_LOG_ERROR(
                 &worker->logger, "WaitForSingleObject failed (%lu), aborting cleanup", error);
-            return BAL_ERROR_INVALID_ARGUMENT;
+            return BAL_ERROR_THREAD_CLEANUP;
         }
     }
 
@@ -185,7 +205,8 @@ bal_tier2_worker_destroy(bal_tier2_worker_t *worker)
         {
             case ESRCH:
                 BAL_LOG_WARN(&worker->logger,
-                             "Thread not found (ESRCH). It may have already exited");
+                             "Thread not found (ESRCH). It may have already exited, proceeding "
+                             "with cleanup");
                 break;
             case EINVAL:
                 BAL_LOG_ERROR(&worker->logger,
@@ -195,7 +216,7 @@ bal_tier2_worker_destroy(bal_tier2_worker_t *worker)
                 BAL_LOG_ERROR(
                     &worker->logger,
                     "Deadlock detected (EDEADLK). Aborting memory cleanup to prevent crash");
-                break;
+                return BAL_ERROR_THREAD_CLEANUP;
             default:
                 BAL_LOG_ERROR(
                     &worker->logger, "Unknown error code %d, proceeding with cleanup", join_result);

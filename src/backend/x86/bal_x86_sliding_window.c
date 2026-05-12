@@ -44,18 +44,21 @@ bal_sliding_window_push(bal_sliding_window_t *window, const bal_x86_macro_t macr
         return;
     }
 
-    if (BAL_UNLIKELY(window->count == BAL_SLIDING_WINDOW_CAPACITY))
+    size_t window_count = window->count;
+
+    if (BAL_UNLIKELY(window_count == BAL_SLIDING_WINDOW_CAPACITY))
     {
         BAL_LOG_DEBUG(&window->assembler->logger,
                       "Sliding window capacity reached (%d), flushing macros",
                       BAL_SLIDING_WINDOW_CAPACITY);
+        const bal_x86_macro_t *macro_cursor = window->macros;
 
-        for (size_t i = 0; i < window->count; ++i)
+        for (size_t i = 0; i < window_count; ++i)
         {
-            flush_single_macro(window->assembler, &window->macros[i]);
+            flush_single_macro(window->assembler, macro_cursor++);
         }
 
-        window->count = 0;
+        window_count = 0;
     }
 
     BAL_LOG_DEBUG(&window->assembler->logger,
@@ -64,7 +67,8 @@ bal_sliding_window_push(bal_sliding_window_t *window, const bal_x86_macro_t macr
                   macro.destination,
                   macro.source,
                   (unsigned long long)macro.immediate_or_offset);
-    window->macros[window->count++] = macro;
+    window->macros[window_count++] = macro;
+    window->count                  = window_count;
     run_peephole_optimizer(window);
 }
 
@@ -81,9 +85,12 @@ bal_sliding_window_flush_all(bal_sliding_window_t *window)
         return;
     }
 
-    for (size_t i = 0; i < window->count; ++i)
+    const size_t           window_count = window->count;
+    const bal_x86_macro_t *macro_cursor = window->macros;
+
+    for (size_t i = 0; i < window_count; ++i)
     {
-        flush_single_macro(window->assembler, &window->macros[i]);
+        flush_single_macro(window->assembler, macro_cursor++);
     }
 
     window->count = 0;
