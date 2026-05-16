@@ -121,6 +121,7 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
 
     // Setup host frame pointer.
     //
+    bal_x86_emit_push_r64(&compiler->assembler, BAL_X86_RBP);
     bal_x86_emit_push_r64(&compiler->assembler, BAL_X86_RBX);
     bal_x86_emit_mov_r64_r64(&compiler->assembler, BAL_X86_RBP, BAL_X86_ABI_ARG1);
 
@@ -357,6 +358,7 @@ terminate_block(bal_tier1_compiler_t *compiler)
     bal_sliding_window_flush_all(&compiler->window);
     BAL_LOG_TRACE(&compiler->logger, "Restoring host frame pointer and emitting RET");
     bal_x86_emit_pop_r64(&compiler->assembler, BAL_X86_RBX);
+    bal_x86_emit_pop_r64(&compiler->assembler, BAL_X86_RBP);
     bal_x86_emit_ret(&compiler->assembler);
 }
 
