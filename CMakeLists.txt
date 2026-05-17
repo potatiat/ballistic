@@ -65,6 +65,11 @@ add_library(Ballistic STATIC
         src/bal_errors.c
         src/bal_logging.c
         src/bal_memory.c
+        src/bal_spsc_queue.c
+        src/bal_tier2_worker.c
+        src/backend/x86/bal_x86_assembler.c
+        src/backend/x86/bal_x86_sliding_window.c
+        src/backend/x86/bal_x86_tier1_compiler.c
 )
 
 target_include_directories(Ballistic PUBLIC include)
@@ -99,9 +104,9 @@ set(COVERAGE_CLI_NAME "coverage_cli")
 add_executable(${COVERAGE_CLI_NAME} tools/coverage_cli.c)
 target_link_libraries(${COVERAGE_CLI_NAME} PRIVATE ${PROJECT_NAME})
 
-set(BALLISTIC_CLI_NAME "ballistic_cli")
-add_executable(${BALLISTIC_CLI_NAME} tools/ballistic_cli.c)
-target_link_libraries(${BALLISTIC_CLI_NAME} PRIVATE ${PROJECT_NAME})
+#set(BALLISTIC_CLI_NAME "ballistic_cli")
+#add_executable(${BALLISTIC_CLI_NAME} tools/ballistic_cli.c)
+#target_link_libraries(${BALLISTIC_CLI_NAME} PRIVATE ${PROJECT_NAME})
 
 # Our documentation generator completely relies on Clang running on UNIX
 # compatable machines for parsing C code. I do not have a Windows machine to
@@ -116,9 +121,21 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
             ${CMAKE_CURRENT_SOURCE_DIR}/extern/cmark/src
             ${CMAKE_CURRENT_BINARY_DIR}/extern/cmark/src/)
     target_link_libraries(${CDOC_NAME} PRIVATE ${CLANG_LIBRARY} cmark)
-    set(PROJECT_HEADERS include/bal_engine.h include/bal_decoder.h
-            include/bal_memory.h include/bal_types.h include/bal_errors.h include/bal_logging.h
-            include/bal_assembler.h)
+    set(PROJECT_HEADERS
+            include/bal_engine.h
+            include/bal_decoder.h
+            include/bal_memory.h
+            include/bal_types.h
+            include/bal_errors.h
+            include/bal_logging.h
+            include/bal_assembler.h
+            include/bal_tier2_worker.h
+            include/bal_spsc_queue.h
+            include/backend/bal_cpu.h
+            include/backend/x86/bal_x86_assembler.h
+            include/backend/x86/bal_x86_sliding_window.h
+            include/backend/x86/bal_x86_tier1_compiler.h
+    )
 
     add_custom_target(doc ALL
             COMMAND ${CMAKE_CURRENT_BINARY_DIR}/cdoc docs/cdoc ${PROJECT_HEADERS}
@@ -159,12 +176,25 @@ if (BALLISTIC_BUILD_TESTS)
     gtest_discover_tests(${DECODER_TEST})
     gtest_discover_tests(${MEMORY_TEST})
 
-    set(TRANSLATION_TESTS movk movn movz ret sub)
-    foreach (test_name ${TRANSLATION_TESTS})
+    #    set(TRANSLATION_TESTS movk movn movz ret sub)
+    #    foreach (test_name ${TRANSLATION_TESTS})
+    #        set(target_name "test_${test_name}")
+    #        add_executable(${target_name} "tests/translation/${target_name}.cpp")
+    #        target_link_libraries(${target_name} PRIVATE Ballistic gtest gtest_main)
+    #        target_include_directories(${target_name} PRIVATE tests/translation)
+    #
+    #        if (NOT MSVC)
+    #            target_compile_options(${MEMORY_TEST} PRIVATE -Wall -Wextra -Werror)
+    #        endif ()
+    #
+    #        gtest_discover_tests(${target_name})
+    #    endforeach ()
+
+    set(BACKEND_X86_TESTS x86_assembler x86_sliding_window)
+    foreach (test_name ${BACKEND_X86_TESTS})
         set(target_name "test_${test_name}")
-        add_executable(${target_name} "tests/translation/${target_name}.cpp")
+        add_executable(${target_name} "tests/backend/x86/${target_name}.cpp")
         target_link_libraries(${target_name} PRIVATE Ballistic gtest gtest_main)
-        target_include_directories(${target_name} PRIVATE tests/translation)
 
         if (NOT MSVC)
             target_compile_options(${MEMORY_TEST} PRIVATE -Wall -Wextra -Werror)

@@ -18,6 +18,18 @@
 #define BAL_ALIGN_UP(x, memory_alignment) \
     (((x) + ((memory_alignment) - 1)) & ~((memory_alignment) - 1))
 
+#define SOURCE_VARIABLES_SIZE_BYTES MAX_GUEST_REGISTERS * sizeof(bal_source_variable_t)
+#define SSA_BIT_WIDTHS_SIZE_BYTES   MAX_INSTRUCTIONS * sizeof(bal_bit_width_t)
+#define INSTRUCTIONS_SIZE_BYTES     MAX_INSTRUCTIONS * sizeof(bal_instruction_t)
+#define CONSTANTS_SIZE_BYTES        MAX_INSTRUCTIONS * sizeof(bal_instruction_t)
+#define MEMORY_ALIGNMENT            64U
+#define OFFSET_INSTRUCTIONS         BAL_ALIGN_UP(SOURCE_VARIABLES_SIZE_BYTES, MEMORY_ALIGNMENT)
+#define OFFSET_SSA_BIT_WIDTHS \
+    BAL_ALIGN_UP((OFFSET_INSTRUCTIONS + INSTRUCTIONS_SIZE_BYTES), MEMORY_ALIGNMENT)
+#define OFFSET_CONSTANTS \
+    BAL_ALIGN_UP((OFFSET_SSA_BIT_WIDTHS + SSA_BIT_WIDTHS_SIZE_BYTES), MEMORY_ALIGNMENT)
+#define ARENA_SIZE_BYTES BAL_ALIGN_UP((OFFSET_CONSTANTS + CONSTANTS_SIZE_BYTES), MEMORY_ALIGNMENT)
+
 typedef struct
 {
     bal_instruction_t      *ir_instruction_cursor;
@@ -31,15 +43,17 @@ typedef struct
     bal_logger_t           *logger;
 } bal_translation_context_t;
 
-static uint32_t extract_operand_value(uint32_t, const bal_decoder_operand_t *);
-static uint32_t intern_constant(bal_translation_context_t *, bal_constant_t);
-static void     translate_const(bal_translation_context_t *,
-                                const bal_decoder_instruction_metadata_t *,
-                                const uint32_t *);
-static void     translate_sub(bal_translation_context_t *,
-                              const bal_decoder_instruction_metadata_t *,
-                              const uint32_t *);
-static void     translate_return(bal_translation_context_t *, const uint32_t *);
+static_assert(sizeof(bal_translation_context_t) <= 64, "Context must fit in  1 cache line");
+
+// static uint32_t extract_operand_value(uint32_t, const bal_decoder_operand_t *);
+// static uint32_t intern_constant(bal_translation_context_t *, bal_constant_t);
+// static void     translate_const(bal_translation_context_t *,
+// const bal_decoder_instruction_metadata_t *,
+// const uint32_t *);
+// static void     translate_sub(bal_translation_context_t *,
+// const bal_decoder_instruction_metadata_t *,
+// const uint32_t *);
+// static void     translate_return(bal_translation_context_t *, const uint32_t *);
 
 BAL_COLD bal_error_t
 bal_engine_init(const bal_allocator_t *allocator, bal_engine_t *engine, bal_logger_t logger)
@@ -49,81 +63,55 @@ bal_engine_init(const bal_allocator_t *allocator, bal_engine_t *engine, bal_logg
         return BAL_ERROR_INVALID_ARGUMENT;
     }
 
-    const size_t source_variables_size = MAX_GUEST_REGISTERS * sizeof(bal_source_variable_t);
-    const size_t ssa_bit_widths_size   = MAX_INSTRUCTIONS * sizeof(bal_bit_width_t);
-    const size_t instructions_size     = MAX_INSTRUCTIONS * sizeof(bal_instruction_t);
-    const size_t constants_size        = MAX_INSTRUCTIONS * sizeof(bal_instruction_t);
+    uint8_t *data = allocator->allocate(allocator->handle, MEMORY_ALIGNMENT, ARENA_SIZE_BYTES);
 
-    // Calculate amount of memory needed for all arrays in engine.
-    //
-    const size_t memory_alignment    = 64U;
-    const size_t offset_instructions = BAL_ALIGN_UP(source_variables_size, memory_alignment);
-
-    const size_t offset_ssa_bit_widths
-        = BAL_ALIGN_UP((offset_instructions + instructions_size), memory_alignment);
-
-    const size_t offset_constants
-        = BAL_ALIGN_UP((offset_ssa_bit_widths + ssa_bit_widths_size), memory_alignment);
-
-    const size_t total_size_with_padding
-        = BAL_ALIGN_UP((offset_constants + constants_size), memory_alignment);
-
-    uint8_t *data
-        = allocator->allocate(allocator->handle, memory_alignment, total_size_with_padding);
-
-    BAL_LOG_DEBUG(&logger, "Calculating arena layout (Alignment: %zu bytes):", memory_alignment);
-    BAL_LOG_DEBUG(
-        &logger, "  [0x%08zx] source_variables (%zu bytes)", (size_t)0, source_variables_size);
+    BAL_LOG_DEBUG(&logger, "Calculating arena layout (Alignment: %zu bytes):", MEMORY_ALIGNMENT);
+    BAL_LOG_DEBUG(&logger,
+                  "  [0x%08zx] source_variables (%zu bytes)",
+                  (size_t)0,
+                  SOURCE_VARIABLES_SIZE_BYTES);
     BAL_LOG_DEBUG(&logger,
                   "  [0x%08zx] instructions     (%zu bytes)",
-                  offset_instructions,
-                  instructions_size);
+                  OFFSET_INSTRUCTIONS,
+                  INSTRUCTIONS_SIZE_BYTES);
     BAL_LOG_DEBUG(&logger,
                   "  [0x%08zx] ssa_bit_widths   (%zu bytes)",
-                  offset_ssa_bit_widths,
-                  ssa_bit_widths_size);
-    BAL_LOG_DEBUG(
-        &logger, "  [0x%08zx] constants        (%zu bytes)", offset_constants, constants_size);
+                  OFFSET_SSA_BIT_WIDTHS,
+                  SSA_BIT_WIDTHS_SIZE_BYTES);
+    BAL_LOG_DEBUG(&logger,
+                  "  [0x%08zx] constants        (%zu bytes)",
+                  OFFSET_CONSTANTS,
+                  CONSTANTS_SIZE_BYTES);
 
     if (NULL == data)
     {
-        BAL_LOG_ERROR(&logger, "Allocation of %zu bytes failed.", total_size_with_padding);
+        BAL_LOG_ERROR(&logger, "Allocation of %zu bytes failed.", ARENA_SIZE_BYTES);
         engine->status = BAL_ERROR_ALLOCATION_FAILED;
         return engine->status;
     }
 
-    engine->source_variables      = (bal_source_variable_t *)data;
-    engine->instructions          = (bal_instruction_t *)(data + offset_instructions);
-    engine->constants             = (bal_constant_t *)(data + offset_constants);
-    engine->ssa_bit_widths        = data + offset_ssa_bit_widths;
-    engine->source_variables_size = source_variables_size / sizeof(bal_source_variable_t);
-    engine->instructions_size     = instructions_size / sizeof(bal_instruction_t);
-    engine->constants_size        = constants_size / sizeof(bal_constant_t);
-    engine->constant_count        = 0;
-    engine->instruction_count     = 0;
-    engine->status                = BAL_SUCCESS;
-    engine->arena_base            = (void *)data;
-    engine->arena_size            = total_size_with_padding;
-    engine->logger                = logger;
+    engine->constant_count    = 0;
+    engine->instruction_count = 0;
+    engine->status            = BAL_SUCCESS;
+    engine->arena_base        = (void *)data;
+    engine->logger            = logger;
 
     BAL_LOG_INFO(&logger,
                  "Initialized engine successfully. Arena: %p (%zu KB)",
                  engine->arena_base,
-                 total_size_with_padding / 1024);
+                 ARENA_SIZE_BYTES / 1024);
 
-    (void)memset(engine->source_variables, POISON_UNINITIALIZED_MEMORY, source_variables_size);
-    (void)memset(engine->instructions, POISON_UNINITIALIZED_MEMORY, instructions_size);
-    (void)memset(engine->ssa_bit_widths, POISON_UNINITIALIZED_MEMORY, ssa_bit_widths_size);
-    (void)memset(engine->constants, POISON_UNINITIALIZED_MEMORY, constants_size);
+    (void)memset(engine->arena_base, POISON_UNINITIALIZED_MEMORY, ARENA_SIZE_BYTES);
 
     return engine->status;
 }
 
+#if 0
 bal_error_t
-bal_engine_translate(bal_engine_t *BAL_RESTRICT                 engine,
-                     const bal_memory_interface_t *BAL_RESTRICT interface,
-                     bal_guest_address_t                       *guest_address_start,
-                     const size_t                               max_instructions)
+bal_engine_translate_tier2(bal_engine_t *BAL_RESTRICT                 engine,
+                           const bal_memory_interface_t *BAL_RESTRICT interface,
+                           bal_guest_address_t                       *guest_address_start,
+                           const size_t                               max_instructions)
 {
     if (BAL_UNLIKELY(NULL == engine))
     {
@@ -164,15 +152,15 @@ bal_engine_translate(bal_engine_t *BAL_RESTRICT                 engine,
                  max_instructions_size_bytes);
 
     bal_translation_context_t context
-        = { .ir_instruction_cursor = engine->instructions + engine->instruction_count,
-            .bit_width_cursor      = engine->ssa_bit_widths + engine->instruction_count,
-            .source_variables      = engine->source_variables,
-            .constants             = engine->constants,
-            .constants_size        = engine->constants_size,
-            .constant_count        = engine->constant_count,
-            .instruction_count     = engine->instruction_count,
-            .status                = engine->status,
-            .logger                = &engine->logger };
+        = { .ir_instruction_cursor
+            = (bal_instruction_t *)((uint8_t *)engine->arena_base + OFFSET_INSTRUCTIONS),
+            .bit_width_cursor = (uint8_t *)engine->arena_base + OFFSET_SSA_BIT_WIDTHS,
+            .source_variables = (bal_source_variable_t *)engine->arena_base,
+            .constants      = (bal_constant_t *)((uint8_t *)engine->arena_base + OFFSET_CONSTANTS),
+            .constant_count = engine->constant_count,
+            .instruction_count = engine->instruction_count,
+            .status            = engine->status,
+            .logger            = &engine->logger };
 
     bool     is_block_terminated                         = false;
     uint32_t arm_instruction_operands[BAL_OPERANDS_SIZE] = { 0 };
@@ -324,10 +312,7 @@ bal_engine_reset(bal_engine_t *engine)
     engine->instruction_count = 0;
     engine->status            = BAL_SUCCESS;
 
-    (void)memset(
-        engine->source_variables, POISON_UNINITIALIZED_MEMORY, engine->source_variables_size);
-
-    (void)memset(engine->constants, POISON_UNINITIALIZED_MEMORY, engine->constants_size);
+    (void)memset(engine->arena_base, POISON_UNINITIALIZED_MEMORY, ARENA_SIZE_BYTES);
 
     return engine->status;
 }
@@ -337,11 +322,43 @@ bal_engine_destroy(const bal_allocator_t *allocator, bal_engine_t *engine)
 {
     // No argument error handling. Segfault if user passes NULL.
 
-    allocator->free(allocator->handle, engine->arena_base, engine->arena_size);
-    engine->arena_base       = NULL;
-    engine->source_variables = NULL;
-    engine->instructions     = NULL;
-    engine->ssa_bit_widths   = NULL;
+    allocator->free(allocator->handle, engine->arena_base, ARENA_SIZE_BYTES);
+    engine->arena_base = NULL;
+}
+const bal_instruction_t *
+bal_engine_get_ir_instructions(const bal_engine_t *engine)
+{
+    if (BAL_UNLIKELY(NULL == engine))
+    {
+        return NULL;
+    }
+
+    if (BAL_UNLIKELY(NULL == engine->arena_base))
+    {
+        BAL_LOG_ERROR(&engine->logger, "Memory Arena is NULL, aborting function");
+        return NULL;
+    }
+
+    const bal_instruction_t *ir_instructions = engine->arena_base + OFFSET_INSTRUCTIONS;
+    return ir_instructions;
+}
+const bal_constant_t *
+bal_engine_get_constant(const bal_engine_t *engine, const bal_constant_t index)
+{
+    if (BAL_UNLIKELY(NULL == engine))
+    {
+        return NULL;
+    }
+
+    if (BAL_UNLIKELY(NULL == engine->arena_base))
+    {
+        BAL_LOG_ERROR(&engine->logger, "Engine memory arena is NULL, aborting function call");
+        return NULL;
+    }
+
+    const bal_constant_t *constants = engine->arena_base + OFFSET_CONSTANTS;
+    const bal_constant_t *constant  = &constants[index];
+    return constant;
 }
 
 BAL_HOT static uint32_t
@@ -380,7 +397,7 @@ intern_constant(bal_translation_context_t *BAL_RESTRICT context, const bal_const
 
     const uint32_t index = context->constant_count;
 
-    if (BAL_UNLIKELY(index >= context->constants_size))
+    if (BAL_UNLIKELY(index >= MAX_INSTRUCTIONS))
     {
         BAL_LOG_ERROR(context->logger,
                       "Constant Pool Overflow at index %u (Max %u)",
@@ -640,6 +657,7 @@ translate_sub(bal_translation_context_t                *context,
     *context->ir_instruction_cursor = (bal_instruction_t)OPCODE_SUB << BAL_OPCODE_SHIFT_POSITION
                                       | rn_ssa_index << BAL_SOURCE1_SHIFT_POSITION
                                       | value_const_index << BAL_SOURCE2_SHIFT_POSITION;
+
     *context->bit_width_cursor = bit_width;
 
     BAL_LOG_DEBUG(context->logger,
@@ -654,3 +672,4 @@ translate_sub(bal_translation_context_t                *context,
 
     context->instruction_count++;
 }
+#endif

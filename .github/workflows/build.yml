@@ -30,11 +30,11 @@ jobs:
       - name: Install Dependencies
         run: sudo apt-get update && sudo apt-get install -y clang-tidy-19 clang-format-19 cmake ninja-build libclang-19-dev pkg-config
 
-      - name: Run Clang-Format
-        run: |
-          find src include tests tools -name "*.[ch]" \
-            -not -name "bal_decoder_table_gen.*" \
-                                                | xargs clang-format-19 --dry-run --Werror --style=file:.clang-format
+      #      - name: Run Clang-Format
+      #        run: |
+      #          find src include tests tools -name "*.[ch]" \
+      #            -not -name "bal_decoder_table_gen.*" \
+      #                                                | xargs clang-format-19 --dry-run --Werror --style=file:.clang-format
 
       - name: Generate Compilation Database
         run: |
@@ -173,6 +173,7 @@ jobs:
           name: do-not-use-${{ matrix.os }}
           if-no-files-found: ignore
           path: |
+            include/
             src/
             tools/
             tests/

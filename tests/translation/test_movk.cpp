@@ -28,12 +28,12 @@ TEST(Translation, Movk)
 
     bal_emit_ret(&context.assembler, BAL_REGISTER_X0);
     bal_guest_address_t entry_point = 0x0;
-    bal_engine_translate(&context.engine,
-                         &context.interface,
-                         &entry_point,
+    bal_engine_translate_tier2(&context.engine,
+                               &context.interface,
+                               &entry_point,
                          context.assembler.offset * sizeof(uint32_t));
-    bal_instruction_t *ir_start  = context.engine.instructions;
-    bal_instruction_t *ir_cursor = context.engine.instructions;
+    const bal_instruction_t *ir_start  = bal_engine_get_ir_instructions(&context.engine);
+    const bal_instruction_t *ir_cursor = ir_start;
 
     for (size_t r = 0; r < registers_count; ++r)
     {
@@ -78,11 +78,12 @@ TEST(Translation, Movk)
                     GTEST_FAIL();
                 }
 
-                const uint64_t actual_mask
-                    = context.engine.constants[ssa_index & ~BAL_IS_CONSTANT_BIT_POSITION];
+                const bal_constant_t  actual_mask_index = ssa_index & ~BAL_IS_CONSTANT_BIT_POSITION;
+                const bal_constant_t *actual_mask
+                    = bal_engine_get_constant(&context.engine, actual_mask_index);
                 const uint64_t expected_mask = ~(0xFFFFULL << shift);
 
-                if (actual_mask != expected_mask)
+                if (*actual_mask != expected_mask)
                 {
                     const size_t ir_instruction_offset = reinterpret_cast<uintptr_t>(ir_cursor)
                                                          - reinterpret_cast<uintptr_t>(ir_start);
@@ -93,7 +94,7 @@ TEST(Translation, Movk)
                             static_cast<unsigned long long>(*ir_cursor),
                             shift,
                             expected_mask,
-                            actual_mask);
+                            *actual_mask);
                     GTEST_FAIL();
                 }
 
@@ -117,10 +118,12 @@ TEST(Translation, Movk)
 
                 const uint32_t pool_index
                     = *ir_cursor >> BAL_SOURCE2_SHIFT_POSITION & BAL_SOURCE_MASK;
-                const uint64_t expected_immediate = static_cast<uint64_t>(immediate) << shift;
-                const uint64_t actual_immediate   = context.engine.constants[pool_index];
+                const bal_constant_t expected_immediate = static_cast<bal_constant_t>(immediate)
+                                                          << shift;
+                const bal_constant_t *actual_immediate
+                    = bal_engine_get_constant(&context.engine, pool_index);
 
-                if (expected_immediate != actual_immediate)
+                if (expected_immediate != *actual_immediate)
                 {
                     const size_t ir_instruction_offset = reinterpret_cast<uintptr_t>(ir_cursor)
                                                          - reinterpret_cast<uintptr_t>(ir_start);
@@ -130,7 +133,7 @@ TEST(Translation, Movk)
                             ir_instruction_offset,
                             static_cast<unsigned long long>(*ir_cursor),
                             expected_immediate,
-                            actual_immediate);
+                            *actual_immediate);
                     fprintf(stderr, "   Pool Index: %u\n", pool_index);
                     GTEST_FAIL();
                 }

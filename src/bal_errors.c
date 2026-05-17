@@ -21,6 +21,12 @@ bal_error_to_string(const bal_error_t error)
         case BAL_ERROR_MEMORY_FAULT:
             string = "accessed invalid memory";
             break;
+        case BAL_ERROR_THREAD_CREATION:
+            string = "could not create thread";
+            break;
+        case BAL_ERROR_THREAD_CLEANUP:
+            string = "could not clean up thread";
+            break;
         case BAL_ERROR_UNKNOWN_INSTRUCTION:
             string = "failed to decode arm instruction";
             break;

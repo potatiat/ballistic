@@ -29,6 +29,13 @@ extern "C"
         BAL_ERROR_MEMORY_FAULT        = -5,
         BAL_ERROR_UNKNOWN_INSTRUCTION = -6,
 
+        /// Error when creating a thread.
+        BAL_ERROR_THREAD_CREATION = -7,
+
+        /// Error on thread clean up. The user will need to manually clean up the thread's
+        /// resources.
+        BAL_ERROR_THREAD_CLEANUP = -8,
+
         // IR Errors.
         //
         BAL_ERROR_INSTRUCTION_OVERFLOW = -100,
