@@ -61,23 +61,19 @@ extern "C"
     typedef bal_executable_buffer_t (*bal_allocate_executable_function_t)(
         bal_allocator_handle_t allocator, size_t alignment, size_t size);
 
-    /// A function signature for reprotecting executable memory.
-    ///
-    /// Turns the memory buffer from Read/Write (RW) to Read/Execute(RX).
-    ///
-    /// # Errors
-    ///
-    /// Returns [`BAL_SUCCESS`] on success.
-    ///
-    /// Returns [`BAL_ERROR_MEMORY_FAULT`] if the OS fails to change the page permissions.
-    typedef bal_error_t (*bal_reprotect_executable_function_t)(bal_allocator_handle_t  allocator,
-                                                               bal_executable_buffer_t buffer,
-                                                               size_t                  size);
+    ///  Converts the memory buffer to Read/Write (RW).
+    typedef void (*bal_protect_rw_function_t)(bal_allocator_handle_t  allocator,
+                                              bal_executable_buffer_t buffer,
+                                              size_t                  size);
+
+    /// Converts the memory buffer to Read/Execute (RX).
+    typedef void (*bal_protect_rx_function_t)(bal_allocator_handle_t  allocator,
+                                              bal_executable_buffer_t buffer,
+                                              size_t                  size);
 
     /// A function signature for freeing executable memory.
     ///
-    /// Implementations must deallocate the memory in `buffer`. If the implementation uses
-    /// dual-mapping, it must unmap both the RW and RX views.
+    /// Implementations must deallocate the memory in `buffer`.
     typedef void (*bal_free_executable_function_t)(bal_allocator_handle_t  allocator,
                                                    bal_executable_buffer_t buffer,
                                                    size_t                  size);
@@ -125,11 +121,14 @@ extern "C"
         /// Callback to allocate W^X executable memory.
         bal_allocate_executable_function_t allocate_executable;
 
-        /// Callback to reprotect W^X executable memory.
-        bal_reprotect_executable_function_t reprotect_executable;
-
         /// Callback to free W^X executable memory.
         bal_free_executable_function_t free_executable;
+
+        /// Converts W^X memory to Read/Write.
+        bal_protect_rw_function_t protect_rw;
+
+        /// Converts W^X memory to Read/Execute.
+        bal_protect_rx_function_t protect_rx;
     } bal_allocator_t;
 
     /// Defines the interface for translating guest addresses to host memory.
