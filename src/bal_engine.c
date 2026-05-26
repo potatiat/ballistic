@@ -275,6 +275,12 @@ bal_engine_run(bal_engine_t *engine)
         // TODO: Lookup PC in a Block Cache Map
         //
         bal_guest_address_t pc = engine->cpu->pc;
+
+        if (engine->flags & BAL_ENGINE_FLAG_LOG_BLOCKS)
+        {
+            BAL_LOG_INFO(&engine->logger, "Fetching block at PC 0x%016llX", (unsigned long long)pc);
+        }
+
         engine->allocator->protect_rw(engine->allocator->handle,
                                       internal_engine_state->tier1_buffer,
                                       internal_engine_state->tier1_buffer_size);
@@ -295,7 +301,12 @@ bal_engine_run(bal_engine_t *engine)
                                       internal_engine_state->tier1_buffer,
                                       internal_engine_state->tier1_buffer_size);
         const bal_jit_block_t compiled_block = entry_point;
-        BAL_LOG_INFO(&engine->logger, "Executing JIT Block at %p", entry_point);
+
+        if (engine->flags & BAL_ENGINE_FLAG_LOG_BLOCKS)
+        {
+            BAL_LOG_INFO(&engine->logger, "Executing JIT Block at %p", entry_point);
+        }
+
         compiled_block(engine->cpu);
     }
 
