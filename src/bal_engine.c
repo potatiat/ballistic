@@ -265,6 +265,13 @@ bal_engine_run(bal_engine_t *engine)
 
     while (engine->flags & BAL_ENGINE_FLAG_RUNNING)
     {
+        if (engine->flags & BAL_ENGINE_FLAG_INTERRUPT_PENDING)
+        {
+            BAL_LOG_INFO(&engine->logger, "Interrupt pending, yielding to host.");
+            engine->flags &= ~BAL_ENGINE_FLAG_INTERRUPT_PENDING;
+            break;
+        }
+
         // TODO: Lookup PC in a Block Cache Map
         //
         bal_guest_address_t pc = engine->cpu->pc;
