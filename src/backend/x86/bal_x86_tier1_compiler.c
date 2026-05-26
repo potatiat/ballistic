@@ -25,7 +25,8 @@ static const bal_x86_register_t SCRATCH_REGISTERS[]
 
 static void               reset_register_allocator(bal_tier1_compiler_t *compiler);
 static bal_x86_register_t allocate_x86_register(bal_tier1_compiler_t *compiler,
-                                                uint8_t               arm_register);
+                                                uint8_t               arm_register,
+                                                bool                  skip_load_instruction);
 static void               flush_dirty_registers(bal_tier1_compiler_t *compiler);
 static void               terminate_block(bal_tier1_compiler_t *compiler);
 static uint32_t extract_operand_value(uint32_t instruction, const bal_decoder_operand_t *operand);
@@ -262,7 +263,9 @@ reset_register_allocator(bal_tier1_compiler_t *compiler)
 }
 
 bal_x86_register_t
-allocate_x86_register(bal_tier1_compiler_t *compiler, uint8_t arm_register)
+allocate_x86_register(bal_tier1_compiler_t *compiler,
+                      uint8_t               arm_register,
+                      const bool            skip_load_instruction)
 {
     if (BAL_UNLIKELY(NULL == compiler))
     {
@@ -299,21 +302,31 @@ allocate_x86_register(bal_tier1_compiler_t *compiler, uint8_t arm_register)
         BAL_LOG_ERROR(&compiler->logger, "Greedy Allocator ran out of scratch registers!");
     }
 
-    BAL_LOG_DEBUG(&compiler->logger,
-                  "RegAlloc: Miss - mapped ARM X%u to x86 r%d",
-                  arm_register,
-                  free_register);
-    compiler->arm_to_x86[arm_register]        = (int8_t)free_register;
-    compiler->x86_to_arm[free_register]       = (int8_t)arm_register;
-    const uint64_t        offset              = offsetof(bal_cpu_t, x[arm_register]);
-    const bal_x86_macro_t load_register_macro = {
-        .opcode              = BAL_X86_MACRO_LOAD,
-        .destination         = free_register,
-        .immediate_or_offset = offset,
-    };
+    compiler->arm_to_x86[arm_register]  = (int8_t)free_register;
+    compiler->x86_to_arm[free_register] = (int8_t)arm_register;
 
-    bal_sliding_window_push(&compiler->window, load_register_macro);
-    BAL_LOG_DEBUG(&compiler->logger, "RegAlloc: emitted LOAD macro for ARM X%u", arm_register);
+    if (false == skip_load_instruction)
+    {
+        BAL_LOG_DEBUG(&compiler->logger,
+                      "RegAlloc: Miss - mapped ARM X%u to x86 r%d",
+                      arm_register,
+                      free_register);
+        const uint64_t        offset              = offsetof(bal_cpu_t, x[arm_register]);
+        const bal_x86_macro_t load_register_macro = {
+            .opcode              = BAL_X86_MACRO_LOAD,
+            .destination         = free_register,
+            .immediate_or_offset = offset,
+        };
+
+        bal_sliding_window_push(&compiler->window, load_register_macro);
+        BAL_LOG_DEBUG(&compiler->logger, "RegAlloc: emitted LOAD macro for ARM X%u", arm_register);
+    }
+    else
+    {
+        BAL_LOG_DEBUG(&compiler->logger,
+                      "RegAlloc: skipped LOAD macro for ARM X%u (write only)",
+                      arm_register);
+    }
     return free_register;
 }
 
@@ -396,8 +409,10 @@ translate_mov(bal_tier1_compiler_t                     *compiler,
 
     if ('Z' == variant)
     {
-        const uint64_t           value  = imm16 << shift & mask;
-        const bal_x86_register_t x86_rd = allocate_x86_register(compiler, rd);
+        const uint64_t           value                 = imm16 << shift & mask;
+        const bool               skip_load_instruction = true;
+        const bal_x86_register_t x86_rd
+            = allocate_x86_register(compiler, rd, skip_load_instruction);
 
         const bal_x86_macro_t mov_macro = {
             .opcode              = BAL_X86_MACRO_MOV_REGISTER_IMMEDIATE,
@@ -409,9 +424,11 @@ translate_mov(bal_tier1_compiler_t                     *compiler,
     }
     else if ('N' == variant)
     {
-        const uint64_t           value     = ~(imm16 << shift) & mask;
-        const bal_x86_register_t x86_rd    = allocate_x86_register(compiler, rd);
-        const bal_x86_macro_t    mov_macro = {
+        const uint64_t           value                 = ~(imm16 << shift) & mask;
+        const bool               skip_load_instruction = true;
+        const bal_x86_register_t x86_rd
+            = allocate_x86_register(compiler, rd, skip_load_instruction);
+        const bal_x86_macro_t mov_macro = {
             .opcode              = BAL_X86_MACRO_MOV_REGISTER_IMMEDIATE,
             .destination         = x86_rd,
             .immediate_or_offset = value,
@@ -423,10 +440,12 @@ translate_mov(bal_tier1_compiler_t                     *compiler,
     {
         // MOVK: Keep existing bits, overwrite 16 bits.
         //
-        const bal_x86_register_t x86_rd       = allocate_x86_register(compiler, rd);
-        const uint64_t           clear_mask   = ~(0xFFFFULL << shift) & mask;
-        const uint64_t           insert_value = imm16 << shift & mask;
-        const bal_x86_macro_t    and_macro    = {
+        const bool               skip_load_instruction = false;
+        const bal_x86_register_t x86_rd
+            = allocate_x86_register(compiler, rd, skip_load_instruction);
+        const uint64_t        clear_mask   = ~(0xFFFFULL << shift) & mask;
+        const uint64_t        insert_value = imm16 << shift & mask;
+        const bal_x86_macro_t and_macro    = {
             .opcode              = BAL_X86_MACRO_AND_REGISTER_IMMEDIATE,
             .destination         = x86_rd,
             .immediate_or_offset = clear_mask,
