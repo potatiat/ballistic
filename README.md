@@ -10,7 +10,7 @@ This is a rewrite of the dynarmic recompiler, with the goal of fixing its many f
 
 # Immediate Goals
 
-- [ ] Create Tier 1 backend compiler.
+- [X] Create Tier 1 backend compiler.
 - [ ] Create Tier 2 backend compiler.
 - [ ] Support `MOVZ`, `MOVK`, `MOVN` instructions on both compilers.
 - [ ] Add more peephole optimizations.
