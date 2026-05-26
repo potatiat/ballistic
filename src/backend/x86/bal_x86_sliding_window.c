@@ -193,7 +193,7 @@ run_peephole_optimizer(bal_sliding_window_t *window)
         return;
     }
 
-    bal_x86_macro_t *macro2 = &window->macros[window->count - 1];
+    bal_x86_macro_t *macro2 = &window->macros[window->count - 2];
 
     // PEEPHOLE 2: Redundant MOV (1: mov rax, rbx. 2: mov rax, rbx).
     //
