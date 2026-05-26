@@ -28,7 +28,7 @@ static bal_x86_register_t allocate_x86_register(bal_tier1_compiler_t *compiler,
                                                 uint8_t               arm_register,
                                                 bool                  skip_load_instruction);
 static void               flush_dirty_registers(bal_tier1_compiler_t *compiler);
-static void               terminate_block(bal_tier1_compiler_t *compiler);
+static void     terminate_block(bal_tier1_compiler_t *compiler, bal_guest_address_t next_pc);
 static uint32_t extract_operand_value(uint32_t instruction, const bal_decoder_operand_t *operand);
 static void     translate_mov(bal_tier1_compiler_t                     *compiler,
                               const bal_decoder_instruction_metadata_t *metadata,
@@ -125,7 +125,6 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
     // Setup block.
     //
     bal_x86_emit_push_r64(&compiler->assembler, BAL_X86_RBP);
-    bal_x86_emit_push_r64(&compiler->assembler, BAL_X86_RBX);
     bal_x86_emit_mov_r64_r64(&compiler->assembler, BAL_X86_RBP, BAL_X86_ABI_ARG1);
 
     bool is_block_terminated = false;
@@ -242,7 +241,7 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
             ++host_address_cursor;
         }
     }
-    terminate_block(compiler);
+    terminate_block(compiler, guest_address);
     BAL_LOG_INFO(
         logger, "Tier 1 compiled block ends at GVA 0x%016llX", (unsigned long long)guest_address);
     return host_address;
@@ -364,7 +363,7 @@ flush_dirty_registers(bal_tier1_compiler_t *compiler)
 }
 
 void
-terminate_block(bal_tier1_compiler_t *compiler)
+terminate_block(bal_tier1_compiler_t *compiler, bal_guest_address_t next_pc)
 {
     if (BAL_UNLIKELY(NULL == compiler))
     {
@@ -375,8 +374,10 @@ terminate_block(bal_tier1_compiler_t *compiler)
     flush_dirty_registers(compiler);
     BAL_LOG_TRACE(&compiler->logger, "Flushing sliding window");
     bal_sliding_window_flush_all(&compiler->window);
+    BAL_LOG_TRACE(&compiler->logger, "Updating Guest PC");
+    bal_x86_emit_mov_r64_imm64(&compiler->assembler, BAL_X86_RAX, next_pc);
+    bal_x86_emit_store_r64_rbp_offset(&compiler->assembler, BAL_X86_RAX, offsetof(bal_cpu_t, pc));
     BAL_LOG_TRACE(&compiler->logger, "Restoring host frame pointer and emitting RET");
-    bal_x86_emit_pop_r64(&compiler->assembler, BAL_X86_RBX);
     bal_x86_emit_pop_r64(&compiler->assembler, BAL_X86_RBP);
     bal_x86_emit_ret(&compiler->assembler);
 }
