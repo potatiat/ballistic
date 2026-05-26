@@ -287,6 +287,31 @@ TEST_F(Backendx86Assembler, Encode_MovRegImm_HighReg)
     EXPECT_EQ(assembler.buffer[1], 0xBF); // Opcode 0xB8 + 7
 }
 
+TEST_F(Backendx86Assembler, Encode_MovRegImm_LowReg_32Bit)
+{
+    bal_x86_emit_mov_r64_imm64(&assembler, BAL_X86_RAX, 0X11223344);
+    EXPECT_EQ(assembler.status, BAL_SUCCESS);
+    EXPECT_EQ(assembler.offset, 5);
+    EXPECT_EQ(assembler.buffer[0], 0xB8); // Opcode
+    EXPECT_EQ(assembler.buffer[1], 0X44);
+    EXPECT_EQ(assembler.buffer[2], 0x33);
+    EXPECT_EQ(assembler.buffer[3], 0x22);
+    EXPECT_EQ(assembler.buffer[4], 0x11);
+}
+
+TEST_F(Backendx86Assembler, Encode_MovRegImm_HighReg_32Bit)
+{
+    bal_x86_emit_mov_r64_imm64(&assembler, BAL_X86_R15, 0X11223344);
+    EXPECT_EQ(assembler.status, BAL_SUCCESS);
+    EXPECT_EQ(assembler.offset, 6);
+    EXPECT_EQ(assembler.buffer[0], 0x41); // REX.B
+    EXPECT_EQ(assembler.buffer[1], 0xBF); // Opcode 0xB8 + 7
+    EXPECT_EQ(assembler.buffer[2], 0X44);
+    EXPECT_EQ(assembler.buffer[3], 0x33);
+    EXPECT_EQ(assembler.buffer[4], 0x22);
+    EXPECT_EQ(assembler.buffer[5], 0x11);
+}
+
 TEST_F(Backendx86Assembler, Encode_OrRegToReg_LowLow)
 {
     bal_x86_emit_or_r64_r64(&assembler, BAL_X86_RAX, BAL_X86_RBX);

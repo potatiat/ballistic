@@ -320,8 +320,22 @@ bal_x86_emit_mov_r64_imm64(bal_x86_assembler_t     *assembler,
         return;
     }
 
-    const size_t instruction_size_bytes = 10;
-    const bool   can_emit_status        = can_emit(assembler, instruction_size_bytes);
+    const bool    fits_in_32_bits = immediate <= 0xFFFFFFFFULL;
+    const uint8_t b               = (uint8_t)destination >> 3;
+    size_t        instruction_size_bytes;
+
+    if (true == fits_in_32_bits)
+    {
+        // 1 byte opcode + 4 bytes imm32 = 5 bytes. +1 byte REX if destination is R8-R15.
+        instruction_size_bytes = b > 0 ? 6 : 5;
+    }
+    else
+    {
+        // 1 byte REX + 1 byte opcode + 8 bytes imm64 = 10 bytes.
+        instruction_size_bytes = 10;
+    }
+
+    const bool can_emit_status = can_emit(assembler, instruction_size_bytes);
 
     if (BAL_UNLIKELY(false == can_emit_status))
     {
@@ -333,13 +347,30 @@ bal_x86_emit_mov_r64_imm64(bal_x86_assembler_t     *assembler,
                   assembler->offset,
                   destination,
                   (unsigned long long)immediate);
-    const uint8_t w          = 1;
-    const uint8_t r          = 0;
-    const uint8_t b          = (uint8_t)destination >> 3;
-    const size_t  old_offset = assembler->offset;
-    emit_rex(assembler->buffer, &assembler->offset, w, r, b);
-    emit8(assembler->buffer, &assembler->offset, 0xB8 + (destination & 7));
-    emit64(assembler->buffer, &assembler->offset, immediate);
+    const size_t old_offset = assembler->offset;
+
+    if (true == fits_in_32_bits)
+    {
+        if (b > 0)
+        {
+            // We only need REX.B if the register is R8-R15. No REX.W needed.
+            //
+            const uint8_t w = 0;
+            const uint8_t r = 0;
+            emit_rex(assembler->buffer, &assembler->offset, w, r, b);
+        }
+
+        emit8(assembler->buffer, &assembler->offset, 0xB8 + (destination & 7));
+        emit32(assembler->buffer, &assembler->offset, (uint32_t)immediate);
+    }
+    else
+    {
+        const uint8_t w = 1;
+        const uint8_t r = 0;
+        emit_rex(assembler->buffer, &assembler->offset, w, r, b);
+        emit8(assembler->buffer, &assembler->offset, 0xB8 + (destination & 7));
+        emit64(assembler->buffer, &assembler->offset, immediate);
+    }
     const size_t bytes_emitted = assembler->offset - old_offset;
     BAL_ASSERT_MSG(bytes_emitted == instruction_size_bytes,
                    "Bytes emitted %d does not match instruction size %d",
