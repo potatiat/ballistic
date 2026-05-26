@@ -15,7 +15,7 @@ This is a rewrite of the dynarmic recompiler, with the goal of fixing its many f
 - [ ] Support `MOVZ`, `MOVK`, `MOVN` instructions on both compilers.
 - [ ] Add more peephole optimizations.
 - [ ] Have 100% branch coverage.
-- [ ] Have a config to change Ballistic behavior at runtime.
+- [X] Have a config to change Ballistic behavior at runtime.
 
 # Building Ballistic
 
