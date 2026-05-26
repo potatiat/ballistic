@@ -31,7 +31,7 @@ static void               terminate_block(bal_tier1_compiler_t *compiler);
 static uint32_t extract_operand_value(uint32_t instruction, const bal_decoder_operand_t *operand);
 static void     translate_mov(bal_tier1_compiler_t                     *compiler,
                               const bal_decoder_instruction_metadata_t *metadata,
-                              const uint32_t                           *arm_operands);
+                              uint32_t                                  instruction);
 
 bal_error_t
 bal_tier1_compiler_init(bal_tier1_compiler_t         *compiler,
@@ -127,9 +127,7 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
     bal_x86_emit_push_r64(&compiler->assembler, BAL_X86_RBX);
     bal_x86_emit_mov_r64_r64(&compiler->assembler, BAL_X86_RBP, BAL_X86_ABI_ARG1);
 
-    bool     is_block_terminated                         = false;
-    uint32_t arm_instruction_operands[BAL_OPERANDS_SIZE] = { 0 };
-
+    bool is_block_terminated = false;
     while (false == is_block_terminated)
     {
         size_t          max_readable_instructions_bytes = 0;
@@ -183,15 +181,6 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                 break;
             }
 
-            const bal_decoder_operand_t *BAL_RESTRICT operands_cursor = metadata->operands;
-            uint32_t *BAL_RESTRICT arm_operands_cursor                = arm_instruction_operands;
-
-            for (size_t ii = 0; ii < BAL_OPERANDS_SIZE; ++ii)
-            {
-                *arm_operands_cursor++ = extract_operand_value(instruction, operands_cursor);
-                ++operands_cursor;
-            }
-
             BAL_LOG_TRACE(logger,
                           "[0X%016llX] %08x : %s",
                           (unsigned long long)guest_address,
@@ -207,7 +196,7 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                     if (BAL_LIKELY(variant == 'N') || BAL_LIKELY(variant == 'K')
                         || BAL_LIKELY(variant == 'Z'))
                     {
-                        translate_mov(compiler, metadata, arm_instruction_operands);
+                        translate_mov(compiler, metadata, instruction);
                         break;
                     }
 
@@ -394,12 +383,12 @@ extract_operand_value(const uint32_t instruction, const bal_decoder_operand_t *o
 void
 translate_mov(bal_tier1_compiler_t                     *compiler,
               const bal_decoder_instruction_metadata_t *metadata,
-              const uint32_t                           *arm_operands)
+              const uint32_t                            instruction)
 {
-    const uint8_t  rd      = (uint8_t)arm_operands[0];
-    const uint64_t imm16   = arm_operands[1];
-    const uint64_t hw      = arm_operands[2];
-    const uint64_t shift   = hw * 16;
+    const uint8_t  rd      = (uint8_t)extract_operand_value(instruction, &metadata->operands[0]);
+    const uint64_t imm16   = extract_operand_value(instruction, &metadata->operands[1]);
+    const uint64_t hw      = extract_operand_value(instruction, &metadata->operands[2]);
+    const uint64_t shift   = hw * 16ULL;
     const uint64_t mask    = metadata->operands[0].type == BAL_OPERAND_TYPE_REGISTER_32
                                  ? 0xFFFFFFFFULL
                                  : 0xFFFFFFFFFFFFFFFFULL;
