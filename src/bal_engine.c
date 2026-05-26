@@ -281,7 +281,6 @@ bal_engine_run(bal_engine_t *engine)
                           "Aborting function: Failed to compile block at PC 0x%0llX",
                           (unsigned long long)pc);
             engine->status = BAL_ERROR_UNKNOWN_INSTRUCTION;
-            engine->flags &= (uint32_t)~BAL_ENGINE_FLAG_RUNNING;
             break;
         }
 
@@ -291,9 +290,9 @@ bal_engine_run(bal_engine_t *engine)
         const bal_jit_block_t compiled_block = entry_point;
         BAL_LOG_INFO(&engine->logger, "Executing JIT Block at %p", entry_point);
         compiled_block(engine->cpu);
-        engine->flags &= (uint32_t)~BAL_ENGINE_FLAG_RUNNING;
     }
 
+    engine->flags &= ~BAL_ENGINE_FLAG_RUNNING;
     return engine->status;
 }
 
