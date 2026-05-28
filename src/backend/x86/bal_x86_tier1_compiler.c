@@ -202,6 +202,18 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                           instruction,
                           metadata->name);
 
+            if (engine_flags & BAL_ENGINE_FLAG_TRAP_SVC)
+            {
+                if (BAL_UNLIKELY(0 == strncmp(metadata->name, "SVC", 3)))
+                {
+                    BAL_LOG_INFO(logger,
+                                 "Trapping on SVC instruction at 0x%016llX",
+                                 (unsigned long long)guest_address);
+                    is_block_terminated = true;
+                    break;
+                }
+            }
+
             switch (metadata->ir_opcode)
             {
                 case OPCODE_CONST:;
