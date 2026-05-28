@@ -27,10 +27,10 @@ BAL_HOT static void emit_modrm_memory_disp32_rbp(uint8_t           *buffer,
                                                  bal_x86_register_t reg);
 
 bal_error_t
-bal_x86_assembler_init(bal_x86_assembler_t    *assembler,
-                       bal_executable_buffer_t executable_buffer,
-                       const size_t            size,
-                       const bal_logger_t      logger)
+bal_x86_assembler_init(bal_x86_assembler_t          *assembler,
+                       const bal_executable_buffer_t executable_buffer,
+                       const size_t                  size,
+                       const bal_logger_t            logger)
 {
     const bal_error_t error = BAL_ERROR_INVALID_ARGUMENT;
 
