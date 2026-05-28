@@ -670,7 +670,7 @@ can_emit(bal_x86_assembler_t *assembler, const size_t size)
 }
 
 void
-emit8(uint8_t *buffer, size_t *offset, uint8_t const value)
+emit8(uint8_t *BAL_RESTRICT buffer, size_t *BAL_RESTRICT offset, uint8_t const value)
 {
     if (BAL_UNLIKELY(NULL == buffer))
     {
@@ -683,7 +683,7 @@ emit8(uint8_t *buffer, size_t *offset, uint8_t const value)
 }
 
 void
-emit32(uint8_t *buffer, size_t *offset, const uint32_t value)
+emit32(uint8_t *BAL_RESTRICT buffer, size_t *BAL_RESTRICT offset, const uint32_t value)
 {
     if (BAL_UNLIKELY(NULL == buffer))
     {
@@ -696,7 +696,7 @@ emit32(uint8_t *buffer, size_t *offset, const uint32_t value)
 }
 
 void
-emit64(uint8_t *buffer, size_t *offset, uint64_t const value)
+emit64(uint8_t *BAL_RESTRICT buffer, size_t *BAL_RESTRICT offset, uint64_t const value)
 {
     if (BAL_UNLIKELY(NULL == buffer))
     {
@@ -709,7 +709,11 @@ emit64(uint8_t *buffer, size_t *offset, uint64_t const value)
 }
 
 void
-emit_rex(uint8_t *buffer, size_t *offset, const uint8_t w, const uint8_t r, const uint8_t b)
+emit_rex(uint8_t *BAL_RESTRICT buffer,
+         size_t *BAL_RESTRICT  offset,
+         const uint8_t         w,
+         const uint8_t         r,
+         const uint8_t         b)
 {
     const uint8_t safe_w = w & 1U;
     const uint8_t safe_r = r & 1U;
@@ -724,8 +728,8 @@ emit_rex(uint8_t *buffer, size_t *offset, const uint8_t w, const uint8_t r, cons
 }
 
 void
-emit_modrm_register(uint8_t                 *buffer,
-                    size_t                  *offset,
+emit_modrm_register(uint8_t *BAL_RESTRICT    buffer,
+                    size_t *BAL_RESTRICT     offset,
                     const bal_x86_register_t reg,
                     const bal_x86_register_t rm)
 {
@@ -744,7 +748,9 @@ emit_modrm_register(uint8_t                 *buffer,
 }
 
 void
-emit_modrm_memory_disp32_rbp(uint8_t *buffer, size_t *offset, const bal_x86_register_t reg)
+emit_modrm_memory_disp32_rbp(uint8_t *BAL_RESTRICT    buffer,
+                             size_t *BAL_RESTRICT     offset,
+                             const bal_x86_register_t reg)
 {
     // WARNING: Lossless conversion of reg (0 - 15) before applying mask.
     const uint8_t safe_reg = (uint8_t)reg & 7;
