@@ -53,7 +53,12 @@ bal_x86_assembler_init(bal_x86_assembler_t    *assembler,
         return error;
     }
 
-    assembler->buffer    = (uint8_t *)executable_buffer.rw_pointer;
+    // WARNING: Assumes executable_buffer.rw_pointer represents a valid writable host memory
+    // allocation of at least `size` bytes.
+    assembler->buffer = (uint8_t *)executable_buffer.rw_pointer;
+
+    // WARNING: Assumes executable_buffer.rx_pointer represents a valid executable host memory
+    // allocation of at least `size` bytes.
     assembler->rx_buffer = (uint8_t *)executable_buffer.rx_pointer;
     assembler->capacity  = size;
     assembler->offset    = 0;
@@ -113,9 +118,16 @@ bal_x86_emit_and_r64_r64(bal_x86_assembler_t     *assembler,
     BAL_LOG_DEBUG(
         &assembler->logger, "[0x%04zx] and r%d, r%d", assembler->offset, destination, source);
 
-    const uint8_t w          = 1;
-    const uint8_t r          = (uint8_t)destination >> 3;
-    const uint8_t b          = (uint8_t)source >> 3;
+    const uint8_t w = 1;
+
+    // WARNING: Destination is verified by is_valid_register() to fall within the safe enum range
+    // [0, 15].
+    const uint8_t r = (uint8_t)destination >> 3;
+
+    // WARNING: Source is verified by is_valid_register() to fall within the safe enum range
+    // [0, 15].
+    const uint8_t b = (uint8_t)source >> 3;
+
     const uint8_t opcode     = 0x23;
     const size_t  old_offset = assembler->offset;
     emit_rex(assembler->buffer, &assembler->offset, w, r, b);
@@ -167,15 +179,22 @@ bal_x86_emit_load_r64_rbp_offset(bal_x86_assembler_t     *assembler,
                   destination,
                   offset);
 
-    const uint8_t w          = 1;
-    const uint8_t r          = (uint8_t)destination >> 3;
+    const uint8_t w = 1;
+
+    // WARNING: Destination is verified by is_valid_register() to fall within the safe enum range
+    // [0, 15].
+    const uint8_t r = (uint8_t)destination >> 3;
+
     const uint8_t b          = 0;
     const uint8_t opcode     = 0X8B;
     const size_t  old_offset = assembler->offset;
     emit_rex(assembler->buffer, &assembler->offset, w, r, b);
     emit8(assembler->buffer, &assembler->offset, opcode);
     emit_modrm_memory_disp32_rbp(assembler->buffer, &assembler->offset, destination);
+
+    // WARNING: Bit pattern of int32_t offset is preserved in uint32_t.
     emit32(assembler->buffer, &assembler->offset, (uint32_t)offset);
+
     const size_t bytes_emitted = assembler->offset - old_offset;
     BAL_ASSERT_MSG(bytes_emitted == instruction_size_bytes,
                    "Bytes emitted %d does not match instruction size %d",
@@ -218,15 +237,22 @@ bal_x86_emit_store_r64_rbp_offset(bal_x86_assembler_t     *assembler,
 
     BAL_LOG_DEBUG(
         &assembler->logger, "[0x%04zx] mov[rbp + 0x%X], r%d", assembler->offset, offset, source);
-    const uint8_t w          = 1;
-    const uint8_t r          = (uint8_t)source >> 3;
+    const uint8_t w = 1;
+
+    // WARNING: Source is verified by is_valid_register() to fall within the safe enum range
+    // [0, 15].
+    const uint8_t r = (uint8_t)source >> 3;
+
     const uint8_t b          = 0;
     const uint8_t opcode     = 0X89;
     const size_t  old_offset = assembler->offset;
     emit_rex(assembler->buffer, &assembler->offset, w, r, b);
     emit8(assembler->buffer, &assembler->offset, opcode);
     emit_modrm_memory_disp32_rbp(assembler->buffer, &assembler->offset, source);
+
+    // WARNING: Bit pattern of int32_t offset is preserved in uint32_t.
     emit32(assembler->buffer, &assembler->offset, (uint32_t)offset);
+
     const size_t bytes_emitted = assembler->offset - old_offset;
     BAL_ASSERT_MSG(bytes_emitted == instruction_size_bytes,
                    "Bytes emitted %d does not match instruction size %d",
@@ -279,9 +305,16 @@ bal_x86_emit_mov_r64_r64(bal_x86_assembler_t     *assembler,
 
     BAL_LOG_DEBUG(
         &assembler->logger, "[+0x%04zx] mov r%d, r%d", assembler->offset, destination, source);
-    const uint8_t w          = 1;
-    const uint8_t r          = (uint8_t)destination >> 3;
-    const uint8_t b          = (uint8_t)source >> 3;
+    const uint8_t w = 1;
+
+    // WARNING: Destination is verified by is_valid_register() to fall within the safe enum range
+    // [0, 15].
+    const uint8_t r = (uint8_t)destination >> 3;
+
+    // WARNING: Source is verified by is_valid_register() to fall within the safe enum range
+    // [0, 15].
+    const uint8_t b = (uint8_t)source >> 3;
+
     const uint8_t opcode     = 0x8BU;
     const size_t  old_offset = assembler->offset;
     emit_rex(assembler->buffer, &assembler->offset, w, r, b);
@@ -320,8 +353,11 @@ bal_x86_emit_mov_r64_imm64(bal_x86_assembler_t     *assembler,
         return;
     }
 
-    const bool    fits_in_32_bits = immediate <= 0xFFFFFFFFULL;
-    const uint8_t b               = (uint8_t)destination >> 3;
+    const bool fits_in_32_bits = immediate <= 0xFFFFFFFFULL;
+
+    // WARNING: Destination is verified by is_valid_register() to fall within the safe enum range
+    // [0, 15].
+    const uint8_t b = (uint8_t)destination >> 3;
     size_t        instruction_size_bytes;
 
     if (true == fits_in_32_bits)
@@ -361,6 +397,9 @@ bal_x86_emit_mov_r64_imm64(bal_x86_assembler_t     *assembler,
         }
 
         emit8(assembler->buffer, &assembler->offset, 0xB8 + (destination & 7));
+
+        // WARNING: Cast from uint64_t to uint32_t is safe because it is only reached if
+        // `fits_in_32_bits` is true.
         emit32(assembler->buffer, &assembler->offset, (uint32_t)immediate);
     }
     else
@@ -450,9 +489,16 @@ bal_x86_emit_or_r64_r64(bal_x86_assembler_t     *assembler,
 
     BAL_LOG_DEBUG(
         &assembler->logger, "[+0x%04zx] mov r%d, r%d", assembler->offset, destination, source);
-    const uint8_t w          = 1;
-    const uint8_t r          = (uint8_t)destination >> 3;
-    const uint8_t b          = (uint8_t)source >> 3;
+    const uint8_t w = 1;
+
+    // WARNING: Destination is verified by is_valid_register() to fall within the safe enum range
+    // [0, 15].
+    const uint8_t r = (uint8_t)destination >> 3;
+
+    // WARNING: Source is verified by is_valid_register() to fall within the safe enum range
+    // [0, 15].
+    const uint8_t b = (uint8_t)source >> 3;
+
     const uint8_t opcode     = 0x0B;
     const size_t  old_offset = assembler->offset;
     emit_rex(assembler->buffer, &assembler->offset, w, r, b);
@@ -504,7 +550,11 @@ bal_x86_emit_push_r64(bal_x86_assembler_t *assembler, const bal_x86_register_t r
     {
         const uint8_t w = 0;
         const uint8_t r = 0;
+
+        // WARNING: reg is verified by is_valid_register() to fall within the safe enum range
+        // [0, 15].
         const uint8_t b = (uint8_t)reg >> 3;
+
         emit_rex(assembler->buffer, &assembler->offset, w, r, b);
         ++instruction_size_bytes;
     }
@@ -557,7 +607,11 @@ bal_x86_emit_pop_r64(bal_x86_assembler_t *assembler, const bal_x86_register_t re
     {
         const uint8_t w = 0;
         const uint8_t r = 0;
+
+        // WARNING: reg is verified by is_valid_register() to fall within the safe enum range
+        // [0, 15].
         const uint8_t b = (uint8_t)reg >> 3;
+
         emit_rex(assembler->buffer, &assembler->offset, w, r, b);
         ++instruction_size_bytes;
     }
@@ -660,7 +714,12 @@ emit_rex(uint8_t *buffer, size_t *offset, const uint8_t w, const uint8_t r, cons
     const uint8_t safe_w = w & 1U;
     const uint8_t safe_r = r & 1U;
     const uint8_t safe_b = b & 1U;
+
+    // WARNING: Casting safe_* to unsigned prevents undefined behavior during bitwise shifts.
+    // WARNING: Cast to uint8_t is safe as the result of the combined bitwise-OR  fits within
+    // uint8_t [0x40, 0x4F].
     const uint8_t rex = (uint8_t)(0x40U | (unsigned)safe_w << 3U | (unsigned)safe_r << 2U | safe_b);
+
     emit8(buffer, offset, rex);
 }
 
@@ -670,17 +729,31 @@ emit_modrm_register(uint8_t                 *buffer,
                     const bal_x86_register_t reg,
                     const bal_x86_register_t rm)
 {
+    // WARNING: Lossless conversion of reg (0 - 15) before applying mask.
     const uint8_t safe_reg = (uint8_t)reg & 7;
-    const uint8_t safe_rm  = (uint8_t)rm & 7U;
-    const uint8_t modrm    = (uint8_t)(0xC0U | (unsigned)safe_reg << 3U | safe_rm);
+
+    // WARNING: Lossless conversion of rm (0 - 15) before applying mask.
+    const uint8_t safe_rm = (uint8_t)rm & 7U;
+
+    // WARNING: Cast safe_reg to unsigned prevents undefined behavior during bitwise shifts.
+    // WARNING: Cast to uint8_t is safe as the resulting byte fits within the uint8_t range
+    // [0xC0, 0xFF].
+    const uint8_t modrm = (uint8_t)(0xC0U | (unsigned)safe_reg << 3U | safe_rm);
+
     emit8(buffer, offset, modrm);
 }
 
 void
 emit_modrm_memory_disp32_rbp(uint8_t *buffer, size_t *offset, const bal_x86_register_t reg)
 {
+    // WARNING: Lossless conversion of reg (0 - 15) before applying mask.
     const uint8_t safe_reg = (uint8_t)reg & 7;
-    uint8_t const modrm    = (uint8_t)(0x80U | (unsigned)safe_reg << 3U | 0x05U);
+
+    // WARNING: Cast safe_reg to unsigned prevents undefined behavior during bitwise shifts.
+    // WARNING: Cast to uint8_t is safe as the resulting byte fits within the uint8_t range
+    // [0xC0, 0xFF].
+    uint8_t const modrm = (uint8_t)(0x80U | (unsigned)safe_reg << 3U | 0x05U);
+
     emit8(buffer, offset, modrm);
 }
 
