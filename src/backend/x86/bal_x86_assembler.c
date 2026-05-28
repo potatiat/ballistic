@@ -631,7 +631,7 @@ is_valid_register(const bal_x86_register_t reg)
     return reg >= BAL_X86_RAX && reg <= BAL_X86_R15;
 }
 
-static bool
+bool
 can_emit(bal_x86_assembler_t *assembler, const size_t size)
 {
     if (BAL_UNLIKELY(NULL == assembler))
@@ -669,7 +669,7 @@ can_emit(bal_x86_assembler_t *assembler, const size_t size)
     return true;
 }
 
-static void
+void
 emit8(uint8_t *buffer, size_t *offset, uint8_t const value)
 {
     if (BAL_UNLIKELY(NULL == buffer))
@@ -682,7 +682,7 @@ emit8(uint8_t *buffer, size_t *offset, uint8_t const value)
     *offset += 1;
 }
 
-static void
+void
 emit32(uint8_t *buffer, size_t *offset, const uint32_t value)
 {
     if (BAL_UNLIKELY(NULL == buffer))
@@ -695,7 +695,7 @@ emit32(uint8_t *buffer, size_t *offset, const uint32_t value)
     *offset += sizeof(uint32_t);
 }
 
-static void
+void
 emit64(uint8_t *buffer, size_t *offset, uint64_t const value)
 {
     if (BAL_UNLIKELY(NULL == buffer))
@@ -708,7 +708,7 @@ emit64(uint8_t *buffer, size_t *offset, uint64_t const value)
     *offset += sizeof(uint64_t);
 }
 
-static void
+void
 emit_rex(uint8_t *buffer, size_t *offset, const uint8_t w, const uint8_t r, const uint8_t b)
 {
     const uint8_t safe_w = w & 1U;
