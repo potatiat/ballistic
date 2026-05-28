@@ -284,9 +284,15 @@ bal_engine_run(bal_engine_t *engine)
         engine->allocator->protect_rw(engine->allocator->handle,
                                       internal_engine_state->tier1_buffer,
                                       internal_engine_state->tier1_buffer_size);
+        size_t max_instructions = MAX_INSTRUCTIONS;
+
+        if (engine->flags & BAL_ENGINE_FLAG_SINGLE_STEP)
+        {
+            max_instructions = 1;
+        }
 
         void *entry_point = bal_tier1_compiler_translate(
-            &internal_engine_state->tier1_compiler, engine->memory_interface, pc, MAX_INSTRUCTIONS);
+            &internal_engine_state->tier1_compiler, engine->memory_interface, pc, max_instructions);
 
         if (BAL_UNLIKELY(NULL == entry_point))
         {
@@ -308,6 +314,13 @@ bal_engine_run(bal_engine_t *engine)
         }
 
         compiled_block(engine->cpu);
+
+        if (engine->flags & BAL_ENGINE_FLAG_SINGLE_STEP)
+        {
+            break;
+        }
+
+        break;
     }
 
     engine->flags &= ~BAL_ENGINE_FLAG_RUNNING;
