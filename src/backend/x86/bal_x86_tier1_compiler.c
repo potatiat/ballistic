@@ -256,10 +256,15 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                                   "Aborting function: Invalid CONST instruction detected: %s",
                                   metadata->name);
                     is_block_terminated = true;
-
                     break;
                 case OPCODE_RETURN:
                     BAL_LOG_DEBUG(logger, "Block terminated by RET");
+                    is_block_terminated = true;
+                    break;
+                case OPCODE_TRAP:
+                    BAL_LOG_INFO(logger,
+                                 "Block terminated by TRAP/Unknown instruction: %s: ",
+                                 metadata->name);
                     is_block_terminated = true;
                     break;
                 default:
