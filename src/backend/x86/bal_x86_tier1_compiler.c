@@ -214,6 +214,19 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                 }
             }
 
+            if (engine_flags & BAL_ENGINE_FLAG_TRAP_SMC_HVC)
+            {
+                if (BAL_UNLIKELY((0 == strncmp(metadata->name, "SMC", 3)
+                                  || (strncmp(metadata->name, "HVC", 3) == 0))))
+                {
+                    BAL_LOG_INFO(logger,
+                                 "Trapping on SMC/HVC instruction at 0x%016llX",
+                                 (unsigned long long)guest_address);
+                    is_block_terminated = true;
+                    break;
+                }
+            }
+
             switch (metadata->ir_opcode)
             {
                 case OPCODE_CONST:;
