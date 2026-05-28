@@ -42,7 +42,8 @@ extern "C"
     BAL_HOT void *bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                                                const bal_memory_interface_t *memory_interface,
                                                bal_guest_address_t           guest_address,
-                                               size_t                        max_instructions);
+                                               size_t                        max_instructions,
+                                               uint32_t                      engine_flags);
 
 #ifdef __cplusplus
 }

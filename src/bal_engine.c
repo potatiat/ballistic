@@ -291,8 +291,11 @@ bal_engine_run(bal_engine_t *engine)
             max_instructions = 1;
         }
 
-        void *entry_point = bal_tier1_compiler_translate(
-            &internal_engine_state->tier1_compiler, engine->memory_interface, pc, max_instructions);
+        void *entry_point = bal_tier1_compiler_translate(&internal_engine_state->tier1_compiler,
+                                                         engine->memory_interface,
+                                                         pc,
+                                                         max_instructions,
+                                                         engine->flags);
 
         if (BAL_UNLIKELY(NULL == entry_point))
         {

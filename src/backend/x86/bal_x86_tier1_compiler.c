@@ -1,6 +1,8 @@
 #include "backend/x86/bal_x86_tier1_compiler.h"
 #include "backend/bal_cpu.h"
 #include "bal_decoder.h"
+#include "bal_engine.h"
+
 #include <string.h>
 
 // Set which registers holds the first argument passed to the JIT block based on the OS calling
@@ -84,7 +86,8 @@ void *
 bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                              const bal_memory_interface_t *memory_interface,
                              bal_guest_address_t           guest_address,
-                             const size_t                  max_instructions)
+                             const size_t                  max_instructions,
+                             uint32_t                      engine_flags)
 {
     if (BAL_UNLIKELY(NULL == compiler))
     {
@@ -164,6 +167,18 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
         if (max_readable_instructions > max_instructions)
         {
             max_readable_instructions = max_instructions;
+        }
+
+        if (engine_flags & BAL_ENGINE_FLAG_STRICT_ALIGNMENT)
+        {
+            if (guest_address % 4 != 0)
+            {
+                BAL_LOG_ERROR(logger,
+                              "Aborting function: strict alignment fault at GVA 0x%016llX",
+                              (unsigned long)guest_address);
+                compiler->status = BAL_ERROR_PC_ALIGNMENT;
+                break;
+            }
         }
 
         for (size_t i = 0; i < max_readable_instructions; ++i)
