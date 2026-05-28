@@ -153,28 +153,6 @@ extern "C"
     /// The sole entry point for executing guest code.
     BAL_HOT bal_error_t bal_engine_run(bal_engine_t *engine);
 
-    /// Translates machine code starting at `guest_address_start` into the engine's
-    /// internal IR. `interface` provides memory access handling (like instruction
-    /// fetching).
-    ///
-    /// Returns [`BAL_SUCCESS`] on success.
-    ///
-    /// # Safety
-    ///
-    /// `guest_address_start` must be non-NULL.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`BAL_ERROR_INVALID_ARGUMENT`] if functino arguments are invalid or
-    /// or `engine->status != BAL_SUCCESS`.
-    ///
-    /// Returns [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if the array `engine->constants` overflows.
-    // BAL_HOT bal_error_t
-    // bal_engine_translate_tier2(bal_engine_t *BAL_RESTRICT                 engine,
-    // const bal_memory_interface_t *BAL_RESTRICT interface,
-    // bal_guest_address_t                       *guest_address_start,
-    // size_t                                     max_instructions);
-
     /// Resets `engine` for the next compilation unit. This is a low-cost memory
     /// operation designed to be called between translation units.
     ///
@@ -183,7 +161,7 @@ extern "C"
     /// # Errors
     ///
     /// Returns [`BAL_ERROR_INVALID_ARGUMENT`] if `engine` is `NULl`.
-    BAL_HOT bal_error_t bal_engine_reset(bal_engine_t *engine);
+    // BAL_HOT bal_error_t bal_engine_reset(bal_engine_t *engine);
 
     /// Frees all `engine` heap-allocated resources using `allocator`.
     ///
@@ -191,21 +169,22 @@ extern "C"
     ///
     /// This function does not free the [`bal_engine_t`] struct itself, as the
     /// caller may have allocated it on the stack.
-    BAL_COLD void bal_engine_destroy(const bal_allocator_t *allocator, bal_engine_t *engine);
+    // BAL_COLD void bal_engine_destroy(const bal_allocator_t *allocator, bal_engine_t *engine);
 
     /// Returns the IR instructions array.
     ///
     /// # Safety
     ///
     /// Returns `NULl` if `engine` or `engine->arena_base` is `NULL`.
-    const bal_instruction_t *bal_engine_get_ir_instructions(const bal_engine_t *engine);
+    // const bal_instruction_t *bal_engine_get_ir_instructions(const bal_engine_t *engine);
 
     /// Returns the constant generated from the IR layer at `index`.
     ///
     /// # Safety
     ///
     /// Returns `NULL` if `engine` or `engine->arena_base` is `NULL`.
-    const bal_constant_t *bal_engine_get_constant(const bal_engine_t *engine, bal_constant_t index);
+    // const bal_constant_t *bal_engine_get_constant(const bal_engine_t *engine, bal_constant_t
+    // index);
 
 #ifdef __cplusplus
 }
