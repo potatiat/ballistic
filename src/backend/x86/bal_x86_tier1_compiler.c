@@ -227,6 +227,18 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                 }
             }
 
+            if (engine_flags & BAL_ENGINE_FLAG_WFI_YIELDS_HOST)
+            {
+                if (BAL_UNLIKELY(0 == strncmp(metadata->name, "WFI", 3)))
+                {
+                    BAL_LOG_INFO(logger,
+                                 "WFI instruction encountered at 0x%016llX, yielding to host",
+                                 (unsigned long long)guest_address);
+                    is_block_terminated = true;
+                    break;
+                }
+            }
+
             switch (metadata->ir_opcode)
             {
                 case OPCODE_CONST:;
