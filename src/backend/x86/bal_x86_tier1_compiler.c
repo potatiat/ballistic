@@ -87,7 +87,7 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                              const bal_memory_interface_t *memory_interface,
                              bal_guest_address_t           guest_address,
                              const size_t                  max_instructions,
-                             uint32_t                      engine_flags)
+                             const uint32_t                engine_flags)
 {
     if (BAL_UNLIKELY(NULL == compiler))
     {
@@ -298,6 +298,7 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
             ++host_address_cursor;
         }
     }
+
     terminate_block(compiler, guest_address);
     BAL_LOG_INFO(
         logger, "Tier 1 compiled block ends at GVA 0x%016llX", (unsigned long long)guest_address);
