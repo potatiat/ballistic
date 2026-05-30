@@ -82,6 +82,22 @@ bal_tier1_compiler_init(bal_tier1_compiler_t         *compiler,
     return BAL_SUCCESS;
 }
 
+void
+bal_tier1_compiler_reset(bal_tier1_compiler_t *compiler)
+{
+    if (BAL_UNLIKELY(NULL == compiler))
+    {
+        return;
+    }
+
+    compiler->status = BAL_SUCCESS;
+    (void)memset(compiler->arm_to_x86, 0, sizeof(*compiler->arm_to_x86));
+    (void)memset(compiler->x86_to_arm, 0, sizeof(*compiler->x86_to_arm));
+    (void)memset(compiler->is_dirty, 0, sizeof(*compiler->is_dirty));
+    bal_sliding_window_reset(&compiler->window);
+    bal_x86_assembler_reset(&compiler->assembler);
+}
+
 void *
 bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                              const bal_memory_interface_t *memory_interface,

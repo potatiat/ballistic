@@ -39,6 +39,8 @@ extern "C"
                                                  size_t                  buffer_size,
                                                  bal_logger_t            logger);
 
+    BAL_HOT void bal_tier1_compiler_reset(bal_tier1_compiler_t *compiler);
+
     BAL_HOT void *bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                                                const bal_memory_interface_t *memory_interface,
                                                bal_guest_address_t           guest_address,
