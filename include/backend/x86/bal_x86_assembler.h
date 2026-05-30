@@ -111,6 +111,21 @@ extern "C"
     /// `assembler` must be valid.
     void bal_x86_assembler_reset(bal_x86_assembler_t *assembler);
 
+    /// Emits an add immediate value to a memory location pointed to by RBP + offset.
+    ///
+    /// Assembly equivalent: `add qword ptr [rbp + offset], immediate`
+    ///
+    /// # Warning
+    ///
+    /// This function fails if:
+    ///
+    /// - `assembler` is `NULL`
+    /// - `assembler->status` != [`BAL_SUCCESS`]
+    /// - `assembler->buffer` is full.
+    void bal_x86_emit_add_mem64_rbp_offset_imm(bal_x86_assembler_t *assembler,
+                                               int32_t              offset,
+                                               int32_t              immediate);
+
     /// Emits a bitwise AND instruction between two 64-bit registers.
     ///
     /// Assembly equivalent: `and destination, source`.

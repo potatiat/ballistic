@@ -120,6 +120,7 @@ TEST_F(Backendx86Assembler, Internal_BitwiseMasking)
 
 TEST_F(Backendx86Assembler, Public_NullContext_NoCrash)
 {
+    bal_x86_emit_add_mem64_rbp_offset_imm(nullptr, 0, 0);
     bal_x86_emit_and_r64_r64(nullptr, BAL_X86_RAX, BAL_X86_RAX);
     bal_x86_emit_load_r64_rbp_offset(nullptr, BAL_X86_RAX, 0);
     bal_x86_emit_store_r64_rbp_offset(nullptr, BAL_X86_RAX, 0);
@@ -225,6 +226,54 @@ TEST_F(Backendx86Assembler, Encode_Pop_HighReg)
     EXPECT_EQ(assembler.offset, 2);
     EXPECT_EQ(assembler.buffer[0], 0x41); // REX.B
     EXPECT_EQ(assembler.buffer[1], 0x5F); // 0x58 + 7
+}
+
+TEST_F(Backendx86Assembler, Encode_AddMemRbp_8BitImm)
+{
+    bal_x86_emit_add_mem64_rbp_offset_imm(&assembler, 0x20, 10);
+    EXPECT_EQ(assembler.status, BAL_SUCCESS);
+    EXPECT_EQ(assembler.offset, 8);
+    EXPECT_EQ(assembler.buffer[0], 0x48); // REX.W
+    EXPECT_EQ(assembler.buffer[1], 0x83); // Opcode
+    EXPECT_EQ(assembler.buffer[2], 0x85); // ModRM
+    EXPECT_EQ(assembler.buffer[3], 0x20); // Displacement LSB
+    EXPECT_EQ(assembler.buffer[4], 0x00);
+    EXPECT_EQ(assembler.buffer[5], 0x00);
+    EXPECT_EQ(assembler.buffer[6], 0x00); // Displacement MSB
+    EXPECT_EQ(assembler.buffer[7], 0x0A); // Imm8
+}
+
+TEST_F(Backendx86Assembler, Encode_AddMemRbp_32BitImm)
+{
+    bal_x86_emit_add_mem64_rbp_offset_imm(&assembler, 0x20, 500);
+    EXPECT_EQ(assembler.status, BAL_SUCCESS);
+    EXPECT_EQ(assembler.offset, 11);
+    EXPECT_EQ(assembler.buffer[0], 0x48); // REX.W
+    EXPECT_EQ(assembler.buffer[1], 0x81); // Opcode
+    EXPECT_EQ(assembler.buffer[2], 0x85); // ModRM
+    EXPECT_EQ(assembler.buffer[3], 0x20); // Displacement LSB
+    EXPECT_EQ(assembler.buffer[4], 0x00);
+    EXPECT_EQ(assembler.buffer[5], 0x00);
+    EXPECT_EQ(assembler.buffer[6], 0x00); // Displacement MSB
+    EXPECT_EQ(assembler.buffer[7], 0xF4); // Imm32 LSB
+    EXPECT_EQ(assembler.buffer[8], 0x01);
+    EXPECT_EQ(assembler.buffer[9], 0x00);
+    EXPECT_EQ(assembler.buffer[10], 0x00); // Imm32 MSB
+}
+
+TEST_F(Backendx86Assembler, Encode_AddMemRbp_NegativeOffset_SignExtension)
+{
+    bal_x86_emit_add_mem64_rbp_offset_imm(&assembler, -32, 10);
+    EXPECT_EQ(assembler.status, BAL_SUCCESS);
+    EXPECT_EQ(assembler.offset, 8);
+    EXPECT_EQ(assembler.buffer[0], 0x48); // REX.W
+    EXPECT_EQ(assembler.buffer[1], 0x83); // Opcode
+    EXPECT_EQ(assembler.buffer[2], 0x85); // ModRM
+    EXPECT_EQ(assembler.buffer[3], 0xE0); // Displacement LSB
+    EXPECT_EQ(assembler.buffer[4], 0xFF);
+    EXPECT_EQ(assembler.buffer[5], 0xFF);
+    EXPECT_EQ(assembler.buffer[6], 0xFF); // Displacement MSB
+    EXPECT_EQ(assembler.buffer[7], 0x0A); // Imm8
 }
 
 TEST_F(Backendx86Assembler, Encode_AndRegToReg_LowLow)

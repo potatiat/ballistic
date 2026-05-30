@@ -88,6 +88,67 @@ bal_x86_assembler_reset(bal_x86_assembler_t *assembler)
 }
 
 void
+bal_x86_emit_add_mem64_rbp_offset_imm(bal_x86_assembler_t *assembler,
+                                      const int32_t        offset,
+                                      const int32_t        immediate)
+{
+    if (BAL_UNLIKELY(NULL == assembler))
+    {
+        return;
+    }
+
+    if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler status != BAL_SUCCESS");
+        return;
+    }
+
+    const bool   fit_in_8_bits          = immediate >= -128 & immediate <= 127;
+    const size_t instruction_size_bytes = true == fit_in_8_bits ? 8 : 11;
+    const bool   can_emit_status        = can_emit(assembler, instruction_size_bytes);
+
+    if (BAL_UNLIKELY(false == can_emit_status))
+    {
+        return;
+    }
+
+    BAL_LOG_DEBUG(&assembler->logger,
+                  "[0x%04zx] add qword ptr [rbp + 0x%X], 0x%X",
+                  assembler->offset,
+                  offset,
+                  immediate);
+
+    const uint8_t w          = 1;
+    const uint8_t r          = 0;
+    const uint8_t b          = 0;
+    const uint8_t opcode     = fit_in_8_bits ? 0x83 : 0x81;
+    const size_t  old_offset = assembler->offset;
+    emit_rex(assembler->buffer, &assembler->offset, w, r, b);
+    emit8(assembler->buffer, &assembler->offset, opcode);
+    emit_modrm_memory_disp32_rbp(assembler->buffer, &assembler->offset, BAL_X86_RAX);
+
+    // WARNING: Bit pattern of int32_t offset is preserved.
+    emit32(assembler->buffer, &assembler->offset, (uint32_t)offset);
+
+    if (true == fit_in_8_bits)
+    {
+        // WARNING: Cast is safe because it is only reached if fit_in_bits is true.
+        emit8(assembler->buffer, &assembler->offset, (uint8_t)immediate);
+    }
+    else
+    {
+        // WARNING: Bit pattern of int32_t immediate is preserved.
+        emit32(assembler->buffer, &assembler->offset, (uint32_t)immediate);
+    }
+
+    const size_t bytes_emitted = assembler->offset - old_offset;
+    BAL_ASSERT_MSG(bytes_emitted == instruction_size_bytes,
+                   "Bytes emitted %d does not match instruction size %d",
+                   bytes_emitted,
+                   instruction_size_bytes);
+}
+
+void
 bal_x86_emit_and_r64_r64(bal_x86_assembler_t     *assembler,
                          const bal_x86_register_t destination,
                          const bal_x86_register_t source)
