@@ -72,6 +72,7 @@ bal_sliding_window_push(bal_sliding_window_t *window, const bal_x86_macro_t macr
                   macro.opcode,
                   macro.destination,
                   macro.source,
+                  // WARNING: C standard guarantees unsigned long long is at least 64 bits wide.
                   (unsigned long long)macro.immediate_or_offset);
     window->macros[window_count++] = macro;
     window->count                  = window_count;
@@ -140,9 +141,15 @@ flush_single_macro(bal_x86_assembler_t *BAL_RESTRICT   assembler,
             bal_x86_emit_mov_r64_imm64(assembler, destination, immediate_or_offset);
             break;
         case BAL_X86_MACRO_LOAD:
+            // WARNING: The displacement offset refers to the structural members within bal_cpu_t.
+            // This struct is statically bounded to 264 bytes, which fits inside a signed 32-bit
+            // integer.
             bal_x86_emit_load_r64_rbp_offset(assembler, destination, (int32_t)immediate_or_offset);
             break;
         case BAL_X86_MACRO_STORE:
+            // WARNING: The displacement offset refers to the structural members within bal_cpu_t.
+            // This struct is statically bounded to 264 bytes, which fits inside a signed 32-bit
+            // integer.
             bal_x86_emit_store_r64_rbp_offset(assembler, source, (int32_t)immediate_or_offset);
             break;
         case BAL_X86_MACRO_AND_REGISTER_IMMEDIATE:
@@ -195,6 +202,7 @@ run_peephole_optimizer(bal_sliding_window_t *window)
     if (BAL_UNLIKELY(BAL_X86_MACRO_MOV_REGISTER_REGISTER == macro1_opcode
                      && macro1_destination == macro1_source))
     {
+        // WARNING: Prevents unsued local variable compiler warning.
         (void)logger;
         BAL_LOG_DEBUG(logger,
                       "Peephole: Killed identity MOV (r%d -> r%d)",
