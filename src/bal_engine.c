@@ -330,6 +330,21 @@ bal_engine_run_thread(bal_engine_t *engine)
     return engine->status;
 }
 
+bal_error_t
+bal_engine_reset(bal_engine_t *BAL_RESTRICT engine)
+{
+    if (BAL_UNLIKELY(NULL == engine))
+    {
+        return BAL_ERROR_INVALID_ARGUMENT;
+    }
+
+    engine->status                                     = BAL_SUCCESS;
+    internal_engine_state_t *BAL_RESTRICT engine_state = engine->engine_state;
+    (void)memset(&engine_state->tier1_buffer, 0, engine_state->tier1_buffer_size);
+    bal_tier1_compiler_reset(&engine_state->tier1_compiler);
+    return engine->status;
+}
+
 #if 0
 bal_error_t
 bal_engine_translate_tier2(bal_engine_t *BAL_RESTRICT                 engine,
@@ -525,21 +540,7 @@ bal_engine_translate_tier2(bal_engine_t *BAL_RESTRICT                 engine,
     return engine->status;
 }
 
-bal_error_t
-bal_engine_reset(bal_engine_t *engine)
-{
-    if (BAL_UNLIKELY(NULL == engine))
-    {
-        return BAL_ERROR_INVALID_ARGUMENT;
-    }
 
-    engine->instruction_count = 0;
-    engine->status            = BAL_SUCCESS;
-
-    (void)memset(engine->arena_base, POISON_UNINITIALIZED_MEMORY, ARENA_SIZE_BYTES);
-
-    return engine->status;
-}
 
 void
 bal_engine_destroy(const bal_allocator_t *allocator, bal_engine_t *engine)

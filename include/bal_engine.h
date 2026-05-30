@@ -159,7 +159,7 @@ extern "C"
     /// # Errors
     ///
     /// Returns [`BAL_ERROR_INVALID_ARGUMENT`] if `engine` is `NULl`.
-    // BAL_HOT bal_error_t bal_engine_reset(bal_engine_t *engine);
+    BAL_HOT bal_error_t bal_engine_reset(bal_engine_t *engine);
 
     /// Frees all `engine` heap-allocated resources using `allocator`.
     ///
