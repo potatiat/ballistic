@@ -57,14 +57,14 @@ extern "C"
     /// Initializes a new macro sliding window.
     ///
     /// # Safety
+    ///
     /// `window` and `assembler must be valid and not `NULL`.
     /// `assembler` must remain valid for the entire lifetime of `window`.
     ///
     /// # Errors
     ///
-    /// Returns [`BAL_SUCCESS`] on success.
-    ///
-    /// Returns [`BAL_ERROR_INVALID_ARGUMENT`] if any pointer is `NULL`.
+    /// * Returns [`BAL_SUCCESS`] on success.
+    /// * Returns [`BAL_ERROR_INVALID_ARGUMENT`] if any pointer is `NULL`.
     BAL_COLD bal_error_t bal_sliding_window_init(bal_sliding_window_t *window,
                                                  bal_x86_assembler_t  *assembler);
 
