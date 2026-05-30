@@ -113,7 +113,7 @@ extern "C"
     /// This function fails if:
     ///
     /// - `assembler` is `NULL`.
-    /// - `assembler->status != [`BAL_SUCCESS`]
+    /// - `assembler->status` != [`BAL_SUCCESS`]
     /// - `assembler->buffer` is full.
     void bal_x86_emit_and_r64_r64(bal_x86_assembler_t *assembler,
                                   bal_x86_register_t   destination,
@@ -128,7 +128,7 @@ extern "C"
     /// This function fails if:
     ///
     /// - `assembler` is `NULL`.
-    /// - `assembler->status != [`BAL_SUCCESS`]
+    /// - `assembler->status` != [`BAL_SUCCESS`]
     /// - `assembler->buffer` is full.
     void bal_x86_emit_load_r64_rbp_offset(bal_x86_assembler_t *assembler,
                                           bal_x86_register_t   destination,
@@ -143,7 +143,7 @@ extern "C"
     /// This function fails if:
     ///
     /// - `assembler` is `NULL`.
-    /// - `assembler->status != [`BAL_SUCCESS`]
+    /// - `assembler->status` != [`BAL_SUCCESS`]
     /// - `assembler->buffer` is full.
     void bal_x86_emit_store_r64_rbp_offset(bal_x86_assembler_t *assembler,
                                            bal_x86_register_t   source,
@@ -158,7 +158,7 @@ extern "C"
     /// This function fails if:
     ///
     /// - `assembler` is `NULL`.
-    /// - `assembler->status != [`BAL_SUCCESS`]
+    /// - `assembler->status` != [`BAL_SUCCESS`]
     /// - `assembler->buffer` is full.
     void bal_x86_emit_mov_r64_r64(bal_x86_assembler_t *assembler,
                                   bal_x86_register_t   destination,
@@ -173,7 +173,7 @@ extern "C"
     /// This function fails if:
     ///
     /// - `assembler` is `NULL`.
-    /// - `assembler->status != [`BAL_SUCCESS`]
+    /// - `assembler->status` != [`BAL_SUCCESS`]
     /// - `assembler->buffer` is full.
     void bal_x86_emit_mov_r64_imm64(bal_x86_assembler_t *assembler,
                                     bal_x86_register_t   destination,
@@ -188,7 +188,7 @@ extern "C"
     /// This function fails if:
     ///
     /// - `assembler` is `NULL`.
-    /// - `assembler->status != [`BAL_SUCCESS`]
+    /// - `assembler->status` != [`BAL_SUCCESS`]
     /// - `assembler->buffer` is full.
     void bal_x86_emit_ret(bal_x86_assembler_t *assembler);
 
@@ -201,7 +201,7 @@ extern "C"
     /// This function fails if:
     ///
     /// - `assembler` is `NULL`.
-    /// - `assembler->status != [`BAL_SUCCESS`]
+    /// - `assembler->status` != [`BAL_SUCCESS`]
     /// - `assembler->buffer` is full.
     void bal_x86_emit_or_r64_r64(bal_x86_assembler_t *assembler,
                                  bal_x86_register_t   destination,
@@ -216,7 +216,7 @@ extern "C"
     /// This function fails if:
     ///
     /// - `assembler` is `NULL`.
-    /// - `assembler->status != [`BAL_SUCCESS`]
+    /// - `assembler->status` != [`BAL_SUCCESS`]
     /// - `assembler->buffer` is full.
     void bal_x86_emit_push_r64(bal_x86_assembler_t *assembler, bal_x86_register_t reg);
 
@@ -229,7 +229,7 @@ extern "C"
     /// This function fails if:
     ///
     /// - `assembler` is `NULL`.
-    /// - `assembler->status != [`BAL_SUCCESS`]
+    /// - `assembler->status` != [`BAL_SUCCESS`]
     /// - `assembler->buffer` is full.
     void bal_x86_emit_pop_r64(bal_x86_assembler_t *assembler, bal_x86_register_t reg);
 
