@@ -1,6 +1,7 @@
 #include "bal_engine.h"
 #include "backend/x86/bal_x86_tier1_compiler.h"
 #include "bal_decoder.h"
+#include "bal_engine_flags.h"
 #include "bal_logging.h"
 
 #include <stdbool.h>

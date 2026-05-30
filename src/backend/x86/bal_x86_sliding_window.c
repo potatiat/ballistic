@@ -1,4 +1,5 @@
 #include "backend/x86/bal_x86_sliding_window.h"
+#include "backend/bal_cpu.h"
 #include <string.h>
 
 #define ASSEMBLER_TEMPORARY_REGISTER BAL_X86_R11

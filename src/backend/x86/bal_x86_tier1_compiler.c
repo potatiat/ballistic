@@ -2,6 +2,7 @@
 #include "backend/bal_cpu.h"
 #include "bal_decoder.h"
 #include "bal_engine.h"
+#include "bal_engine_flags.h"
 
 #include <string.h>
 

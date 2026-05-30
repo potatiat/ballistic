@@ -123,6 +123,7 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     target_link_libraries(${CDOC_NAME} PRIVATE ${CLANG_LIBRARY} cmark)
     set(PROJECT_HEADERS
             include/bal_engine.h
+            include/bal_engine_flags.h
             include/bal_decoder.h
             include/bal_memory.h
             include/bal_types.h
