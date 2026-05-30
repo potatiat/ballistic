@@ -122,6 +122,8 @@ TEST_F(Backendx86Assembler, Public_NullContext_NoCrash)
 {
     bal_x86_emit_add_mem64_rbp_offset_imm(nullptr, 0, 0);
     bal_x86_emit_and_r64_r64(nullptr, BAL_X86_RAX, BAL_X86_RAX);
+    bal_x86_emit_jmp_r64(nullptr, BAL_X86_RAX);
+    bal_x86_emit_jmp_rel32(nullptr, 0);
     bal_x86_emit_load_r64_rbp_offset(nullptr, BAL_X86_RAX, 0);
     bal_x86_emit_store_r64_rbp_offset(nullptr, BAL_X86_RAX, 0);
     bal_x86_emit_mov_r64_r64(nullptr, BAL_X86_RAX, BAL_X86_RAX);
@@ -148,6 +150,10 @@ TEST_F(Backendx86Assembler, Public_InvalidRegister_NoEmit)
 
     assembler.status = BAL_SUCCESS;
     bal_x86_emit_and_r64_r64(&assembler, BAL_X86_RAX, bad_register);
+    EXPECT_EQ(assembler.status, BAL_ERROR_INVALID_ARGUMENT);
+
+    assembler.status = BAL_SUCCESS;
+    bal_x86_emit_jmp_r64(&assembler, bad_register);
     EXPECT_EQ(assembler.status, BAL_ERROR_INVALID_ARGUMENT);
 
     assembler.status = BAL_SUCCESS;
