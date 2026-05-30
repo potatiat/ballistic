@@ -36,6 +36,18 @@ bal_sliding_window_init(bal_sliding_window_t *BAL_RESTRICT window,
 }
 
 void
+bal_sliding_window_reset(bal_sliding_window_t *window)
+{
+    if (BAL_UNLIKELY(NULL == window))
+    {
+        return;
+    }
+
+    window->count = 0;
+    (void)memset(window->macros, 0, sizeof(*window->macros));
+}
+
+void
 bal_sliding_window_push(bal_sliding_window_t *BAL_RESTRICT window, const bal_x86_macro_t macro)
 {
     if (BAL_UNLIKELY(NULL == window))

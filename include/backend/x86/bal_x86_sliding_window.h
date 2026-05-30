@@ -127,6 +127,13 @@ extern "C"
     BAL_COLD bal_error_t bal_sliding_window_init(bal_sliding_window_t *window,
                                                  bal_x86_assembler_t  *assembler);
 
+    /// Resets the sliding window back to its initial state.
+    ///
+    /// # Safety
+    ///
+    /// `window` must be valid.
+    BAL_HOT void bal_sliding_window_reset(bal_sliding_window_t *window);
+
     /// Pushes a new macro into the sliding window and triggers the peephole optimizer.
     ///
     /// # Safety
