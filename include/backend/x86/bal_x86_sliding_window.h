@@ -1,3 +1,62 @@
+//! This file implements a buffered middleware layer between the Tier1/Tier2 compiler and the
+//! x86 assembler.
+//!
+//! # Example
+//!
+//! ```c
+//! #include "backend/x86/bal_x86_sliding_window.h"
+//! #include "backend/x86/bal_x86_assembler.h"
+//! #include "bal_logging.h"
+//! #include "bal_memory.h"
+//! #include <stdint.h>
+//!
+//! // ---
+//! // Allocate memory to represent our executable/writable buffer.
+//! uint8_t raw_buffer[1024] = {0};
+//! bal_executable_buffer_t exec_buffer = {
+//!     .rw_pointer = raw_buffer,
+//!     .rx_pointer = raw_buffer,
+//! };
+//!
+//! bal_logger_t logger = {0};
+//! bal_logger_init_default(&logger);
+//! logger.min_level = BAL_LOG_LEVEL_INFO;
+//!
+//! bal_x86_assembler_t assembler = {0};
+//! bal_error_t error = bal_x86_assembler_init(&assembler, exec_buffer, sizeof(raw_buffer), logger);
+//! if (error != BAL_SUCCESS) {
+//!     return 1;
+//! }
+//!
+//! bal_sliding_window_t window;
+//! error = bal_sliding_window_init(&window, &assembler);
+//! if (error != BAL_SUCCESS) {
+//!     return 1;
+//! }
+//!
+//! // 1. Emit load instruction macro: mov rax, [rbp + 16]
+//! bal_x86_macro_t load_macro = {
+//!     .opcode = BAL_X86_MACRO_LOAD,
+//!     .destination = BAL_X86_RAX,
+//!     .source = BAL_X86_RBP,
+//!     .immediate_or_offset = 16
+//! };
+//! bal_sliding_window_push(&window, load_macro);
+//!
+//! // 2. Emit an identity register move: mov rcx, rcx
+//! // The peephole optimizer identifies this and rewrites the opcode to BAL_X86_MACRO_NOP.
+//! bal_x86_macro_t identity_macro = {
+//!     .opcode = BAL_X86_MACRO_MOV_REGISTER_REGISTER,
+//!     .destination = BAL_X86_RCX,
+//!     .source = BAL_X86_RCX,
+//!     .immediate_or_offset = 0
+//! };
+//! bal_sliding_window_push(&window, identity_macro);
+//!
+//! // 3. Lower and write the queued macro items into the assembler buffer.
+//! bal_sliding_window_flush_all(&window);
+//! ```
+
 #ifndef BALLISTIC_BAL_X86_SLIDING_WINDOW_H
 #define BALLISTIC_BAL_X86_SLIDING_WINDOW_H
 

@@ -208,8 +208,12 @@ if (BALLISTIC_BUILD_TESTS)
             COMMAND Python3::Interpreter ${CMAKE_SOURCE_DIR}/tools/doctest.py
             ${CMAKE_CURRENT_SOURCE_DIR}/include/bal_logging.h
             ${CMAKE_CURRENT_SOURCE_DIR}/include/bal_assembler.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/backend/x86/bal_x86_sliding_window.h
             --sources ${CMAKE_CURRENT_SOURCE_DIR}/src/bal_logging.c
             ${CMAKE_CURRENT_SOURCE_DIR}/src/bal_assembler.c
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/bal_assert.c
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/backend/x86/bal_x86_sliding_window.c
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/backend/x86/bal_x86_assembler.c
             --includes ${CMAKE_CURRENT_SOURCE_DIR}/include
     )
 endif ()
