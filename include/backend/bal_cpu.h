@@ -15,6 +15,11 @@ extern "C"
     {
         uint64_t x[32];
         uint64_t pc;
+
+        /// Tracks executed guest instructions.
+        ///
+        /// This only increments if the engine flag [`BAL_ENGINE_FLAG_INSTRUCTION_COUNTING`] is set.
+        uint64_t instruction_count;
     } bal_cpu_t;
 
     /// The function signature of a JIT-compiled basic block.

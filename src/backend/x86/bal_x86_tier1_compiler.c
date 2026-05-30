@@ -31,7 +31,10 @@ static bal_x86_register_t allocate_x86_register(bal_tier1_compiler_t *compiler,
                                                 uint8_t               arm_register,
                                                 bool                  skip_load_instruction);
 static void               flush_dirty_registers(bal_tier1_compiler_t *compiler);
-static void     terminate_block(bal_tier1_compiler_t *compiler, bal_guest_address_t next_pc);
+static void               terminate_block(bal_tier1_compiler_t *compiler,
+                                          bal_guest_address_t   next_pc,
+                                          size_t                arm_instruction_count,
+                                          uint32_t              engine_flags);
 static uint32_t extract_operand_value(uint32_t instruction, const bal_decoder_operand_t *operand);
 static void     translate_mov(bal_tier1_compiler_t                     *compiler,
                               const bal_decoder_instruction_metadata_t *metadata,
@@ -145,7 +148,9 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
     bal_x86_emit_push_r64(&compiler->assembler, BAL_X86_RBP);
     bal_x86_emit_mov_r64_r64(&compiler->assembler, BAL_X86_RBP, BAL_X86_ABI_ARG1);
 
-    bool is_block_terminated = false;
+    bool   is_block_terminated   = false;
+    size_t arm_instruction_count = 0;
+
     while (false == is_block_terminated)
     {
         size_t          max_readable_instructions_bytes = 0;
@@ -303,6 +308,8 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                 break;
             }
 
+            ++arm_instruction_count;
+
             if (i + 1 == max_instructions)
             {
                 BAL_LOG_WARN(logger, "Max instructions limit reached, terminating block");
@@ -320,7 +327,7 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
         }
     }
 
-    terminate_block(compiler, guest_address);
+    terminate_block(compiler, guest_address, arm_instruction_count, engine_flags);
 
     if (BAL_UNLIKELY(compiler->status != BAL_SUCCESS || compiler->assembler.status != BAL_SUCCESS))
     {
@@ -452,7 +459,10 @@ flush_dirty_registers(bal_tier1_compiler_t *compiler)
 }
 
 void
-terminate_block(bal_tier1_compiler_t *compiler, bal_guest_address_t next_pc)
+terminate_block(bal_tier1_compiler_t *compiler,
+                bal_guest_address_t   next_pc,
+                size_t                arm_instruction_count,
+                uint32_t              engine_flags)
 {
     if (BAL_UNLIKELY(NULL == compiler))
     {
@@ -460,6 +470,17 @@ terminate_block(bal_tier1_compiler_t *compiler, bal_guest_address_t next_pc)
     }
 
     BAL_LOG_DEBUG(&compiler->logger, "Terminating basic block");
+
+    if (engine_flags & BAL_ENGINE_FLAG_INSTRUCTION_COUNTING)
+    {
+        const bal_x86_macro_t count_macro = {
+            .opcode              = BAL_X86_MACRO_ADD_CPU_ICOUNT,
+            .destination         = BAL_X86_RBP,
+            .immediate_or_offset = arm_instruction_count,
+        };
+        bal_sliding_window_push(&compiler->window, count_macro);
+    }
+
     flush_dirty_registers(compiler);
     BAL_LOG_TRACE(&compiler->logger, "Flushing sliding window");
     bal_sliding_window_flush_all(&compiler->window);
@@ -483,6 +504,7 @@ extract_operand_value(const uint32_t instruction, const bal_decoder_operand_t *o
     const uint32_t bits = instruction >> operand->bit_position & mask;
     return bits;
 }
+
 void
 translate_mov(bal_tier1_compiler_t                     *compiler,
               const bal_decoder_instruction_metadata_t *metadata,

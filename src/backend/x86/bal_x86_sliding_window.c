@@ -2,6 +2,35 @@
 #include "backend/bal_cpu.h"
 #include <string.h>
 
+#ifndef NDEBUG
+
+static const char *const BAL_X86_MACRO_NAMES[] = {
+    [BAL_X86_MACRO_NOP]                    = "NOP",
+    [BAL_X86_MACRO_ADD_CPU_ICOUNT]         = "ADD_CPU_ICOUNT",
+    [BAL_X86_MACRO_AND_REGISTER_IMMEDIATE] = "AND_REGISTER_IMMEDIATE",
+    [BAL_X86_MACRO_OR_REGISTER_IMMEDIATE]  = "OR_REGISTER_IMMEDIATE",
+    [BAL_X86_MACRO_MOV_REGISTER_IMMEDIATE] = "MOV_REGISTER_IMMEDIATE",
+    [BAL_X86_MACRO_MOV_REGISTER_REGISTER]  = "MOV_REGISTER_REGISTER",
+    [BAL_X86_MACRO_LOAD]                   = "LOAD",
+    [BAL_X86_MACRO_STORE]                  = "STORE",
+    [BAL_X86_MACRO_RET]                    = "RET",
+};
+
+static inline const char *
+bal_x86_macro_opcode_to_string(const bal_x86_macro_opcode_t opcode)
+{
+    const size_t num_names = sizeof(BAL_X86_MACRO_NAMES) / sizeof(BAL_X86_MACRO_NAMES[0]);
+
+    if ((size_t)opcode < num_names && BAL_X86_MACRO_NAMES[opcode] != NULL)
+    {
+        return BAL_X86_MACRO_NAMES[opcode];
+    }
+
+    return "UNKNOWN MACRO";
+}
+
+#endif // NDEBUG
+
 #define ASSEMBLER_TEMPORARY_REGISTER BAL_X86_R11
 
 BAL_HOT static void flush_single_macro(bal_x86_assembler_t   *assembler,
@@ -80,13 +109,18 @@ bal_sliding_window_push(bal_sliding_window_t *BAL_RESTRICT window, const bal_x86
         window_count = 0;
     }
 
+#ifndef NDEBUG
+
     BAL_LOG_DEBUG(&assembler->logger,
-                  "Pushing macro opcode id %d (dest: r%d, src: r%d, imm/off: 0x%llX)",
-                  macro.opcode,
+                  "Pushing macro opcode %s (dest: r%d, src: r%d, imm/off: 0x%llX)",
+                  bal_x86_macro_opcode_to_string(macro.opcode),
                   macro.destination,
                   macro.source,
                   // WARNING: C standard guarantees unsigned long long is at least 64 bits wide.
                   (unsigned long long)macro.immediate_or_offset);
+
+#endif // NDEBUG
+
     window->macros[window_count++] = macro;
     window->count                  = window_count;
     run_peephole_optimizer(window);
@@ -149,6 +183,14 @@ flush_single_macro(bal_x86_assembler_t *BAL_RESTRICT   assembler,
     {
         case BAL_X86_MACRO_NOP:
             BAL_LOG_DEBUG(&assembler->logger, "Flush skipped: NOP macro");
+            break;
+        case BAL_X86_MACRO_ADD_CPU_ICOUNT:
+            // WARNING: Cast of offset (size_t) to int32_t is safe because the bal_cpu_t struct
+            // size is far below the limits of a 32-bit signed integer.
+            // WARNING: Cast from uint64_t to int32_t is safe because the basic block instruction
+            // count cannot exceed the hard coded instruction count (65536).
+            bal_x86_emit_add_mem64_rbp_offset_imm(
+                assembler, offsetof(bal_cpu_t, instruction_count), (int32_t)immediate_or_offset);
             break;
         case BAL_X86_MACRO_MOV_REGISTER_IMMEDIATE:
             bal_x86_emit_mov_r64_imm64(assembler, destination, immediate_or_offset);

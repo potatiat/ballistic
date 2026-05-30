@@ -75,6 +75,10 @@ extern "C"
     typedef enum
     {
         BAL_X86_MACRO_NOP = 0,
+
+        /// Emits instruction count.
+        BAL_X86_MACRO_ADD_CPU_ICOUNT,
+
         BAL_X86_MACRO_AND_REGISTER_IMMEDIATE,
         BAL_X86_MACRO_OR_REGISTER_IMMEDIATE,
         BAL_X86_MACRO_MOV_REGISTER_IMMEDIATE,
