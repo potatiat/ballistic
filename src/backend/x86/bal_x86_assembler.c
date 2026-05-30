@@ -502,7 +502,7 @@ bal_x86_emit_or_r64_r64(bal_x86_assembler_t     *assembler,
     }
 
     BAL_LOG_DEBUG(
-        &assembler->logger, "[+0x%04zx] mov r%d, r%d", assembler->offset, destination, source);
+        &assembler->logger, "[+0x%04zx] or r%d, r%d", assembler->offset, destination, source);
     const uint8_t w = 1;
 
     // WARNING: Destination is verified by is_valid_register() to fall within the safe enum range
