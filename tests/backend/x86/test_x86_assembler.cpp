@@ -315,6 +315,18 @@ TEST_F(Backendx86Assembler, Encode_Jmp_HighReg)
     EXPECT_EQ(assembler.buffer[2], 0xE7); // 0xC0 | 4 << 3 | 7
 }
 
+TEST_F(Backendx86Assembler, Encode_Jmp_Rel32)
+{
+    bal_x86_emit_jmp_rel32(&assembler, 0x11223344);
+    EXPECT_EQ(assembler.status, BAL_SUCCESS);
+    EXPECT_EQ(assembler.offset, 5);
+    EXPECT_EQ(assembler.buffer[0], 0xE9);
+    EXPECT_EQ(assembler.buffer[1], 0x44);
+    EXPECT_EQ(assembler.buffer[2], 0x33);
+    EXPECT_EQ(assembler.buffer[3], 0x22);
+    EXPECT_EQ(assembler.buffer[4], 0x11);
+}
+
 TEST_F(Backendx86Assembler, Encode_MovRegToReg_LowLow)
 {
     bal_x86_emit_mov_r64_r64(&assembler, BAL_X86_RAX, BAL_X86_RBX);

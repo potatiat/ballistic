@@ -275,6 +275,48 @@ bal_x86_emit_jmp_r64(bal_x86_assembler_t *assembler, const bal_x86_register_t re
 }
 
 void
+bal_x86_emit_jmp_rel32(bal_x86_assembler_t *assembler, const int32_t offset)
+{
+    if (BAL_UNLIKELY(NULL == assembler))
+    {
+        return;
+    }
+
+    if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler status != BAL_SUCCESS");
+        return;
+    }
+
+    const size_t instruction_size_bytes = 5;
+    const bool   can_emit_status        = can_emit(assembler, instruction_size_bytes);
+
+    if (BAL_UNLIKELY(false == can_emit_status))
+    {
+        return;
+    }
+
+    if (BAL_UNLIKELY(false == can_emit_status))
+    {
+        return;
+    }
+
+    BAL_LOG_DEBUG(&assembler->logger, "[+0x%04zx] jmp 0x%X", assembler->offset, offset);
+    const size_t  old_offset = assembler->offset;
+    const uint8_t opcode     = 0xE9;
+    emit8(assembler->buffer, &assembler->offset, opcode);
+
+    // WARNING: Bit pattern of int32_t offset is preserved in uint32_t.
+    emit32(assembler->buffer, &assembler->offset, (uint32_t)offset);
+
+    const size_t bytes_emitted = assembler->offset - old_offset;
+    BAL_ASSERT_MSG(bytes_emitted == instruction_size_bytes,
+                   "Bytes emitted %d does not match instruction size %d",
+                   bytes_emitted,
+                   instruction_size_bytes);
+}
+
+void
 bal_x86_emit_load_r64_rbp_offset(bal_x86_assembler_t     *assembler,
                                  const bal_x86_register_t destination,
                                  const int32_t            offset)
