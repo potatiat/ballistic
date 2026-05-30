@@ -1,4 +1,4 @@
-//! This file implements a buffered middleware layer between the Tier1/Tier2 compiler and the
+//! This file implements a buffered middleware layer between the Tier1 compiler and the
 //! x86 assembler.
 //!
 //! # Example
@@ -95,7 +95,7 @@ extern "C"
 
     /// The Sliding Window Context.
     ///
-    /// This struct acts as a middleware between the high level Tier 1/Tier 2 compilers and the
+    /// This struct acts as a middleware between the high level Tier 1 compilers and the
     /// low-level `[bal_x86_assembler_t]`.
     ///
     /// # Warning
