@@ -91,9 +91,7 @@ bal_tier1_compiler_reset(bal_tier1_compiler_t *compiler)
     }
 
     compiler->status = BAL_SUCCESS;
-    (void)memset(compiler->arm_to_x86, 0, sizeof(*compiler->arm_to_x86));
-    (void)memset(compiler->x86_to_arm, 0, sizeof(*compiler->x86_to_arm));
-    (void)memset(compiler->is_dirty, 0, sizeof(*compiler->is_dirty));
+    reset_register_allocator(compiler);
     bal_sliding_window_reset(&compiler->window);
     bal_x86_assembler_reset(&compiler->assembler);
 }
