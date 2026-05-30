@@ -32,6 +32,8 @@ extern "C"
         BAL_X86_RSP,
 
         /// Base pointer.
+        ///
+        /// We use this register holds the base [`bal_cpu_t`] context pointer.
         BAL_X86_RBP,
 
         /// Source Index.
