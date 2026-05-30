@@ -99,6 +99,7 @@ bal_x86_emit_and_r64_r64(bal_x86_assembler_t     *assembler,
 
     if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
     {
+        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler status != BAL_SUCCESS");
         return;
     }
 
