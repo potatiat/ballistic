@@ -125,7 +125,7 @@ extern "C"
         /// The current error state of the engine.
         ///
         /// If an operation fails, this field is set to a specific error code.
-        /// See [`bal_opcode_t`]. Once set to an error state, subsequent operation
+        /// See [`bal_error_t`]. Once set to an error state, subsequent operation
         /// on this engine will silently fail until [`bal_engine_reset`] is called.
         bal_error_t status;
 
@@ -139,11 +139,9 @@ extern "C"
     ///
     /// # Errors
     ///
-    /// Returns [`BAL_SUCCESS`] if the engine is ready for use.
-    ///
-    /// Returns [`BAL_ERROR_INVALID_ARGUMENT`] if the pointers are `NULL`.
-    ///
-    /// Returns [`BAL_ERROR_ALLOCATION_FAILED`] if the allocator cannot allocate a memory buffer.
+    /// * Returns [`BAL_SUCCESS`] if the engine is ready for use.
+    /// * Returns [`BAL_ERROR_INVALID_ARGUMENT`] if the pointers are `NULL`.
+    /// * Returns [`BAL_ERROR_ALLOCATION_FAILED`] if the allocator cannot allocate a memory buffer.
     BAL_COLD bal_error_t bal_engine_init(bal_engine_t                 *engine,
                                          bal_cpu_t                    *cpu,
                                          const bal_allocator_t        *allocator,
