@@ -104,6 +104,13 @@ extern "C"
                                        size_t                  size,
                                        bal_logger_t            logger);
 
+    /// Resets the assembler back to its initial state.
+    ///
+    /// # Safety
+    ///
+    /// `assembler` must be valid.
+    void bal_x86_assembler_reset(bal_x86_assembler_t *assembler);
+
     /// Emits a bitwise AND instruction between two 64-bit registers.
     ///
     /// Assembly equivalent: `and destination, source`.

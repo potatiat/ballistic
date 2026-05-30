@@ -74,6 +74,20 @@ bal_x86_assembler_init(bal_x86_assembler_t          *assembler,
 }
 
 void
+bal_x86_assembler_reset(bal_x86_assembler_t *assembler)
+{
+    if (BAL_UNLIKELY(NULL == assembler))
+    {
+        return;
+    }
+
+    assembler->offset = 0;
+    assembler->status = BAL_SUCCESS;
+    (void)memset(assembler->buffer, 0, assembler->capacity);
+    (void)memset(assembler->rx_buffer, 0, assembler->capacity);
+}
+
+void
 bal_x86_emit_and_r64_r64(bal_x86_assembler_t     *assembler,
                          const bal_x86_register_t destination,
                          const bal_x86_register_t source)
