@@ -291,11 +291,39 @@ bal_engine_run_thread(bal_engine_t *engine)
             max_instructions = 1;
         }
 
-        void *entry_point = bal_tier1_compiler_translate(&internal_engine_state->tier1_compiler,
-                                                         engine->memory_interface,
-                                                         pc,
-                                                         max_instructions,
-                                                         engine->flags);
+        void *BAL_RESTRICT entry_point
+            = bal_tier1_compiler_translate(&internal_engine_state->tier1_compiler,
+                                           engine->memory_interface,
+                                           pc,
+                                           max_instructions,
+                                           engine->flags);
+
+        if (BAL_UNLIKELY(NULL == entry_point))
+        {
+            if (internal_engine_state->tier1_compiler.assembler.status
+                == BAL_ERROR_INSTRUCTION_OVERFLOW)
+            {
+                BAL_LOG_INFO(&engine->logger,
+                             "Tier 1 executable buffer full. Resetting JIT layout cache");
+                bal_tier1_compiler_reset(&internal_engine_state->tier1_compiler);
+
+                // TODO: When the block cache is implemented, it must be cleared here.
+                entry_point = bal_tier1_compiler_translate(&internal_engine_state->tier1_compiler,
+                                                           engine->memory_interface,
+                                                           pc,
+                                                           max_instructions,
+                                                           engine->flags);
+            }
+
+            if (BAL_UNLIKELY(NULL == entry_point))
+            {
+                BAL_LOG_ERROR(
+                    &engine->logger,
+                    "Aborting function: Failed to compile block at PC 0x%0llx",
+                    // WARNING: C standard guarantees unsigned long long is at least 64 bits wide.
+                    (unsigned long long)pc);
+            }
+        }
 
         if (BAL_UNLIKELY(NULL == entry_point))
         {

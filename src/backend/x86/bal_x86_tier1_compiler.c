@@ -289,9 +289,15 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                     break;
             }
 
-            if (BAL_UNLIKELY(compiler->status != BAL_SUCCESS))
+            if (BAL_UNLIKELY(compiler->status != BAL_SUCCESS
+                             || compiler->assembler.status != BAL_SUCCESS))
             {
-                BAL_LOG_ERROR(logger, "Status failure: %d", compiler->status);
+                if (BAL_SUCCESS == compiler->status)
+                {
+                    compiler->status = compiler->assembler.status;
+                }
+
+                BAL_LOG_ERROR(logger, "Status failure during translation: %d", compiler->status);
                 is_block_terminated = true;
                 break;
             }
@@ -314,6 +320,16 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
     }
 
     terminate_block(compiler, guest_address);
+
+    if (BAL_UNLIKELY(compiler->status != BAL_SUCCESS || compiler->assembler.status != BAL_SUCCESS))
+    {
+        const bal_error_t status
+            = compiler->status == BAL_SUCCESS ? compiler->assembler.status : compiler->status;
+        BAL_LOG_ERROR(
+            logger, "Aborting function: block assembly was truncated due to error: %d", status);
+        return NULL;
+    }
+
     BAL_LOG_INFO(
         logger, "Tier 1 compiled block ends at GVA 0x%016llX", (unsigned long long)guest_address);
     return host_address;
