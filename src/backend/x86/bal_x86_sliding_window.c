@@ -36,7 +36,7 @@ bal_sliding_window_init(bal_sliding_window_t *BAL_RESTRICT window,
 }
 
 void
-bal_sliding_window_push(bal_sliding_window_t *window, const bal_x86_macro_t macro)
+bal_sliding_window_push(bal_sliding_window_t *BAL_RESTRICT window, const bal_x86_macro_t macro)
 {
     if (BAL_UNLIKELY(NULL == window))
     {
@@ -80,7 +80,7 @@ bal_sliding_window_push(bal_sliding_window_t *window, const bal_x86_macro_t macr
 }
 
 void
-bal_sliding_window_flush_all(bal_sliding_window_t *window)
+bal_sliding_window_flush_all(bal_sliding_window_t *BAL_RESTRICT window)
 {
     if (NULL == window)
     {
@@ -94,8 +94,8 @@ bal_sliding_window_flush_all(bal_sliding_window_t *window)
         return;
     }
 
-    const size_t           window_count = window->count;
-    const bal_x86_macro_t *macro_cursor = window->macros;
+    const size_t                        window_count = window->count;
+    const bal_x86_macro_t *BAL_RESTRICT macro_cursor = window->macros;
 
     for (size_t i = 0; i < window_count; ++i)
     {
@@ -170,7 +170,7 @@ flush_single_macro(bal_x86_assembler_t *BAL_RESTRICT   assembler,
 }
 
 void
-run_peephole_optimizer(bal_sliding_window_t *window)
+run_peephole_optimizer(bal_sliding_window_t *BAL_RESTRICT window)
 {
     if (BAL_UNLIKELY(NULL == window) || BAL_UNLIKELY(NULL == window->assembler))
     {
