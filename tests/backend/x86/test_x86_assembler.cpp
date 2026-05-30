@@ -296,6 +296,25 @@ TEST_F(Backendx86Assembler, Encode_AndRegToReg_HighLow)
     EXPECT_EQ(assembler.buffer[2], 0xFE); // ModRM: 0xC0 | 7 << 3 | 6
 }
 
+TEST_F(Backendx86Assembler, Encode_Jmp_LowReg)
+{
+    bal_x86_emit_jmp_r64(&assembler, BAL_X86_RAX);
+    EXPECT_EQ(assembler.status, BAL_SUCCESS);
+    EXPECT_EQ(assembler.offset, 2);
+    EXPECT_EQ(assembler.buffer[0], 0xFF);
+    EXPECT_EQ(assembler.buffer[1], 0xE0); // 0xC0 | 4 << 3 | 0
+}
+
+TEST_F(Backendx86Assembler, Encode_Jmp_HighReg)
+{
+    bal_x86_emit_jmp_r64(&assembler, BAL_X86_R15);
+    EXPECT_EQ(assembler.status, BAL_SUCCESS);
+    EXPECT_EQ(assembler.offset, 3);
+    EXPECT_EQ(assembler.buffer[0], 0x41); // REX.B
+    EXPECT_EQ(assembler.buffer[1], 0xFF);
+    EXPECT_EQ(assembler.buffer[2], 0xE7); // 0xC0 | 4 << 3 | 7
+}
+
 TEST_F(Backendx86Assembler, Encode_MovRegToReg_LowLow)
 {
     bal_x86_emit_mov_r64_r64(&assembler, BAL_X86_RAX, BAL_X86_RBX);

@@ -143,6 +143,19 @@ extern "C"
                                   bal_x86_register_t   destination,
                                   bal_x86_register_t   source);
 
+    /// Emits an unconditional jump to the address in the specified 64-bit register.
+    ///
+    /// Assembly equivalent: `jmp reg64`
+    ///
+    /// # Warning
+    ///
+    /// This function fails if:
+    ///
+    /// - `assembler` is `NULL`.
+    /// - `assembler->status` != [`BAL_SUCCESS`].
+    /// - `assembler->buffer` is full.
+    void bal_x86_emit_jmp_r64(bal_x86_assembler_t *assembler, bal_x86_register_t reg);
+
     /// Emits a memory load using the 32-bit displacement `offset`.
     ///
     /// Assembler equivalent: `mov destination, [rbp + offset]`
