@@ -258,7 +258,7 @@ bal_engine_init(bal_engine_t *BAL_RESTRICT                 engine,
 }
 
 bal_error_t
-bal_engine_run(bal_engine_t *engine)
+bal_engine_run_thread(bal_engine_t *engine)
 {
     internal_engine_state_t *internal_engine_state = engine->engine_state;
     engine->flags |= BAL_ENGINE_FLAG_RUNNING;

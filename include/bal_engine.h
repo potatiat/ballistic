@@ -149,7 +149,7 @@ extern "C"
                                          bal_logger_t                  logger);
 
     /// The sole entry point for executing guest code.
-    BAL_HOT bal_error_t bal_engine_run(bal_engine_t *engine);
+    BAL_HOT bal_error_t bal_engine_run_thread(bal_engine_t *engine);
 
     /// Resets `engine` for the next compilation unit. This is a low-cost memory
     /// operation designed to be called between translation units.
