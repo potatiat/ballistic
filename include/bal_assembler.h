@@ -93,6 +93,23 @@ extern "C"
                                 uint16_t             imm12,
                                 uint8_t              shift);
 
+    /// Emits a `B` (Branch) instruction.
+    ///
+    /// Branches unconditionally to a PC-relative offset.
+    ///
+    /// # Safety
+    ///
+    /// * `offset` will be truncated if it exceeds 26 bits.
+    /// *  Does not emit if `assembler->status` != [`BAL_SUCCESS`]
+    ///
+    /// # Errors
+    ///
+    /// Modifies `assembler->status` to the following if an error occurs:
+    ///
+    /// * [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if `assembler->offset >= assembler->capacity`.
+    /// * [`BAL_ERROR_INVALID_ARGUMENT`] if function arguments are invalid.
+    void bal_emit_b(bal_assembler_t *assembler, int32_t offset);
+
     /// Emit a `SUB` (Immediate) instruction.
     ///
     /// Subtracts a 12 bit immediate value `imm12` with the optional left shift `sh` from register

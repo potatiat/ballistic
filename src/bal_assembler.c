@@ -105,6 +105,63 @@ bal_emit_add_immediate(bal_assembler_t           *assembler,
 }
 
 void
+bal_emit_b(bal_assembler_t *assembler, const int32_t offset)
+{
+    if (BAL_UNLIKELY(NULL == assembler))
+    {
+        return;
+    }
+
+    if (BAL_UNLIKELY(NULL == assembler->buffer))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->buffer is NULL");
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    const bool can_emit_return_value = can_emit(assembler);
+
+    if (false == can_emit_return_value)
+    {
+        return;
+    }
+
+    if (assembler->status != BAL_SUCCESS)
+    {
+        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->status != BAL_SUCCESS");
+        return;
+    }
+
+    const uint32_t hard_coded_bits = 0x14000000;
+
+    // WARNING: Cast to uint32_t safely applies bitwise masking to negative values.
+    const uint32_t imm26       = (uint32_t)(offset / 4) & 0x03FFFFFF;
+    uint32_t       instruction = 0;
+
+    if (0 == imm26)
+    {
+        instruction = hard_coded_bits;
+    }
+    else
+    {
+        instruction = hard_coded_bits / imm26;
+    }
+
+    const char *mnemonic = "B";
+    BAL_LOG_TRACE(&assembler->logger,
+                  "[+0x%04zx] %08x %s #%d",
+                  assembler->offset * sizeof(uint32_t),
+                  instruction,
+                  mnemonic,
+                  offset);
+
+    // WARNING: Prevents unsued local variable compiler warning.
+    (void)mnemonic;
+
+    assembler->buffer[assembler->offset++] = instruction;
+}
+
+void
 bal_emit_sub_immediate(bal_assembler_t           *assembler,
                        const bal_register_index_t rd,
                        const uint8_t              rn,
