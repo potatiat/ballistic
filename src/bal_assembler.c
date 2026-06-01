@@ -162,6 +162,58 @@ bal_emit_b(bal_assembler_t *assembler, const int32_t offset)
 }
 
 void
+bal_emit_br(bal_assembler_t *BAL_RESTRICT assembler, const bal_register_index_t rn)
+{
+    if (BAL_UNLIKELY(NULL == assembler))
+    {
+        return;
+    }
+
+    if (BAL_UNLIKELY(NULL == assembler->buffer))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->buffer is NULL");
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    const bool can_emit_return_status = can_emit(assembler);
+
+    if (BAL_UNLIKELY(false == can_emit_return_status))
+    {
+        return;
+    }
+
+    if (BAL_UNLIKELY(rn > 31))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "X%u out of range (0-31)", rn);
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    if (assembler->status != BAL_SUCCESS)
+    {
+        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->status != BAL_SUCCESS");
+        return;
+    }
+
+    const uint32_t           hard_coded_bits = 0xD61F0000;
+    const uint32_t           rn_shift        = 5;
+    const uint32_t           instruction     = hard_coded_bits | rn << rn_shift;
+    const char *BAL_RESTRICT mnemonic        = "BR";
+    BAL_LOG_TRACE(&assembler->logger,
+                  "[+0x%04zx] %08x %s X%u",
+                  assembler->offset * sizeof(uint32_t),
+                  instruction,
+                  mnemonic,
+                  rn);
+
+    // WARNING: Prevents unsued local variable compiler warning.
+    (void)mnemonic;
+
+    assembler->buffer[assembler->offset++] = instruction;
+}
+
+void
 bal_emit_sub_immediate(bal_assembler_t           *assembler,
                        const bal_register_index_t rd,
                        const uint8_t              rn,

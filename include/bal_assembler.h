@@ -110,6 +110,23 @@ extern "C"
     /// * [`BAL_ERROR_INVALID_ARGUMENT`] if function arguments are invalid.
     void bal_emit_b(bal_assembler_t *assembler, int32_t offset);
 
+    /// Emits a `BR` (Branch Register) instruction.
+    ///
+    /// Branches unconditionally to an address in a register.
+    ///
+    /// # Safety
+    ///
+    /// * `rn` must be between 0-31 inclusive.
+    /// * Does not emit if `assembler->status` != [`BAL_SUCCESS`]
+    ///
+    /// # Errors
+    ///
+    /// Modifies `assembler->status` to the following if an error occurs:
+    ///
+    /// * [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if `assembler->offset >= assembler->capacity.
+    /// * [`BAL_ERROR_INVALID_ARGUMENT`] if function arguments are invalid.
+    void bal_emit_br(bal_assembler_t *assembler, bal_register_index_t rn);
+
     /// Emit a `SUB` (Immediate) instruction.
     ///
     /// Subtracts a 12 bit immediate value `imm12` with the optional left shift `sh` from register
