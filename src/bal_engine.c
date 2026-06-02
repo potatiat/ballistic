@@ -351,8 +351,6 @@ bal_engine_run_thread(bal_engine_t *engine)
         {
             break;
         }
-
-        break;
     }
 
     engine->flags &= ~BAL_ENGINE_FLAG_RUNNING;

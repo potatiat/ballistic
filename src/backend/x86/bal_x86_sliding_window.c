@@ -8,6 +8,8 @@ static const char *const BAL_X86_MACRO_NAMES[] = {
     [BAL_X86_MACRO_NOP]                    = "NOP",
     [BAL_X86_MACRO_ADD_CPU_ICOUNT]         = "ADD_CPU_ICOUNT",
     [BAL_X86_MACRO_AND_REGISTER_IMMEDIATE] = "AND_REGISTER_IMMEDIATE",
+    [BAL_X86_MACRO_JMP_REGISTER]           = "JMP_REGISTER",
+    [BAL_X86_MACRO_JMP_RELATIVE]           = "JMP_RELATIVE",
     [BAL_X86_MACRO_OR_REGISTER_IMMEDIATE]  = "OR_REGISTER_IMMEDIATE",
     [BAL_X86_MACRO_MOV_REGISTER_IMMEDIATE] = "MOV_REGISTER_IMMEDIATE",
     [BAL_X86_MACRO_MOV_REGISTER_REGISTER]  = "MOV_REGISTER_REGISTER",
@@ -191,6 +193,14 @@ flush_single_macro(bal_x86_assembler_t *BAL_RESTRICT   assembler,
             // count cannot exceed the hard coded instruction count (65536).
             bal_x86_emit_add_mem64_rbp_offset_imm(
                 assembler, offsetof(bal_cpu_t, instruction_count), (int32_t)immediate_or_offset);
+            break;
+
+        case BAL_X86_MACRO_JMP_REGISTER:
+            bal_x86_emit_jmp_r64(assembler, destination);
+            break;
+        case BAL_X86_MACRO_JMP_RELATIVE:
+            // WARNING: Relative jump offsets fit within a 32-bit signed integer.
+            bal_x86_emit_jmp_rel32(assembler, (int32_t)immediate_or_offset);
             break;
         case BAL_X86_MACRO_MOV_REGISTER_IMMEDIATE:
             bal_x86_emit_mov_r64_imm64(assembler, destination, immediate_or_offset);

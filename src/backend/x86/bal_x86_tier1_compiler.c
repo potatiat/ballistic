@@ -33,9 +33,15 @@ static bal_x86_register_t allocate_x86_register(bal_tier1_compiler_t *compiler,
 static void               flush_dirty_registers(bal_tier1_compiler_t *compiler);
 static void               terminate_block(bal_tier1_compiler_t *compiler,
                                           bal_guest_address_t   next_pc,
+                                          bool                  is_pc_dynamic,
                                           size_t                arm_instruction_count,
                                           uint32_t              engine_flags);
 static uint32_t extract_operand_value(uint32_t instruction, const bal_decoder_operand_t *operand);
+static void     translate_jump(bal_tier1_compiler_t                     *compiler,
+                               const bal_decoder_instruction_metadata_t *metadata,
+                               const uint32_t                            instruction,
+                               const bal_guest_address_t                 guest_address,
+                               bal_guest_address_t                      *target_pc);
 static void     translate_mov(bal_tier1_compiler_t                     *compiler,
                               const bal_decoder_instruction_metadata_t *metadata,
                               uint32_t                                  instruction);
@@ -149,6 +155,7 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
     bal_x86_emit_mov_r64_r64(&compiler->assembler, BAL_X86_RBP, BAL_X86_ABI_ARG1);
 
     bool   is_block_terminated   = false;
+    bool   is_pc_dynamic         = false;
     size_t arm_instruction_count = 0;
 
     while (false == is_block_terminated)
@@ -277,8 +284,27 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                                   metadata->name);
                     is_block_terminated = true;
                     break;
+                case OPCODE_JUMP:;
+                    bal_guest_address_t target_pc = 0;
+                    translate_jump(compiler, metadata, instruction, guest_address, &target_pc);
+                    guest_address       = target_pc;
+                    is_block_terminated = true;
+                    break;
                 case OPCODE_RETURN:
                     BAL_LOG_DEBUG(logger, "Block terminated by RET");
+                    const uint8_t rn
+                        = (uint8_t)extract_operand_value(instruction, &metadata->operands[0]);
+                    const bool               skip_load_instruction = false;
+                    const bal_x86_register_t x86_rn
+                        = allocate_x86_register(compiler, rn, skip_load_instruction);
+
+                    const bal_x86_macro_t store_pc_macro
+                        = { .opcode              = BAL_X86_MACRO_STORE,
+                            .source              = x86_rn,
+                            .immediate_or_offset = offsetof(bal_cpu_t, pc) };
+                    bal_sliding_window_push(&compiler->window, store_pc_macro);
+
+                    is_pc_dynamic       = true;
                     is_block_terminated = true;
                     break;
                 case OPCODE_TRAP:
@@ -327,7 +353,7 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
         }
     }
 
-    terminate_block(compiler, guest_address, arm_instruction_count, engine_flags);
+    terminate_block(compiler, guest_address, is_pc_dynamic, arm_instruction_count, engine_flags);
 
     if (BAL_UNLIKELY(compiler->status != BAL_SUCCESS || compiler->assembler.status != BAL_SUCCESS))
     {
@@ -461,6 +487,7 @@ flush_dirty_registers(bal_tier1_compiler_t *compiler)
 void
 terminate_block(bal_tier1_compiler_t *compiler,
                 bal_guest_address_t   next_pc,
+                bool                  is_pc_dynamic,
                 size_t                arm_instruction_count,
                 uint32_t              engine_flags)
 {
@@ -484,9 +511,15 @@ terminate_block(bal_tier1_compiler_t *compiler,
     flush_dirty_registers(compiler);
     BAL_LOG_TRACE(&compiler->logger, "Flushing sliding window");
     bal_sliding_window_flush_all(&compiler->window);
-    BAL_LOG_TRACE(&compiler->logger, "Updating Guest PC");
-    bal_x86_emit_mov_r64_imm64(&compiler->assembler, BAL_X86_RAX, next_pc);
-    bal_x86_emit_store_r64_rbp_offset(&compiler->assembler, BAL_X86_RAX, offsetof(bal_cpu_t, pc));
+
+    if (false == is_pc_dynamic)
+    {
+        BAL_LOG_TRACE(&compiler->logger, "Updating Guest PC");
+        bal_x86_emit_mov_r64_imm64(&compiler->assembler, BAL_X86_RAX, next_pc);
+        bal_x86_emit_store_r64_rbp_offset(
+            &compiler->assembler, BAL_X86_RAX, offsetof(bal_cpu_t, pc));
+    }
+
     BAL_LOG_TRACE(&compiler->logger, "Restoring host frame pointer and emitting RET");
     bal_x86_emit_pop_r64(&compiler->assembler, BAL_X86_RBP);
     bal_x86_emit_ret(&compiler->assembler);
@@ -503,6 +536,31 @@ extract_operand_value(const uint32_t instruction, const bal_decoder_operand_t *o
     const uint32_t mask = (1U << operand->bit_width) - 1;
     const uint32_t bits = instruction >> operand->bit_position & mask;
     return bits;
+}
+
+void
+translate_jump(bal_tier1_compiler_t *BAL_RESTRICT                     compiler,
+               const bal_decoder_instruction_metadata_t *BAL_RESTRICT metadata,
+               const uint32_t                                         instruction,
+               const bal_guest_address_t                              guest_address,
+               bal_guest_address_t *BAL_RESTRICT                      target_pc)
+{
+    const uint32_t imm26     = extract_operand_value(instruction, &metadata->operands[0]);
+    const uint32_t bit_width = metadata->operands[0].bit_width;
+    const uint32_t shift     = 32U - bit_width;
+
+    // WARNING: Shift guarantees sign extension within 32-bits.
+    const int32_t signed_immediate = (int32_t)(imm26 << shift) >> shift;
+
+    // WARNING: ARM64 branch offsets are encoded as 4 bytes.
+    const int64_t offset = (int64_t)signed_immediate * 4;
+
+    // WARNING: Cast offset to uint64_t handles negative offsets safely via two's complement
+    // wrapping.
+    *target_pc = guest_address + (uint64_t)offset;
+
+    BAL_LOG_DEBUG(
+        &compiler->logger, "Translated JUMP to 0x%016llX", (unsigned long long)*target_pc);
 }
 
 void
