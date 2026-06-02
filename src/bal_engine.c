@@ -313,8 +313,6 @@ bal_engine_run_thread(bal_engine_t *engine)
         return BAL_ERROR_ENGINE_ALREADY_RUNNING;
     }
 
-    atomic_store_explicit(
-        &internal_engine_state->thread_state.stop_requested, false, memory_order_release);
     engine->flags |= BAL_ENGINE_FLAG_RUNNING;
 
     while (true)
