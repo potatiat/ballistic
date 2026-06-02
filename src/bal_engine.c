@@ -36,6 +36,28 @@
 
 #define TIER1_BUFFER_SIZE_BYTES (1024 * 1024 * 16) // 16 MiB
 
+#define BLOCK_CACHE_SIZE 65536
+#define BLOCK_CACHE_MASK (BLOCK_CACHE_SIZE - 1)]
+
+/// Restrict block lookups to 4 entries. Since each `block_cache_entry_t` is 16 bytes, 4 entries
+/// fit exactly inside an L1 cache line.
+#define BLOCK_CACHE_PROBE_LIMIT 4
+
+// So here's the logic behind what should happen if there's a hash collision between two blocks at
+// block_cache[index].
+//
+// 1. If Block A and Block B collide, Block A takes the primary slot at block_cache[index].
+// 2. Block B is allowed to sit anywhere between block_cache[index...BLOCK_CACHE_PROBE_LIMIT].
+//
+// This is the logic behind block_cache_lookup() and block_cache_insert() implementations.
+typedef struct
+{
+    bal_guest_address_t guest_address;
+    void               *host_code;
+} block_cache_entry_t;
+
+static_assert(16 == sizeof(block_cache_entry_t), "Block cache entry size mismatch");
+
 typedef struct
 {
     // Tier 1 State
@@ -43,6 +65,7 @@ typedef struct
     bal_tier1_compiler_t    tier1_compiler;
     bal_executable_buffer_t tier1_buffer;
     size_t                  tier1_buffer_size;
+    block_cache_entry_t     block_cache[BLOCK_CACHE_SIZE];
 
     // Tier 2 State
 
@@ -65,6 +88,12 @@ typedef struct
 } bal_tier2_translation_context_t;
 
 static_assert(sizeof(bal_tier2_translation_context_t) <= 64, "Context must fit in  1 cache line");
+
+static void *block_cache_lookup(const internal_engine_state_t *engine_state,
+                                const bal_guest_address_t      pc);
+static void  block_cache_insert(internal_engine_state_t  *engine_state,
+                                const bal_guest_address_t pc,
+                                void                     *host_code);
 
 // static uint32_t extract_operand_value(uint32_t, const bal_decoder_operand_t *);
 // static uint32_t intern_constant(bal_translation_context_t *, bal_constant_t);
@@ -273,71 +302,87 @@ bal_engine_run_thread(bal_engine_t *engine)
             break;
         }
 
-        // TODO: Lookup PC in a Block Cache Map
-        //
+        // TODO: Implement Block linking
         bal_guest_address_t pc = engine->cpu->pc;
 
-        if (engine->flags & BAL_ENGINE_FLAG_LOG_BLOCKS)
+        void *BAL_RESTRICT entry_point = NULL;
+
+        if (BAL_LIKELY(!(engine->flags & BAL_ENGINE_FLAG_DISABLE_BLOCK_CACHE)))
         {
-            BAL_LOG_INFO(&engine->logger, "Fetching block at PC 0x%016llX", (unsigned long long)pc);
+            entry_point = block_cache_lookup(internal_engine_state, pc);
         }
 
-        engine->allocator->protect_rw(engine->allocator->handle,
-                                      internal_engine_state->tier1_buffer,
-                                      internal_engine_state->tier1_buffer_size);
-        size_t max_instructions = MAX_INSTRUCTIONS;
-
-        if (engine->flags & BAL_ENGINE_FLAG_SINGLE_STEP)
+        if (NULL == entry_point)
         {
-            max_instructions = 1;
-        }
-
-        void *BAL_RESTRICT entry_point
-            = bal_tier1_compiler_translate(&internal_engine_state->tier1_compiler,
-                                           engine->memory_interface,
-                                           pc,
-                                           max_instructions,
-                                           engine->flags);
-
-        if (BAL_UNLIKELY(NULL == entry_point))
-        {
-            if (internal_engine_state->tier1_compiler.assembler.status
-                == BAL_ERROR_INSTRUCTION_OVERFLOW)
+            if (engine->flags & BAL_ENGINE_FLAG_LOG_BLOCKS)
             {
-                BAL_LOG_INFO(&engine->logger,
-                             "Tier 1 executable buffer full. Resetting JIT layout cache");
-                bal_tier1_compiler_reset(&internal_engine_state->tier1_compiler);
+                BAL_LOG_INFO(
+                    &engine->logger, "Fetching block at PC 0x%016llX", (unsigned long long)pc);
+            }
 
-                // TODO: When the block cache is implemented, it must be cleared here.
-                entry_point = bal_tier1_compiler_translate(&internal_engine_state->tier1_compiler,
-                                                           engine->memory_interface,
-                                                           pc,
-                                                           max_instructions,
-                                                           engine->flags);
+            engine->allocator->protect_rw(engine->allocator->handle,
+                                          internal_engine_state->tier1_buffer,
+                                          internal_engine_state->tier1_buffer_size);
+            size_t max_instructions = MAX_INSTRUCTIONS;
+
+            if (engine->flags & BAL_ENGINE_FLAG_SINGLE_STEP)
+            {
+                max_instructions = 1;
+            }
+
+            entry_point = bal_tier1_compiler_translate(&internal_engine_state->tier1_compiler,
+                                                       engine->memory_interface,
+                                                       pc,
+                                                       max_instructions,
+                                                       engine->flags);
+
+            if (BAL_UNLIKELY(NULL == entry_point))
+            {
+                if (internal_engine_state->tier1_compiler.assembler.status
+                    == BAL_ERROR_INSTRUCTION_OVERFLOW)
+                {
+                    BAL_LOG_INFO(&engine->logger,
+                                 "Tier 1 executable buffer full. Resetting JIT layout cache");
+                    bal_tier1_compiler_reset(&internal_engine_state->tier1_compiler);
+
+                    // TODO: When the block cache is implemented, it must be cleared here.
+                    entry_point
+                        = bal_tier1_compiler_translate(&internal_engine_state->tier1_compiler,
+                                                       engine->memory_interface,
+                                                       pc,
+                                                       max_instructions,
+                                                       engine->flags);
+                }
+
+                if (BAL_UNLIKELY(NULL == entry_point))
+                {
+                    BAL_LOG_ERROR(&engine->logger,
+                                  "Aborting function: Failed to compile block at PC 0x%0llx",
+                                  // WARNING: C standard guarantees unsigned long long is at least
+                                  // 64 bits wide.
+                                  (unsigned long long)pc);
+                }
             }
 
             if (BAL_UNLIKELY(NULL == entry_point))
             {
-                BAL_LOG_ERROR(
-                    &engine->logger,
-                    "Aborting function: Failed to compile block at PC 0x%0llx",
-                    // WARNING: C standard guarantees unsigned long long is at least 64 bits wide.
-                    (unsigned long long)pc);
+                BAL_LOG_ERROR(&engine->logger,
+                              "Aborting function: Failed to compile block at PC 0x%0llX",
+                              (unsigned long long)pc);
+                engine->status = BAL_ERROR_UNKNOWN_INSTRUCTION;
+                break;
             }
-        }
-
-        if (BAL_UNLIKELY(NULL == entry_point))
-        {
-            BAL_LOG_ERROR(&engine->logger,
-                          "Aborting function: Failed to compile block at PC 0x%0llX",
-                          (unsigned long long)pc);
-            engine->status = BAL_ERROR_UNKNOWN_INSTRUCTION;
-            break;
         }
 
         engine->allocator->protect_rx(engine->allocator->handle,
                                       internal_engine_state->tier1_buffer,
                                       internal_engine_state->tier1_buffer_size);
+
+        if (BAL_LIKELY(!(engine->flags & BAL_ENGINE_FLAG_DISABLE_BLOCK_CACHE)))
+        {
+            block_cache_insert(internal_engine_state, pc, entry_point);
+        }
+
         const bal_jit_block_t compiled_block = entry_point;
 
         if (engine->flags & BAL_ENGINE_FLAG_LOG_BLOCKS)
@@ -368,8 +413,71 @@ bal_engine_reset(bal_engine_t *BAL_RESTRICT engine)
     engine->status                                     = BAL_SUCCESS;
     internal_engine_state_t *BAL_RESTRICT engine_state = engine->engine_state;
     (void)memset(&engine_state->tier1_buffer, 0, engine_state->tier1_buffer_size);
+    (void)memset(&engine_state->block_cache, 0, sizeof(engine_state->block_cache));
     bal_tier1_compiler_reset(&engine_state->tier1_compiler);
     return engine->status;
+}
+
+BAL_HOT void *
+block_cache_lookup(const internal_engine_state_t *BAL_RESTRICT engine_state,
+                   const bal_guest_address_t                   pc)
+{
+    // Lowest 2 bytes in an ARM64 PC is always 0 so shift them out.
+    uint32_t                                index  = (uint32_t)(pc >> 2) & BLOCK_CACHE_SIZE;
+    const block_cache_entry_t *BAL_RESTRICT cursor = &engine_state->block_cache[index];
+
+    for (uint32_t i = 0; i < BLOCK_CACHE_PROBE_LIMIT; ++i)
+    {
+        if (cursor->guest_address == pc && cursor->host_code != NULL)
+        {
+            return cursor->host_code;
+        }
+
+        ++cursor;
+        ++index;
+
+        if (BAL_UNLIKELY(index >= BLOCK_CACHE_SIZE))
+        {
+            cursor = &engine_state->block_cache[0];
+            index  = 0;
+        }
+    }
+
+    return NULL;
+}
+
+BAL_HOT void
+block_cache_insert(internal_engine_state_t *BAL_RESTRICT engine_state,
+                   const bal_guest_address_t             pc,
+                   void *BAL_RESTRICT                    host_code)
+{
+    // Lowest 2 bytes in an ARM64 PC is always 0 so shift them out.
+    uint32_t                          index  = (uint32_t)(pc >> 2) & BLOCK_CACHE_SIZE;
+    block_cache_entry_t *BAL_RESTRICT cursor = &engine_state->block_cache[index];
+
+    for (uint32_t i = 0; i < BLOCK_CACHE_PROBE_LIMIT; ++i)
+    {
+        if (cursor->guest_address == pc || NULL == cursor->host_code)
+        {
+            cursor->guest_address = pc;
+            cursor->host_code     = host_code;
+            return;
+        }
+
+        ++cursor;
+        ++index;
+
+        if (BAL_UNLIKELY(index >= BLOCK_CACHE_SIZE))
+        {
+            cursor = &engine_state->block_cache[0];
+            index  = 0;
+        }
+    }
+
+    // Evict the first probed entry if full.
+    index                                          = (uint32_t)(pc >> 2) & BLOCK_CACHE_SIZE;
+    engine_state->block_cache[index].guest_address = pc;
+    engine_state->block_cache[index].host_code     = host_code;
 }
 
 #if 0
