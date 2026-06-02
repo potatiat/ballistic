@@ -413,7 +413,6 @@ bal_engine_reset(bal_engine_t *BAL_RESTRICT engine)
     engine->status                                     = BAL_SUCCESS;
     internal_engine_state_t *BAL_RESTRICT engine_state = engine->engine_state;
     (void)memset(&engine_state->tier1_buffer, 0, engine_state->tier1_buffer_size);
-    (void)memset(&engine_state->block_cache, 0, sizeof(engine_state->block_cache));
     bal_tier1_compiler_reset(&engine_state->tier1_compiler);
     return engine->status;
 }
