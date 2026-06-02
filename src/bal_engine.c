@@ -3,7 +3,7 @@
 #include "bal_decoder.h"
 #include "bal_engine_flags.h"
 #include "bal_logging.h"
-
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <string.h>
@@ -66,6 +66,13 @@ typedef struct
     bal_executable_buffer_t tier1_buffer;
     size_t                  tier1_buffer_size;
     block_cache_entry_t     block_cache[BLOCK_CACHE_SIZE];
+
+    BAL_ALIGNED(64) struct
+    {
+        atomic_bool is_executing;
+        atomic_bool stop_requested;
+        atomic_bool clear_cache_requested;
+    } thread_state;
 
     // Tier 2 State
 
@@ -255,6 +262,10 @@ bal_engine_init(bal_engine_t *BAL_RESTRICT                 engine,
         return engine->status;
     }
 
+    atomic_init(&internal_engine_state->thread_state.is_executing, false);
+    atomic_init(&internal_engine_state->thread_state.stop_requested, false);
+    atomic_init(&internal_engine_state->thread_state.clear_cache_requested, false);
+
     BAL_LOG_DEBUG(&logger, "Calculating arena layout (Alignment: %zu bytes):", MEMORY_ALIGNMENT);
     BAL_LOG_DEBUG(&logger,
                   "  [0x%08zx] source_variables (%zu bytes)",
@@ -291,10 +302,43 @@ bal_error_t
 bal_engine_run_thread(bal_engine_t *engine)
 {
     internal_engine_state_t *internal_engine_state = engine->engine_state;
+    bool                     expected              = false;
+    if (!atomic_compare_exchange_strong_explicit(&internal_engine_state->thread_state.is_executing,
+                                                 &expected,
+                                                 false,
+                                                 memory_order_acq_rel,
+                                                 memory_order_acquire))
+    {
+        BAL_LOG_ERROR(&engine->logger, "Aborting function: Engine is already running");
+        return BAL_ERROR_ENGINE_ALREADY_RUNNING;
+    }
+
+    atomic_store_explicit(
+        &internal_engine_state->thread_state.stop_requested, false, memory_order_release);
     engine->flags |= BAL_ENGINE_FLAG_RUNNING;
 
-    while (engine->flags & BAL_ENGINE_FLAG_RUNNING)
+    while (true)
     {
+        if (BAL_UNLIKELY(atomic_load_explicit(&internal_engine_state->thread_state.stop_requested,
+                                              memory_order_acquire)))
+        {
+            BAL_LOG_INFO(&engine->logger, "Engine stop requested. Exiting execution loop.");
+            break;
+        }
+
+        if (BAL_UNLIKELY(atomic_load_explicit(
+                &internal_engine_state->thread_state.clear_cache_requested, memory_order_acquire)))
+        {
+            BAL_LOG_INFO(&engine->logger,
+                         "Clear cache requested. Resetting JIT layout and block cache.");
+            bal_tier1_compiler_reset(&internal_engine_state->tier1_compiler);
+            (void)memset(
+                internal_engine_state->block_cache, 0, sizeof(internal_engine_state->block_cache));
+            atomic_store_explicit(&internal_engine_state->thread_state.clear_cache_requested,
+                                  false,
+                                  memory_order_release);
+        }
+
         if (engine->flags & BAL_ENGINE_FLAG_INTERRUPT_PENDING)
         {
             BAL_LOG_INFO(&engine->logger, "Interrupt pending, yielding to host.");
@@ -399,6 +443,8 @@ bal_engine_run_thread(bal_engine_t *engine)
     }
 
     engine->flags &= ~BAL_ENGINE_FLAG_RUNNING;
+    atomic_store_explicit(
+        &internal_engine_state->thread_state.is_executing, false, memory_order_release);
     return engine->status;
 }
 
