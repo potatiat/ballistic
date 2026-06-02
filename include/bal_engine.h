@@ -110,7 +110,7 @@ extern "C"
     ///
     /// # Errors
     ///
-    /// Returns [`BAL_ENGINE_ALREADY_RUNNING`] if the thread is still running.
+    /// Returns [`BAL_ERROR_ENGINE_ALREADY_RUNNING`] if the thread is still running.
     BAL_HOT bal_error_t bal_engine_run_thread(bal_engine_t *engine);
 
     /// Stops the engine execution asynchronously.
