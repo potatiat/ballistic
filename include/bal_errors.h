@@ -36,6 +36,8 @@ extern "C"
         /// resources.
         BAL_ERROR_THREAD_CLEANUP = -8,
 
+        BAL_ERROR_ENGINE_ALREADY_RUNNING = -9,
+
         // IR Errors.
         //
         BAL_ERROR_INSTRUCTION_OVERFLOW = -100,

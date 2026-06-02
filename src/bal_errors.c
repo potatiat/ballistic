@@ -27,6 +27,9 @@ bal_error_to_string(const bal_error_t error)
         case BAL_ERROR_THREAD_CLEANUP:
             string = "could not clean up thread";
             break;
+        case BAL_ERROR_ENGINE_ALREADY_RUNNING:
+            string = "engine already running";
+            break;
         case BAL_ERROR_UNKNOWN_INSTRUCTION:
             string = "failed to decode arm instruction";
             break;
