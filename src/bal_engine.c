@@ -448,6 +448,25 @@ bal_engine_run_thread(bal_engine_t *engine)
     return engine->status;
 }
 
+void
+bal_engine_stop_thread(bal_engine_t *BAL_RESTRICT engine)
+{
+    if (BAL_UNLIKELY(NULL == engine))
+    {
+        return;
+    }
+
+    if (BAL_UNLIKELY(NULL == engine->engine_state))
+    {
+        BAL_LOG_ERROR(&engine->logger, "Aborting function: engine state is NULL");
+        engine->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    internal_engine_state_t *BAL_RESTRICT engine_state = engine->engine_state;
+    atomic_store_explicit(&engine_state->thread_state.stop_requested, true, memory_order_release);
+}
+
 bal_error_t
 bal_engine_reset(bal_engine_t *BAL_RESTRICT engine)
 {

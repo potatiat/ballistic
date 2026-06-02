@@ -113,6 +113,11 @@ extern "C"
     /// Returns [`BAL_ENGINE_ALREADY_RUNNING`] if the thread is still running.
     BAL_HOT bal_error_t bal_engine_run_thread(bal_engine_t *engine);
 
+    /// Stops the engine execution asynchronously.
+    ///
+    /// This function is thread-safe and can be called from any thread.
+    BAL_HOT void bal_engine_stop_thread(bal_engine_t *engine);
+
     /// Resets `engine` for the next compilation unit. This is a low-cost memory
     /// operation designed to be called between translation units.
     ///
