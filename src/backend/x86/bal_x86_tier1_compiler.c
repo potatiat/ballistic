@@ -561,6 +561,9 @@ translate_jump(bal_tier1_compiler_t *BAL_RESTRICT                     compiler,
 
     BAL_LOG_DEBUG(
         &compiler->logger, "Translated JUMP to 0x%016llX", (unsigned long long)*target_pc);
+
+    // WARNING: Prevents unsued local variable compiler warning.
+    (void)compiler;
 }
 
 void
