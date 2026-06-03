@@ -8,6 +8,7 @@
 #include "bal_memory.h"
 #include "bal_types.h"
 #include <assert.h>
+#include <stdbool.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -127,6 +128,11 @@ extern "C"
     ///
     /// Returns [`BAL_ERROR_INVALID_ARGUMENT`] if `engine` is `NULl`.
     BAL_HOT bal_error_t bal_engine_reset(bal_engine_t *engine);
+
+    /// Checks if the engine is currently executing guest code.
+    ///
+    /// This function is thread-safe and can be called from any thread.
+    BAL_HOT bool bal_engine_is_running(bal_engine_t *engine);
 
     /// Frees all `engine` heap-allocated resources using `allocator`.
     ///

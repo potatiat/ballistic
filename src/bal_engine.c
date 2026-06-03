@@ -480,6 +480,25 @@ bal_engine_reset(bal_engine_t *BAL_RESTRICT engine)
     return engine->status;
 }
 
+bool
+bal_engine_is_running(bal_engine_t *engine)
+{
+    if (BAL_UNLIKELY(NULL == engine))
+    {
+        return false;
+    }
+
+    if (BAL_UNLIKELY(NULL == engine->engine_state))
+    {
+        BAL_LOG_ERROR(&engine->logger, "Aborting function: engine state is NULL");
+        engine->status = BAL_ERROR_INVALID_ARGUMENT;
+        return false;
+    }
+
+    internal_engine_state_t *BAL_RESTRICT engine_state = engine->engine_state;
+    return atomic_load_explicit(&engine_state->thread_state.is_executing, memory_order_acquire);
+}
+
 BAL_HOT void *
 block_cache_lookup(const internal_engine_state_t *BAL_RESTRICT engine_state,
                    const bal_guest_address_t                   pc)
