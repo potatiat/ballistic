@@ -103,7 +103,7 @@ bal_x86_emit_add_mem64_rbp_offset_imm(bal_x86_assembler_t *assembler,
         return;
     }
 
-    const bool   fit_in_8_bits          = immediate >= -128 & immediate <= 127;
+    const bool   fit_in_8_bits          = (immediate >= -128) & (immediate <= 127);
     const size_t instruction_size_bytes = true == fit_in_8_bits ? 8 : 11;
     const bool   can_emit_status        = can_emit(assembler, instruction_size_bytes);
 
