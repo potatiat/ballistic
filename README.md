@@ -16,6 +16,13 @@ This is a rewrite of the dynarmic recompiler, with the goal of fixing its many f
 - [ ] Add more peephole optimizations.
 - [ ] Have 100% branch coverage.
 - [X] Have a config to change Ballistic behavior at runtime.
+- [ ] Support Block linking.
+- [ ] Map ARM flags to x86 flags.
+- [ ] Support 128-bit types and x86 SSE/AVX instructions.
+- [ ] Add exception handling and recover guest CPU state.
+- [ ] Add register spilling.
+- [ ] Add Callback Memory Model.
+- [ ] Add TLB Memory model.
 
 # Building Ballistic
 
