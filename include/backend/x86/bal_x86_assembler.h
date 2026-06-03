@@ -67,6 +67,27 @@ extern "C"
         BAL_X86_R15,
     } bal_x86_register_t;
 
+    /// x86 Condition Codes for SETcc and Jcc instructions.
+    typedef enum
+    {
+        BAL_X86_COND_O  = 0x0, // Overflow (OF = 1)
+        BAL_X86_COND_NO = 0x1, // No Overflow (OF = 0)
+        BAL_X86_COND_B  = 0x2, // Below / Carry (CF = 1)
+        BAL_X86_COND_AE = 0x3, // Above or Equal / No Carry (CF = 0)
+        BAL_X86_COND_E  = 0x4, // Equal / Zero (ZF = 1)
+        BAL_X86_COND_NE = 0x5, // Not Equal / Not Zero (ZF = 0)
+        BAL_X86_COND_BE = 0x6, // Below or Equal (CF = 1 or ZF = 1)
+        BAL_X86_COND_A  = 0x7, // Above (CF = 0 and ZF = 0)
+        BAL_X86_COND_S  = 0x8, // Sign (SF = 1)
+        BAL_X86_COND_NS = 0x9, // No Sign (SF = 0)
+        BAL_X86_COND_P  = 0xA, // Parity (PF = 1)
+        BAL_X86_COND_NP = 0xB, // No Parity (PF = 0)
+        BAL_X86_COND_L  = 0xC, // Less (SF != OF)
+        BAL_X86_COND_GE = 0xD, // Greater or Equal (SF == OF)
+        BAL_X86_COND_LE = 0xE, // Less or Equal (ZF = 1 or SF != OF)
+        BAL_X86_COND_G  = 0xF, // Greater (ZF = 0 and SF == OF)
+    } bal_x86_condition_t;
+
     /// The x86-64 assembler state.
     typedef struct
     {
