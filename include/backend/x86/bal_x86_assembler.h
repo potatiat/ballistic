@@ -205,9 +205,9 @@ extern "C"
                                           bal_x86_register_t   destination,
                                           int32_t              offset);
 
-    /// Emits a memory store using a 32-bit displacement.
+    /// Emits an instruction to move a 64-bit immediate value into a 64-bit register.
     ///
-    /// Assembly equivalent: `mov[rbp + offset], reg64`
+    /// Assembly equivalent: `mov destination, immediate`
     ///
     /// # Warning
     ///
@@ -216,9 +216,9 @@ extern "C"
     /// - `assembler` is `NULL`.
     /// - `assembler->status` != [`BAL_SUCCESS`]
     /// - `assembler->buffer` is full.
-    void bal_x86_emit_store_r64_rbp_offset(bal_x86_assembler_t *assembler,
-                                           bal_x86_register_t   source,
-                                           int32_t              offset);
+    void bal_x86_emit_mov_r64_imm64(bal_x86_assembler_t *assembler,
+                                    bal_x86_register_t   destination,
+                                    uint64_t             immediate);
 
     /// Emits an instruction to move 64-bit register `source` into `destination`.
     ///
@@ -235,34 +235,6 @@ extern "C"
                                   bal_x86_register_t   destination,
                                   bal_x86_register_t   source);
 
-    /// Emits an instruction to move a 64-bit immediate value into a 64-bit register.
-    ///
-    /// Assembly equivalent: `mov destination, immediate`
-    ///
-    /// # Warning
-    ///
-    /// This function fails if:
-    ///
-    /// - `assembler` is `NULL`.
-    /// - `assembler->status` != [`BAL_SUCCESS`]
-    /// - `assembler->buffer` is full.
-    void bal_x86_emit_mov_r64_imm64(bal_x86_assembler_t *assembler,
-                                    bal_x86_register_t   destination,
-                                    uint64_t             immediate);
-
-    /// Emits a near return instruction.
-    ///
-    /// Assembly equivalent: `ret`
-    ///
-    /// # Warning
-    ///
-    /// This function fails if:
-    ///
-    /// - `assembler` is `NULL`.
-    /// - `assembler->status` != [`BAL_SUCCESS`]
-    /// - `assembler->buffer` is full.
-    void bal_x86_emit_ret(bal_x86_assembler_t *assembler);
-
     /// Emits a bitwise OR instruction between two 64-bit registers.
     ///
     /// Assembly equivalent: `or destination, source`.
@@ -278,6 +250,19 @@ extern "C"
                                  bal_x86_register_t   destination,
                                  bal_x86_register_t   source);
 
+    /// Emits a Stack Pop instruction.
+    ///
+    /// Assembly equivalent: `push reg64`
+    ///
+    /// # Warning
+    ///
+    /// This function fails if:
+    ///
+    /// - `assembler` is `NULL`.
+    /// - `assembler->status` != [`BAL_SUCCESS`]
+    /// - `assembler->buffer` is full.
+    void bal_x86_emit_pop_r64(bal_x86_assembler_t *assembler, bal_x86_register_t reg);
+
     /// Emits a Stack Push instruction.
     ///
     /// Assembly equivalent: `push reg64`
@@ -291,9 +276,9 @@ extern "C"
     /// - `assembler->buffer` is full.
     void bal_x86_emit_push_r64(bal_x86_assembler_t *assembler, bal_x86_register_t reg);
 
-    /// Emits a Stack Pop instruction.
+    /// Emits a near return instruction.
     ///
-    /// Assembly equivalent: `push reg64`
+    /// Assembly equivalent: `ret`
     ///
     /// # Warning
     ///
@@ -302,7 +287,22 @@ extern "C"
     /// - `assembler` is `NULL`.
     /// - `assembler->status` != [`BAL_SUCCESS`]
     /// - `assembler->buffer` is full.
-    void bal_x86_emit_pop_r64(bal_x86_assembler_t *assembler, bal_x86_register_t reg);
+    void bal_x86_emit_ret(bal_x86_assembler_t *assembler);
+
+    /// Emits a memory store using a 32-bit displacement.
+    ///
+    /// Assembly equivalent: `mov[rbp + offset], reg64`
+    ///
+    /// # Warning
+    ///
+    /// This function fails if:
+    ///
+    /// - `assembler` is `NULL`.
+    /// - `assembler->status` != [`BAL_SUCCESS`]
+    /// - `assembler->buffer` is full.
+    void bal_x86_emit_store_r64_rbp_offset(bal_x86_assembler_t *assembler,
+                                           bal_x86_register_t   source,
+                                           int32_t              offset);
 
 #ifdef __cplusplus
 }
