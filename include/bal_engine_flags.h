@@ -2,6 +2,7 @@
 #define BALLISTIC_BAL_ENGINE_FLAGS_H
 
 /// The engine is currently executing guest code.
+/// TODO: This flag does nothing. Find a suitable flag to replace this.
 #define BAL_ENGINE_FLAG_RUNNING (1U << 0)
 
 /// Forces the engine to return to the host after executing a single instruction.
