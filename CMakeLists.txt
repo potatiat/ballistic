@@ -65,7 +65,7 @@ add_library(Ballistic STATIC
         src/bal_errors.c
         src/bal_logging.c
         src/bal_memory.c
-        src/bal_spsc_queue.c
+        #        src/bal_spsc_queue.c
         #        src/bal_tier2_worker.c
         src/backend/x86/bal_x86_assembler.c
         src/backend/x86/bal_x86_sliding_window.c
