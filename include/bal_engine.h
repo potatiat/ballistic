@@ -134,6 +134,11 @@ extern "C"
     /// This function is thread-safe and can be called from any thread.
     BAL_HOT bool bal_engine_is_running(bal_engine_t *engine);
 
+    /// Requests the engine to clear its compiled code cache and JIT buffers.
+    ///
+    /// This function is completely lock-free and thread-safe.
+    BAL_HOT void bal_engine_clear_cache(bal_engine_t *engine);
+
     /// Frees all `engine` heap-allocated resources using `allocator`.
     ///
     /// # Warning
