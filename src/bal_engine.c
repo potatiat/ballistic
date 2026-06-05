@@ -64,21 +64,21 @@ typedef struct
 
     bal_tier1_compiler_t    tier1_compiler;
     bal_executable_buffer_t tier1_buffer;
+    void                   *ir_arena_base;
     size_t                  tier1_buffer_size;
-    block_cache_entry_t     block_cache[BLOCK_CACHE_SIZE];
+    bal_instruction_count_t instruction_count;
+    bal_constant_count_t    constant_count;
+    char                    pad0[28];
 
     BAL_ALIGNED(64) struct
     {
         atomic_bool is_executing;
         atomic_bool stop_requested;
         atomic_bool clear_cache_requested;
+        char        pad1[61];
     } thread_state;
 
-    // Tier 2 State
-
-    void                   *ir_arena_base;
-    bal_instruction_count_t instruction_count;
-    bal_constant_count_t    constant_count;
+    BAL_ALIGNED(64) block_cache_entry_t block_cache[BLOCK_CACHE_SIZE];
 } internal_engine_state_t;
 
 typedef struct

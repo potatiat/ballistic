@@ -60,6 +60,7 @@
 #ifndef BALLISTIC_BAL_X86_SLIDING_WINDOW_H
 #define BALLISTIC_BAL_X86_SLIDING_WINDOW_H
 
+#include "assert.h"
 #include "backend/x86/bal_x86_assembler.h"
 #include "bal_assembler.h"
 #include <stddef.h>
@@ -96,8 +97,12 @@ extern "C"
         bal_x86_macro_opcode_t opcode;
         bal_x86_register_t     destination;
         bal_x86_register_t     source;
+        uint32_t               pad0;
         uint64_t               immediate_or_offset;
+        uint64_t               pad1;
     } bal_x86_macro_t;
+
+    static_assert(32 == sizeof(bal_x86_macro_t), "Struct size mismatch");
 
     /// The Sliding Window Context.
     ///

@@ -57,6 +57,7 @@
 
 #include "bal_attributes.h"
 #include <stdarg.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C"
@@ -125,6 +126,8 @@ extern "C"
 
         /// The minimum severity level required for a message to be processed.
         bal_log_level_t min_level;
+
+        uint32_t pad;
     } bal_logger_t;
 
 // Remove all log code if log level not defined.

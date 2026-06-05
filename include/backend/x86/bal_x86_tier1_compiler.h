@@ -21,6 +21,7 @@ extern "C"
         int8_t               x86_to_arm[16];
         bool                 is_dirty[32];
         bal_error_t          status;
+        uint32_t             pad;
     } bal_tier1_compiler_t;
 
     /// Initializes the Tier 1 Compiler.

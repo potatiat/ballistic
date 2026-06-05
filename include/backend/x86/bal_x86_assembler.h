@@ -102,11 +102,14 @@ extern "C"
 
         /// Current byte index in the buffer.
         size_t offset;
+
         /// Logger instance.
         bal_logger_t logger;
 
         /// Current error state. If this is not [`BAL_SUCCESS`], all emit calls will fail.
         bal_error_t status;
+
+        uint32_t pad;
     } bal_x86_assembler_t;
 
     /// Initializes the x86-64 assembler with `executable_buffer`.

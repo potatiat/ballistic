@@ -54,6 +54,8 @@ extern "C"
         /// Once this is set to anything other than [`BAL_SUCCESS`], all subsequent emit calls will
         /// be ignored until the assembler is reset.
         bal_error_t status;
+
+        uint32_t pad;
     } bal_assembler_t;
 
     /// Initializes the assembler with a specific memory buffer and the size of the buffer in
