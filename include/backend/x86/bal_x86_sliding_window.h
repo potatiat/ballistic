@@ -124,6 +124,8 @@ extern "C"
         bal_x86_macro_t macros[BAL_SLIDING_WINDOW_CAPACITY];
     } bal_sliding_window_t;
 
+    static_assert(144 == sizeof(bal_sliding_window_t), "Struct size mismatch");
+
     /// Initializes a new macro sliding window.
     ///
     /// # Safety
