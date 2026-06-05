@@ -117,11 +117,11 @@ extern "C"
         /// x86 Assembler context.
         bal_x86_assembler_t *assembler;
 
-        /// Ring buffer holding the currently queued macros.
-        bal_x86_macro_t macros[BAL_SLIDING_WINDOW_CAPACITY];
-
         /// The current number queued macros.
         size_t count;
+
+        /// Ring buffer holding the currently queued macros.
+        bal_x86_macro_t macros[BAL_SLIDING_WINDOW_CAPACITY];
     } bal_sliding_window_t;
 
     /// Initializes a new macro sliding window.
