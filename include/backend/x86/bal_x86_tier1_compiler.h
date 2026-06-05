@@ -24,6 +24,8 @@ extern "C"
         uint32_t             pad;
     } bal_tier1_compiler_t;
 
+    static_assert(320 == sizeof(bal_tier1_compiler_t), "Struct size mismatch");
+
     /// Initializes the Tier 1 Compiler.
     ///
     /// # Safety
