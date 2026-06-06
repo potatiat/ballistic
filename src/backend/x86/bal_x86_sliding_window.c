@@ -200,13 +200,37 @@ flush_single_macro(bal_x86_assembler_t *BAL_RESTRICT   assembler,
             bal_x86_emit_and_r64_r64(assembler, destination, ASSEMBLER_TEMPORARY_REGISTER);
             break;
         case BAL_X86_MACRO_JCC_RELATIVE:
-            bal_x86_emit_jcc_rel32(assembler, macro->condition, (int32_t)immediate_or_offset);
+            if (BAL_LIKELY(immediate_or_offset <= INT32_MAX))
+            {
+                // WARNING: Check confirms offset can fit in int32_t.
+                bal_x86_emit_jcc_rel32(assembler, macro->condition, (int32_t)immediate_or_offset);
+            }
+            else
+            {
+                BAL_LOG_ERROR(&assembler->logger,
+                              "[+0x%04zu] Relative jump offset 0x%X out of bounds for `jcc rel32`",
+                              assembler->offset,
+                              immediate_or_offset);
+                assembler->status = BAL_ERROR_BRANCH_OFFSET_OVERFLOW;
+            }
+            break;
         case BAL_X86_MACRO_JMP_REGISTER:
             bal_x86_emit_jmp_r64(assembler, destination);
             break;
         case BAL_X86_MACRO_JMP_RELATIVE:
-            // WARNING: Relative jump offsets fit within a 32-bit signed integer.
-            bal_x86_emit_jmp_rel32(assembler, (int32_t)immediate_or_offset);
+            if (BAL_LIKELY(immediate_or_offset <= INT32_MAX))
+            {
+                // WARNING: Check confirms offset can fit in int32_t.
+                bal_x86_emit_jmp_rel32(assembler, (int32_t)immediate_or_offset);
+            }
+            else
+            {
+                BAL_LOG_ERROR(&assembler->logger,
+                              "[+0x%04zu] Relative jump offset 0x%X out of bounds for `jmp rel32`",
+                              assembler->offset,
+                              immediate_or_offset);
+                assembler->status = BAL_ERROR_BRANCH_OFFSET_OVERFLOW;
+            }
             break;
         case BAL_X86_MACRO_LOAD:
             // WARNING: The displacement offset refers to the structural members within bal_cpu_t.
