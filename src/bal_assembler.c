@@ -5,7 +5,10 @@ static bool can_emit(bal_assembler_t *assembler);
 static void emit_mov(bal_assembler_t *, const char *, uint32_t, uint16_t, uint8_t, uint32_t);
 
 bal_error_t
-bal_assembler_init(bal_assembler_t *assembler, void *buffer, const size_t size, bal_logger_t logger)
+bal_assembler_init(bal_assembler_t   *assembler,
+                   void              *buffer,
+                   const size_t       size,
+                   const bal_logger_t logger)
 {
     if (NULL == assembler)
     {
@@ -106,12 +109,12 @@ bal_emit_add_immediate(bal_assembler_t           *assembler,
 }
 
 void
-bal_emit_add_shifted_register(bal_assembler_t     *assembler,
-                              bal_register_index_t rd,
-                              bal_register_index_t rn,
-                              bal_register_index_t rm,
-                              uint8_t              shift,
-                              uint8_t              shift_type)
+bal_emit_add_shifted_register(bal_assembler_t           *assembler,
+                              const bal_register_index_t rd,
+                              const bal_register_index_t rn,
+                              const bal_register_index_t rm,
+                              const uint8_t              shift,
+                              const uint8_t              shift_type)
 {
     if (BAL_UNLIKELY(NULL == assembler))
     {
