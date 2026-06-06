@@ -189,8 +189,6 @@ flush_single_macro(bal_x86_assembler_t *BAL_RESTRICT   assembler,
         case BAL_X86_MACRO_ADD_CPU_ICOUNT:
             // WARNING: Cast of offset (size_t) to int32_t is safe because the bal_cpu_t struct
             // size is far below the limits of a 32-bit signed integer.
-            // WARNING: Cast from uint64_t to int32_t is safe because the basic block instruction
-            // count cannot exceed the hard coded instruction count (65536).
             bal_x86_emit_add_mem64_rbp_offset_imm(
                 assembler, offsetof(bal_cpu_t, instruction_count), (int32_t)immediate_or_offset);
             break;
