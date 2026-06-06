@@ -861,10 +861,13 @@ bal_x86_emit_setcc_mem8_rbp_offset(bal_x86_assembler_t *assembler,
 
     // SETcc is 0x0F 0x90+cc.
     emit8(assembler->buffer, &assembler->offset, 0x0F);
+
+    // WARNING: Cast to uint8_t is safe because bal_x86_condition_t enum values fall within 0x0 to
+    // 0xF.
     emit8(assembler->buffer, &assembler->offset, 0x90 + (uint8_t)condition);
 
     // Opcode extension is 0.
-    emit_modrm_memory_disp32_rbp(assembler->buffer, &assembler->offset, (bal_x86_register_t)0);
+    emit_modrm_memory_disp32_rbp(assembler->buffer, &assembler->offset, BAL_X86_RAX);
 
     // WARNING: Bit pattern of int32_t offset is preserved.
     emit32(assembler->buffer, &assembler->offset, (uint32_t)offset);
@@ -908,8 +911,14 @@ bal_x86_emit_jcc_rel32(bal_x86_assembler_t *assembler,
                   offset);
     const size_t old_offset = assembler->offset;
     emit8(assembler->buffer, &assembler->offset, 0x0F);
+
+    // WARNING: Cast to uint8_t is safe because bal_x86_condition_t enum values fall within 0x0 to
+    // 0xF.
     emit8(assembler->buffer, &assembler->offset, 0x80 + (uint8_t)condition);
+
+    // WARNING: Bit pattern of int32_t offset is preserved in uint32_t.
     emit32(assembler->buffer, &assembler->offset, (uint32_t)offset);
+
     const size_t bytes_emitted = assembler->offset - old_offset;
     BAL_ASSERT_MSG(bytes_emitted == instruction_size_bytes,
                    "Bytes emitted %d does not match instruction size %d",
