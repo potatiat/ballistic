@@ -3,6 +3,32 @@
 #include <stdbool.h>
 #include <string.h>
 
+#ifndef NDEBUG
+
+static const char *const BAL_X86_CONDITION_CODES[] = {
+    [BAL_X86_COND_O] = "o",   [BAL_X86_COND_NO] = "no", [BAL_X86_COND_B] = "b",
+    [BAL_X86_COND_AE] = "ae", [BAL_X86_COND_E] = "e",   [BAL_X86_COND_NE] = "ne",
+    [BAL_X86_COND_BE] = "be", [BAL_X86_COND_A] = "a",   [BAL_X86_COND_S] = "s",
+    [BAL_X86_COND_NS] = "ns", [BAL_X86_COND_P] = "p",   [BAL_X86_COND_NP] = "np",
+    [BAL_X86_COND_L] = "l",   [BAL_X86_COND_GE] = "ge", [BAL_X86_COND_LE] = "le",
+    [BAL_X86_COND_G] = "g",
+};
+
+static inline const char *
+condition_code_to_string(const bal_x86_condition_t condition)
+{
+    const size_t num_names = sizeof(BAL_X86_CONDITION_CODES) / sizeof(BAL_X86_CONDITION_CODES[0]);
+
+    if ((size_t)condition < num_names && BAL_X86_CONDITION_CODES[condition] != NULL)
+    {
+        return BAL_X86_CONDITION_CODES[condition];
+    }
+
+    return "???";
+}
+
+#endif // NDEBUG
+
 BAL_HOT static bool is_valid_register(bal_x86_register_t reg);
 BAL_HOT static bool can_emit(bal_x86_assembler_t *assembler, size_t size);
 BAL_HOT static void emit8(uint8_t *buffer, size_t *offset, uint8_t value);
@@ -794,6 +820,55 @@ bal_x86_emit_pop_r64(bal_x86_assembler_t *assembler, const bal_x86_register_t re
 
     const uint8_t opcode = 0x58;
     emit8(assembler->buffer, &assembler->offset, opcode + (reg & 7));
+    const size_t bytes_emitted = assembler->offset - old_offset;
+    BAL_ASSERT_MSG(bytes_emitted == instruction_size_bytes,
+                   "Bytes emitted %d does not match instruction size %d",
+                   bytes_emitted,
+                   instruction_size_bytes);
+}
+
+void
+bal_x86_emit_setcc_mem8_rbp_offset(bal_x86_assembler_t *assembler,
+                                   bal_x86_condition_t  condition,
+                                   int32_t              offset)
+{
+    if (BAL_UNLIKELY(NULL == assembler))
+    {
+        return;
+    }
+
+    if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "Assembler status != BAL_SUCCESS, aborting function");
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    const size_t instruction_size_bytes = 7;
+    const bool   can_emit_status        = can_emit(assembler, instruction_size_bytes);
+
+    if (BAL_UNLIKELY(false == can_emit_status))
+    {
+        return;
+    }
+
+    BAL_LOG_DEBUG(&assembler->logger,
+                  "[+0x%04zx] set%s byte ptr [rbp + 0x%X]",
+                  assembler->offset,
+                  condition_code_to_string(condition),
+                  offset);
+    const size_t old_offset = assembler->offset;
+
+    // SETcc is 0x0F 0x90+cc.
+    emit8(assembler->buffer, &assembler->offset, 0x0F);
+    emit8(assembler->buffer, &assembler->offset, 0x90 + (uint8_t)condition);
+
+    // Opcode extension is 0.
+    emit_modrm_memory_disp32_rbp(assembler->buffer, &assembler->offset, (bal_x86_register_t)0);
+
+    // WARNING: Bit pattern of int32_t offset is preserved.
+    emit32(assembler->buffer, &assembler->offset, (uint32_t)offset);
+
     const size_t bytes_emitted = assembler->offset - old_offset;
     BAL_ASSERT_MSG(bytes_emitted == instruction_size_bytes,
                    "Bytes emitted %d does not match instruction size %d",

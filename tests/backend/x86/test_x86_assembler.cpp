@@ -130,6 +130,7 @@ TEST_F(Backendx86Assembler, Public_NullContext_NoCrash)
     bal_x86_emit_mov_r64_imm64(nullptr, BAL_X86_RAX, 0);
     bal_x86_emit_or_r64_r64(nullptr, BAL_X86_RAX, BAL_X86_RAX);
     bal_x86_emit_ret(nullptr);
+    bal_x86_emit_setcc_mem8_rbp_offset(&assembler, BAL_X86_COND_E, 0);
     bal_x86_emit_push_r64(nullptr, BAL_X86_RAX);
     bal_x86_emit_pop_r64(nullptr, BAL_X86_RAX);
     SUCCEED();
@@ -442,6 +443,36 @@ TEST_F(Backendx86Assembler, Encode_LoadRdp_NegativeOffset_SignExtension)
     EXPECT_EQ(assembler.buffer[4], 0xFF);
     EXPECT_EQ(assembler.buffer[5], 0xFF);
     EXPECT_EQ(assembler.buffer[6], 0xFF);
+}
+
+TEST_F(Backendx86Assembler, Encode_Setcc_PositiveOffset)
+{
+    // Test SETE (Set if Equal / Zero) -> Condition code 0x4.
+    bal_x86_emit_setcc_mem8_rbp_offset(&assembler, BAL_X86_COND_E, 0x20);
+    EXPECT_EQ(assembler.status, BAL_SUCCESS);
+    EXPECT_EQ(assembler.offset, 7);
+    EXPECT_EQ(assembler.buffer[0], 0x0F); // Prefix
+    EXPECT_EQ(assembler.buffer[1], 0x94); // SETE: 0x90 + 0x4
+    EXPECT_EQ(assembler.buffer[2], 0x85); // ModRM
+    EXPECT_EQ(assembler.buffer[3], 0x20); // Disp32 LSB
+    EXPECT_EQ(assembler.buffer[4], 0x00);
+    EXPECT_EQ(assembler.buffer[5], 0x00);
+    EXPECT_EQ(assembler.buffer[6], 0x00); // Disp32 MSB
+}
+
+TEST_F(Backendx86Assembler, Encode_Setcc_NegativeOffset_SignExtension)
+{
+    // Test SETB (Set if Below / Carry) -> Condition code 0x2.
+    bal_x86_emit_setcc_mem8_rbp_offset(&assembler, BAL_X86_COND_B, -16);
+    EXPECT_EQ(assembler.status, BAL_SUCCESS);
+    EXPECT_EQ(assembler.offset, 7);
+    EXPECT_EQ(assembler.buffer[0], 0x0F); // Prefix
+    EXPECT_EQ(assembler.buffer[1], 0x92); // SETB: 0x90 + 0x2
+    EXPECT_EQ(assembler.buffer[2], 0x85); // ModRM
+    EXPECT_EQ(assembler.buffer[3], 0xF0); // Offset LSB
+    EXPECT_EQ(assembler.buffer[4], 0xFF);
+    EXPECT_EQ(assembler.buffer[5], 0xFF);
+    EXPECT_EQ(assembler.buffer[6], 0xFF); // Offset MSB
 }
 
 TEST_F(Backendx86Assembler, Encode_StoreRdp_PositiveOffset)

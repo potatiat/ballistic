@@ -292,6 +292,21 @@ extern "C"
     /// - `assembler->buffer` is full.
     void bal_x86_emit_ret(bal_x86_assembler_t *assembler);
 
+    /// Emits a SETcc instruction to a memory location pointed to by RBP + offset.
+    ///
+    /// Assembly equivalent: `setcc byte ptr [rbp + offset]
+    ///
+    /// # Warning
+    ///
+    /// This function fails if:
+    ///
+    /// - `assembler` is `NULL`.
+    /// - `assembler->status` != [`BAL_SUCCESS`]
+    /// - `assembler->buffer` is full.
+    void bal_x86_emit_setcc_mem8_rbp_offset(bal_x86_assembler_t *assembler,
+                                            bal_x86_condition_t  condition,
+                                            int32_t              offset);
+
     /// Emits a memory store using a 32-bit displacement.
     ///
     /// Assembly equivalent: `mov[rbp + offset], reg64`
