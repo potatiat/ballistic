@@ -8,6 +8,7 @@ static const char *const BAL_X86_MACRO_NAMES[] = {
     [BAL_X86_MACRO_NOP]                    = "NOP",
     [BAL_X86_MACRO_ADD_CPU_ICOUNT]         = "ADD_CPU_ICOUNT",
     [BAL_X86_MACRO_AND_REGISTER_IMMEDIATE] = "AND_REGISTER_IMMEDIATE",
+    [BAL_X86_MACRO_JCC_RELATIVE]           = "JCC_RELATIVE",
     [BAL_X86_MACRO_JMP_REGISTER]           = "JMP_REGISTER",
     [BAL_X86_MACRO_JMP_RELATIVE]           = "JMP_RELATIVE",
     [BAL_X86_MACRO_OR_REGISTER_IMMEDIATE]  = "OR_REGISTER_IMMEDIATE",
@@ -16,6 +17,7 @@ static const char *const BAL_X86_MACRO_NAMES[] = {
     [BAL_X86_MACRO_LOAD]                   = "LOAD",
     [BAL_X86_MACRO_STORE]                  = "STORE",
     [BAL_X86_MACRO_RET]                    = "RET",
+    [BAL_X86_MACRO_SETCC]                  = "SETCC",
 };
 
 static inline const char *
@@ -192,7 +194,8 @@ flush_single_macro(bal_x86_assembler_t *BAL_RESTRICT   assembler,
             bal_x86_emit_add_mem64_rbp_offset_imm(
                 assembler, offsetof(bal_cpu_t, instruction_count), (int32_t)immediate_or_offset);
             break;
-
+        case BAL_X86_MACRO_JCC_RELATIVE:
+            bal_x86_emit_jcc_rel32(assembler, macro->condition, (int32_t)immediate_or_offset);
         case BAL_X86_MACRO_JMP_REGISTER:
             bal_x86_emit_jmp_r64(assembler, destination);
             break;
@@ -225,6 +228,9 @@ flush_single_macro(bal_x86_assembler_t *BAL_RESTRICT   assembler,
                 assembler, ASSEMBLER_TEMPORARY_REGISTER, immediate_or_offset);
             bal_x86_emit_or_r64_r64(assembler, destination, ASSEMBLER_TEMPORARY_REGISTER);
             break;
+        case BAL_X86_MACRO_SETCC:
+            bal_x86_emit_setcc_mem8_rbp_offset(
+                assembler, macro->condition, (int32_t)immediate_or_offset);
         default:
             BAL_LOG_ERROR(
                 &assembler->logger, "Aborting function: Unknown x86 macro opcode: %d", opcode);

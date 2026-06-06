@@ -81,6 +81,7 @@ extern "C"
         BAL_X86_MACRO_ADD_CPU_ICOUNT,
 
         BAL_X86_MACRO_AND_REGISTER_IMMEDIATE,
+        BAL_X86_MACRO_JCC_RELATIVE,
         BAL_X86_MACRO_JMP_REGISTER,
         BAL_X86_MACRO_JMP_RELATIVE,
         BAL_X86_MACRO_OR_REGISTER_IMMEDIATE,
@@ -89,6 +90,7 @@ extern "C"
         BAL_X86_MACRO_LOAD,
         BAL_X86_MACRO_STORE,
         BAL_X86_MACRO_RET,
+        BAL_X86_MACRO_SETCC,
     } bal_x86_macro_opcode_t;
 
     /// Represents a single un-lowered x86 instruction inside the sliding window.
@@ -99,7 +101,8 @@ extern "C"
         bal_x86_register_t     source;
         uint32_t               pad0;
         uint64_t               immediate_or_offset;
-        uint64_t               pad1;
+        bal_x86_condition_t    condition; // Used for SETcc and Jcc instructions only.
+        uint32_t               pad;
     } bal_x86_macro_t;
 
     static_assert(32 == sizeof(bal_x86_macro_t), "Struct size mismatch");
