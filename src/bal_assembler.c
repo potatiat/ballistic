@@ -176,15 +176,25 @@ bal_emit_add_shifted_register(bal_assembler_t           *assembler,
         return;
     }
 
+    const uint32_t register_mask     = 0x1F;
+    const uint32_t shift_mask        = 0x3F;
+    const uint32_t shift_type_mask   = 0x2;
+    const uint32_t rm_uint32         = rm & register_mask;
+    const uint32_t rn_uint32         = rn & register_mask;
+    const uint32_t rd_uint32         = rd & register_mask;
+    const uint32_t shift_uint32      = shift & shift_mask;
+    const uint32_t shift_type_uint32 = shift_type & shift_type_mask;
+
     const uint32_t sf          = 1U;
     const uint32_t opcode      = 0x0BU;
     uint32_t       instruction = 0;
     instruction |= sf << 31;
     instruction |= opcode << 24;
-    instruction |= (uint32_t)shift_type << 22;
-    instruction |= (uint32_t)rm << 16;
-    instruction |= (uint32_t)rn << 5;
-    instruction |= (uint32_t)rd;
+    instruction |= shift_type_uint32 << 22;
+    instruction |= rm_uint32 << 16;
+    instruction |= shift_uint32 << 10;
+    instruction |= rn_uint32 << 5;
+    instruction |= rd_uint32;
 
     const char *mnemonic = "ADD (Shifted Register)";
     BAL_LOG_TRACE(&assembler->logger,
