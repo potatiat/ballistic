@@ -68,13 +68,7 @@ cmake -DCMAKE_PREFIX_PATH=$(brew --prefix llvm) ..
 cmake --build .
 ```
 
-The following executables will be created in the `build/` directory:
-
-* `libBallistic.a` (Static Library)
-* `ballistic_cli` (Used for Ballistic development)
-* `decoder_cli` (Instruction decoding tool)
-* `cdoc` (Documentation generator)
-* `test_*` (Test suite, run with `ctest`)
+The compiled executables will be created in the `build/bin` and `build/lib` directories.
 
 See [tools/](tools/) for more information on these executables.
 
