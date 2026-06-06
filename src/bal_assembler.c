@@ -50,6 +50,7 @@ bal_emit_add_immediate(bal_assembler_t           *assembler,
 
     if (assembler->status != BAL_SUCCESS)
     {
+        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->status != BAL_SUCCESS");
         return;
     }
 
@@ -62,7 +63,7 @@ bal_emit_add_immediate(bal_assembler_t           *assembler,
 
     if (rd > 31)
     {
-        BAL_LOG_ERROR(&assembler->logger, "X%u out of range (0-31).", rd);
+        BAL_LOG_ERROR(&assembler->logger, "Rd X%u out of range (0-31).", rd);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
