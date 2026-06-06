@@ -122,6 +122,7 @@ TEST_F(Backendx86Assembler, Public_NullContext_NoCrash)
 {
     bal_x86_emit_add_mem64_rbp_offset_imm(nullptr, 0, 0);
     bal_x86_emit_and_r64_r64(nullptr, BAL_X86_RAX, BAL_X86_RAX);
+    bal_x86_emit_jcc_rel32(nullptr, BAL_X86_COND_A, 0);
     bal_x86_emit_jmp_r64(nullptr, BAL_X86_RAX);
     bal_x86_emit_jmp_rel32(nullptr, 0);
     bal_x86_emit_load_r64_rbp_offset(nullptr, BAL_X86_RAX, 0);
@@ -301,6 +302,34 @@ TEST_F(Backendx86Assembler, Encode_AndRegToReg_HighLow)
     EXPECT_EQ(assembler.buffer[0], 0x4D); // REX.W | REX.R | REX.B
     EXPECT_EQ(assembler.buffer[1], 0x23); // Opcode
     EXPECT_EQ(assembler.buffer[2], 0xFE); // ModRM: 0xC0 | 7 << 3 | 6
+}
+
+TEST_F(Backendx86Assembler, Encode_Jcc_PositiveOffset)
+{
+    // Test JNE (Jump if Not Equal / Not Zero) -> Condition code 0x5
+    bal_x86_emit_jcc_rel32(&assembler, BAL_X86_COND_NE, 0x11223344);
+    EXPECT_EQ(assembler.status, BAL_SUCCESS);
+    EXPECT_EQ(assembler.offset, 6);
+    EXPECT_EQ(assembler.buffer[0], 0x0F); // Prefix
+    EXPECT_EQ(assembler.buffer[1], 0x85); // Opcode
+    EXPECT_EQ(assembler.buffer[2], 0x44); // Rel32 LSB
+    EXPECT_EQ(assembler.buffer[3], 0x33);
+    EXPECT_EQ(assembler.buffer[4], 0x22);
+    EXPECT_EQ(assembler.buffer[5], 0x11); // Rel32 MSB
+}
+
+TEST_F(Backendx86Assembler, Encode_Jcc_NegativeOffset_SignExtension)
+{
+    // Test JL (Jump if Less) -> Condition  code 0xC
+    bal_x86_emit_jcc_rel32(&assembler, BAL_X86_COND_L, -32);
+    EXPECT_EQ(assembler.status, BAL_SUCCESS);
+    EXPECT_EQ(assembler.offset, 6);
+    EXPECT_EQ(assembler.buffer[0], 0x0F); // Prefix
+    EXPECT_EQ(assembler.buffer[1], 0x8C); // Opcode
+    EXPECT_EQ(assembler.buffer[2], 0xE0); // Rel32 LSB
+    EXPECT_EQ(assembler.buffer[3], 0xFF);
+    EXPECT_EQ(assembler.buffer[4], 0xFF);
+    EXPECT_EQ(assembler.buffer[5], 0xFF); // Rel32 MSB
 }
 
 TEST_F(Backendx86Assembler, Encode_Jmp_LowReg)

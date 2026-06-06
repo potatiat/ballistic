@@ -172,6 +172,21 @@ extern "C"
                                   bal_x86_register_t   destination,
                                   bal_x86_register_t   source);
 
+    /// Emits a conditional jump to a relative 32-bit offset.
+    ///
+    /// Assembler equivalent : `jcc offset`
+    ///
+    /// # Warning
+    ///
+    /// This function fails if:
+    ///
+    /// - `assembler` is `NULL`.
+    /// - `assembler->status` != [`BAL_SUCCESS`].
+    /// - `assembler->buffer` is full.
+    void bal_x86_emit_jcc_rel32(bal_x86_assembler_t *assembler,
+                                bal_x86_condition_t  condition,
+                                int32_t              offset);
+
     /// Emits an unconditional jump to the address in the specified 64-bit register.
     ///
     /// Assembly equivalent: `jmp reg64`

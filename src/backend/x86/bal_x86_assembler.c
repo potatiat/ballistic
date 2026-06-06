@@ -876,6 +876,47 @@ bal_x86_emit_setcc_mem8_rbp_offset(bal_x86_assembler_t *assembler,
                    instruction_size_bytes);
 }
 
+void
+bal_x86_emit_jcc_rel32(bal_x86_assembler_t *assembler,
+                       bal_x86_condition_t  condition,
+                       int32_t              offset)
+{
+    if (BAL_UNLIKELY(NULL == assembler))
+    {
+        return;
+    }
+
+    if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "Assembler status != BAL_SUCCESS, aborting function");
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    const size_t instruction_size_bytes = 6;
+    const bool   can_emit_status        = can_emit(assembler, instruction_size_bytes);
+
+    if (BAL_UNLIKELY(false == can_emit_status))
+    {
+        return;
+    }
+
+    BAL_LOG_DEBUG(&assembler->logger,
+                  "[0x%4zx] j%s 0x%X",
+                  assembler->offset,
+                  condition_code_to_string(condition),
+                  offset);
+    const size_t old_offset = assembler->offset;
+    emit8(assembler->buffer, &assembler->offset, 0x0F);
+    emit8(assembler->buffer, &assembler->offset, 0x80 + (uint8_t)condition);
+    emit32(assembler->buffer, &assembler->offset, (uint32_t)offset);
+    const size_t bytes_emitted = assembler->offset - old_offset;
+    BAL_ASSERT_MSG(bytes_emitted == instruction_size_bytes,
+                   "Bytes emitted %d does not match instruction size %d",
+                   bytes_emitted,
+                   instruction_size_bytes);
+}
+
 bool
 is_valid_register(const bal_x86_register_t reg)
 {
