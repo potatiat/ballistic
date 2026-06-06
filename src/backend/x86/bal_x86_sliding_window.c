@@ -133,7 +133,7 @@ bal_sliding_window_push(bal_sliding_window_t *BAL_RESTRICT window, const bal_x86
 void
 bal_sliding_window_flush_all(bal_sliding_window_t *BAL_RESTRICT window)
 {
-    if (NULL == window)
+    if (BAL_UNLIKELY(NULL == window))
     {
         return;
     }
