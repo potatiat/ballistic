@@ -4,6 +4,7 @@
 #include "bal_errors.h"
 #include "bal_logging.h"
 #include "bal_memory.h"
+#include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -87,6 +88,10 @@ extern "C"
         BAL_X86_COND_LE = 0xE, // Less or Equal (ZF = 1 or SF != OF)
         BAL_X86_COND_G  = 0xF, // Greater (ZF = 0 and SF == OF)
     } bal_x86_condition_t;
+
+    static_assert(0xF == BAL_X86_COND_G,
+                  "BAL_X86_COND_G Must be the last element in the enum and equals to 0xF to cast "
+                  "to uint8_t safely");
 
     /// The x86-64 assembler state.
     typedef struct
