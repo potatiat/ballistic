@@ -23,6 +23,7 @@ This is a rewrite of the dynarmic recompiler, with the goal of fixing its many f
 - [ ] Add register spilling.
 - [ ] Add Callback Memory Model.
 - [ ] Add TLB Memory model.
+- [ ] Rewrite `tools/cdoc.c`
 
 # Building Ballistic
 
