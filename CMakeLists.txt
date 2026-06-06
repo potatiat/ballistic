@@ -13,6 +13,29 @@ endif ()
 
 project(Ballistic LANGUAGES C CXX VERSION 0.4.0)
 
+# -----------------------------------------------------------------------------
+# Setup Build Directory
+# -----------------------------------------------------------------------------
+
+if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    set(BALLISTIC_PLATFORM "windows")
+elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    set(BALLISTIC_PLATFORM "mac")
+elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    set(BALLISTIC_PLATFORM "linux")
+else ()
+    set(BALLISTIC_PLATFORM "Unknown")
+endif ()
+
+set(BALLISTIC_BINARIES_DIRECTORY "${CMAKE_BINARY_DIR}/bin/${BALLISTIC_PLATFORM}")
+set(BALLISTIC_LIBRARIES_DIRECTORY "${CMAKE_BINARY_DIR}/lib/${BALLISTIC_PLATFORM}")
+
+foreach (CONFIG IN ITEMS "" _DEBUG _RELEASE _MINSIZEREL _RELWITHDEBINFO)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY${CONFIG} "${BALLISTIC_BINARIES_DIRECTORY}")
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY${CONFIG} "${BALLISTIC_LIBRARIES_DIRECTORY}")
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY${CONFIG} "${BALLISTIC_LIBRARIES_DIRECTORY}")
+endforeach ()
+
 # option(BALLISTIC_ENABLE_CPU_FEATURE_DETECTION "Makes Ballistic able to detect CPU features of the host" ON)
 option(BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION "Enables LTO for Ballistic (improves performance)" ON)
 option(BALLISTIC_BUILD_TESTS "Enables Ballistic tests" ON)
@@ -140,7 +163,7 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     )
 
     add_custom_target(doc ALL
-            COMMAND ${CMAKE_CURRENT_BINARY_DIR}/cdoc docs/cdoc ${PROJECT_HEADERS}
+            COMMAND $<TARGET_FILE:cdoc> docs/cdoc ${PROJECT_HEADERS}
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
             COMMENT "Generating Documentation..."
             DEPENDS cdoc
