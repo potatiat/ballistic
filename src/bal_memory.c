@@ -36,7 +36,7 @@ static_assert(0 == sizeof(flat_translation_interface_t) % 16, "Struct must be al
 void
 bal_allocator_default_init(bal_allocator_t *out_allocator)
 {
-    out_allocator->handle              = NULL;
+    out_allocator->context             = NULL;
     out_allocator->allocate            = default_allocate;
     out_allocator->free                = default_free;
     out_allocator->allocate_executable = default_allocate_executable;
@@ -80,7 +80,7 @@ bal_flat_translation_interface_init(bal_allocator_t *BAL_RESTRICT        allocat
 
     const size_t                  memory_alignment_bytes = 16U;
     flat_translation_interface_t *flat_interface         = allocator->allocate(
-        allocator->handle, memory_alignment_bytes, sizeof(flat_translation_interface_t));
+        allocator->context, memory_alignment_bytes, sizeof(flat_translation_interface_t));
 
     if (NULL == flat_interface)
     {
@@ -116,7 +116,7 @@ bal_flat_translation_interface_destroy(bal_allocator_t        *allocator,
         return BAL_SUCCESS;
     }
 
-    allocator->free(allocator->handle, interface->context, sizeof(flat_translation_interface_t));
+    allocator->free(allocator->context, interface->context, sizeof(flat_translation_interface_t));
     *interface = (bal_memory_interface_t) {};
     return BAL_SUCCESS;
 }

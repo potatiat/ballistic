@@ -206,8 +206,8 @@ bal_engine_init(bal_engine_t *BAL_RESTRICT                 engine,
         return engine->status;
     }
 
-    internal_engine_state_t *BAL_RESTRICT internal_engine_state
-        = allocator->allocate(allocator->handle, MEMORY_ALIGNMENT, sizeof(internal_engine_state_t));
+    internal_engine_state_t *BAL_RESTRICT internal_engine_state = allocator->allocate(
+        allocator->context, MEMORY_ALIGNMENT, sizeof(internal_engine_state_t));
 
     if (BAL_UNLIKELY(NULL == internal_engine_state))
     {
@@ -219,11 +219,11 @@ bal_engine_init(bal_engine_t *BAL_RESTRICT                 engine,
     (void)memset(internal_engine_state, 0, sizeof(internal_engine_state_t));
 
     internal_engine_state->ir_arena_base
-        = allocator->allocate(allocator->handle, MEMORY_ALIGNMENT, ARENA_SIZE_BYTES);
+        = allocator->allocate(allocator->context, MEMORY_ALIGNMENT, ARENA_SIZE_BYTES);
 
     if (BAL_UNLIKELY(NULL == internal_engine_state->ir_arena_base))
     {
-        allocator->free(allocator->handle, internal_engine_state, sizeof(internal_engine_state_t));
+        allocator->free(allocator->context, internal_engine_state, sizeof(internal_engine_state_t));
         BAL_LOG_ERROR(&logger, "Aborting function: Failed to allocate Internal IR Arena");
         engine->status = BAL_ERROR_ALLOCATION_FAILED;
     }
@@ -234,7 +234,7 @@ bal_engine_init(bal_engine_t *BAL_RESTRICT                 engine,
     internal_engine_state->constant_count    = 0;
     internal_engine_state->tier1_buffer_size = TIER1_BUFFER_SIZE_BYTES;
     internal_engine_state->tier1_buffer      = allocator->allocate_executable(
-        allocator->handle, 4096, internal_engine_state->tier1_buffer_size);
+        allocator->context, 4096, internal_engine_state->tier1_buffer_size);
 
     if (NULL == internal_engine_state->tier1_buffer.rw_pointer)
     {
@@ -251,13 +251,13 @@ bal_engine_init(bal_engine_t *BAL_RESTRICT                 engine,
     if (status != BAL_SUCCESS)
     {
         BAL_LOG_ERROR(&logger, "Aborting function: Failed to initialize Tier1 Compiler");
-        allocator->free(allocator->handle,
+        allocator->free(allocator->context,
                         &internal_engine_state->tier1_buffer,
                         sizeof(internal_engine_state_t));
-        allocator->free(allocator->handle,
+        allocator->free(allocator->context,
                         internal_engine_state->ir_arena_base,
                         sizeof(internal_engine_state_t));
-        allocator->free(allocator->handle, internal_engine_state, sizeof(internal_engine_state_t));
+        allocator->free(allocator->context, internal_engine_state, sizeof(internal_engine_state_t));
         engine->status = status;
         return engine->status;
     }
@@ -362,7 +362,7 @@ bal_engine_run_thread(bal_engine_t *engine)
                     &engine->logger, "Fetching block at PC 0x%016llX", (unsigned long long)pc);
             }
 
-            engine->allocator->protect_rw(engine->allocator->handle,
+            engine->allocator->protect_rw(engine->allocator->context,
                                           internal_engine_state->tier1_buffer,
                                           internal_engine_state->tier1_buffer_size);
             size_t max_instructions = MAX_INSTRUCTIONS;
@@ -416,7 +416,7 @@ bal_engine_run_thread(bal_engine_t *engine)
             }
         }
 
-        engine->allocator->protect_rx(engine->allocator->handle,
+        engine->allocator->protect_rx(engine->allocator->context,
                                       internal_engine_state->tier1_buffer,
                                       internal_engine_state->tier1_buffer_size);
 
@@ -783,7 +783,7 @@ bal_engine_destroy(const bal_allocator_t *allocator, bal_engine_t *engine)
 {
     // No argument error handling. Segfault if user passes NULL.
 
-    allocator->free(allocator->handle, engine->arena_base, ARENA_SIZE_BYTES);
+    allocator->free(allocator->context, engine->arena_base, ARENA_SIZE_BYTES);
     engine->arena_base = NULL;
 }
 const bal_instruction_t *

@@ -105,7 +105,7 @@ extern "C"
     {
         /// An opaque pointer defining the state or tracking information for the
         /// heap.
-        bal_allocator_handle_t handle;
+        bal_allocator_handle_t context;
 
         /// The callback invoked to allocate aligned memory.
         ///
