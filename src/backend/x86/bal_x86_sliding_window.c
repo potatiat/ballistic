@@ -243,6 +243,7 @@ flush_single_macro(bal_x86_assembler_t *BAL_RESTRICT   assembler,
             break;
         case BAL_X86_MACRO_MOV_REGISTER_REGISTER:
             bal_x86_emit_mov_r64_r64(assembler, destination, source);
+            break;
         case BAL_X86_MACRO_OR_REGISTER_IMMEDIATE:
             bal_x86_emit_mov_r64_imm64(
                 assembler, ASSEMBLER_TEMPORARY_REGISTER, immediate_or_offset);
@@ -257,6 +258,7 @@ flush_single_macro(bal_x86_assembler_t *BAL_RESTRICT   assembler,
         case BAL_X86_MACRO_SETCC:
             bal_x86_emit_setcc_mem8_rbp_offset(
                 assembler, macro->condition, (int32_t)immediate_or_offset);
+            break;
         default:
             BAL_LOG_ERROR(
                 &assembler->logger, "Aborting function: Unknown x86 macro opcode: %d", opcode);
