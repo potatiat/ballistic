@@ -499,14 +499,14 @@ emit_mov(bal_assembler_t *assembler,
 
     if (NULL == assembler->buffer)
     {
-        BAL_LOG_ERROR(&assembler->logger, "assembler->buffer is NULL, aborting emission");
+        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->buffer is NULL");
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
 
     if (assembler->status != BAL_SUCCESS)
     {
-        BAL_LOG_ERROR(&assembler->logger, "assembler->status != BAL_SUCCESS, aborting emission");
+        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->status != BAL_SUCCESS");
         return;
     }
 
@@ -519,7 +519,7 @@ emit_mov(bal_assembler_t *assembler,
 
     if (rd > 31)
     {
-        BAL_LOG_ERROR(&assembler->logger, "X%u out of range (0-31).", rd);
+        BAL_LOG_ERROR(&assembler->logger, "Rd X%u out of range (0-31).", rd);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
