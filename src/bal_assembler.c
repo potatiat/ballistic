@@ -492,19 +492,19 @@ emit_mov(bal_assembler_t *assembler,
          const uint8_t    shift,
          const uint32_t   opcode)
 {
-    if (NULL == assembler)
+    if (BAL_UNLIKELY(NULL == assembler))
     {
         return;
     }
 
-    if (NULL == assembler->buffer)
+    if (BAL_UNLIKELY(NULL == assembler->buffer))
     {
         BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->buffer is NULL");
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
 
-    if (assembler->status != BAL_SUCCESS)
+    if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
     {
         BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->status != BAL_SUCCESS");
         return;
@@ -512,19 +512,19 @@ emit_mov(bal_assembler_t *assembler,
 
     const bool can_emit_return_value = can_emit(assembler);
 
-    if (false == can_emit_return_value)
+    if (BAL_UNLIKELY(false == can_emit_return_value))
     {
         return;
     }
 
-    if (rd > 31)
+    if (BAL_UNLIKELY(rd > 31))
     {
         BAL_LOG_ERROR(&assembler->logger, "Rd X%u out of range (0-31).", rd);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
 
-    if (shift != 0 && shift != 16 && shift != 32 && shift != 48)
+    if (BAL_UNLIKELY(shift != 0 && shift != 16 && shift != 32 && shift != 48))
     {
         BAL_LOG_ERROR(&assembler->logger, "%u is not a valid shift amount (0, 16, 32, 48).", shift);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
