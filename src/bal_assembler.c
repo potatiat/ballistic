@@ -333,6 +333,7 @@ bal_emit_sub_immediate(bal_assembler_t           *assembler,
 
     if (assembler->status != BAL_SUCCESS)
     {
+        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->status != BAL_SUCCESS");
         return;
     }
 
