@@ -194,6 +194,11 @@ flush_single_macro(bal_x86_assembler_t *BAL_RESTRICT   assembler,
             bal_x86_emit_add_mem64_rbp_offset_imm(
                 assembler, offsetof(bal_cpu_t, instruction_count), (int32_t)immediate_or_offset);
             break;
+        case BAL_X86_MACRO_AND_REGISTER_IMMEDIATE:
+            bal_x86_emit_mov_r64_imm64(
+                assembler, ASSEMBLER_TEMPORARY_REGISTER, immediate_or_offset);
+            bal_x86_emit_and_r64_r64(assembler, destination, ASSEMBLER_TEMPORARY_REGISTER);
+            break;
         case BAL_X86_MACRO_JCC_RELATIVE:
             bal_x86_emit_jcc_rel32(assembler, macro->condition, (int32_t)immediate_or_offset);
         case BAL_X86_MACRO_JMP_REGISTER:
@@ -203,30 +208,25 @@ flush_single_macro(bal_x86_assembler_t *BAL_RESTRICT   assembler,
             // WARNING: Relative jump offsets fit within a 32-bit signed integer.
             bal_x86_emit_jmp_rel32(assembler, (int32_t)immediate_or_offset);
             break;
-        case BAL_X86_MACRO_MOV_REGISTER_IMMEDIATE:
-            bal_x86_emit_mov_r64_imm64(assembler, destination, immediate_or_offset);
-            break;
         case BAL_X86_MACRO_LOAD:
             // WARNING: The displacement offset refers to the structural members within bal_cpu_t.
             // This struct is statically bounded to 264 bytes, which fits inside a signed 32-bit
             // integer.
             bal_x86_emit_load_r64_rbp_offset(assembler, destination, (int32_t)immediate_or_offset);
             break;
-        case BAL_X86_MACRO_STORE:
-            // WARNING: The displacement offset refers to the structural members within bal_cpu_t.
-            // This struct is statically bounded to 264 bytes, which fits inside a signed 32-bit
-            // integer.
-            bal_x86_emit_store_r64_rbp_offset(assembler, source, (int32_t)immediate_or_offset);
-            break;
-        case BAL_X86_MACRO_AND_REGISTER_IMMEDIATE:
-            bal_x86_emit_mov_r64_imm64(
-                assembler, ASSEMBLER_TEMPORARY_REGISTER, immediate_or_offset);
-            bal_x86_emit_and_r64_r64(assembler, destination, ASSEMBLER_TEMPORARY_REGISTER);
+        case BAL_X86_MACRO_MOV_REGISTER_IMMEDIATE:
+            bal_x86_emit_mov_r64_imm64(assembler, destination, immediate_or_offset);
             break;
         case BAL_X86_MACRO_OR_REGISTER_IMMEDIATE:
             bal_x86_emit_mov_r64_imm64(
                 assembler, ASSEMBLER_TEMPORARY_REGISTER, immediate_or_offset);
             bal_x86_emit_or_r64_r64(assembler, destination, ASSEMBLER_TEMPORARY_REGISTER);
+            break;
+        case BAL_X86_MACRO_STORE:
+            // WARNING: The displacement offset refers to the structural members within bal_cpu_t.
+            // This struct is statically bounded to 264 bytes, which fits inside a signed 32-bit
+            // integer.
+            bal_x86_emit_store_r64_rbp_offset(assembler, source, (int32_t)immediate_or_offset);
             break;
         case BAL_X86_MACRO_SETCC:
             bal_x86_emit_setcc_mem8_rbp_offset(

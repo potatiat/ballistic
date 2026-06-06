@@ -84,13 +84,13 @@ extern "C"
         BAL_X86_MACRO_JCC_RELATIVE,
         BAL_X86_MACRO_JMP_REGISTER,
         BAL_X86_MACRO_JMP_RELATIVE,
-        BAL_X86_MACRO_OR_REGISTER_IMMEDIATE,
+        BAL_X86_MACRO_LOAD,
         BAL_X86_MACRO_MOV_REGISTER_IMMEDIATE,
         BAL_X86_MACRO_MOV_REGISTER_REGISTER,
-        BAL_X86_MACRO_LOAD,
-        BAL_X86_MACRO_STORE,
+        BAL_X86_MACRO_OR_REGISTER_IMMEDIATE,
         BAL_X86_MACRO_RET,
         BAL_X86_MACRO_SETCC,
+        BAL_X86_MACRO_STORE,
     } bal_x86_macro_opcode_t;
 
     /// Represents a single un-lowered x86 instruction inside the sliding window.
