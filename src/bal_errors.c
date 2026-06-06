@@ -39,6 +39,9 @@ bal_error_to_string(const bal_error_t error)
         case BAL_ERROR_INCORRECT_REGISTER_TYPE:
             string = "incorrect register type";
             break;
+        case BAL_ERROR_BRANCH_OFFSET_OVERFLOW:
+            string = "relative branch offset exceeds target displacement limit";
+            break;
         case BAL_SUCCESS:
             string = "there is no error";
             break;

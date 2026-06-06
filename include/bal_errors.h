@@ -38,12 +38,16 @@ extern "C"
 
         BAL_ERROR_ENGINE_ALREADY_RUNNING = -9,
 
-        // IR Errors.
+        // IR / Assembler Errors.
         //
         BAL_ERROR_INSTRUCTION_OVERFLOW = -100,
 
         /// The decoded register type does not match the expected type.
         BAL_ERROR_INCORRECT_REGISTER_TYPE = -101,
+
+        /// The relative jump or branch offset exceeded the capacity of the target displacement
+        /// field.
+        BAL_ERROR_BRANCH_OFFSET_OVERFLOW = -102,
     } bal_error_t;
 
     /// Converts the enum into a readable string for error handling.
