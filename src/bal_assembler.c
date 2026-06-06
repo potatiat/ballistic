@@ -485,12 +485,12 @@ can_emit(bal_assembler_t *assembler)
 }
 
 static void
-emit_mov(bal_assembler_t *assembler,
-         const char      *mnemonic,
-         const uint32_t   rd,
-         const uint16_t   imm,
-         const uint8_t    shift,
-         const uint32_t   opcode)
+emit_mov(bal_assembler_t *BAL_RESTRICT assembler,
+         const char *BAL_RESTRICT      mnemonic,
+         const uint32_t                rd,
+         const uint16_t                imm,
+         const uint8_t                 shift,
+         const uint32_t                opcode)
 {
     if (BAL_UNLIKELY(NULL == assembler))
     {
