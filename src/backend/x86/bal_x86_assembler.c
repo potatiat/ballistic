@@ -828,9 +828,9 @@ bal_x86_emit_pop_r64(bal_x86_assembler_t *assembler, const bal_x86_register_t re
 }
 
 void
-bal_x86_emit_setcc_mem8_rbp_offset(bal_x86_assembler_t *assembler,
-                                   bal_x86_condition_t  condition,
-                                   int32_t              offset)
+bal_x86_emit_setcc_mem8_rbp_offset(bal_x86_assembler_t      *assembler,
+                                   const bal_x86_condition_t condition,
+                                   const int32_t             offset)
 {
     if (BAL_UNLIKELY(NULL == assembler))
     {
@@ -880,9 +880,9 @@ bal_x86_emit_setcc_mem8_rbp_offset(bal_x86_assembler_t *assembler,
 }
 
 void
-bal_x86_emit_jcc_rel32(bal_x86_assembler_t *assembler,
-                       bal_x86_condition_t  condition,
-                       int32_t              offset)
+bal_x86_emit_jcc_rel32(bal_x86_assembler_t      *assembler,
+                       const bal_x86_condition_t condition,
+                       const int32_t             offset)
 {
     if (BAL_UNLIKELY(NULL == assembler))
     {
