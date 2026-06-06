@@ -105,6 +105,98 @@ bal_emit_add_immediate(bal_assembler_t           *assembler,
 }
 
 void
+bal_emit_add_shifted_register(bal_assembler_t     *assembler,
+                              bal_register_index_t rd,
+                              bal_register_index_t rn,
+                              bal_register_index_t rm,
+                              uint8_t              shift,
+                              uint8_t              shift_type)
+{
+    if (BAL_UNLIKELY(NULL == assembler))
+    {
+        return;
+    }
+
+    if (BAL_UNLIKELY(NULL == assembler->buffer))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->buffer is NULL");
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->status != BAL_SUCCESS");
+        return;
+    }
+
+    const bool can_emit_return_value = can_emit(assembler);
+
+    if (BAL_UNLIKELY(false == can_emit_return_value))
+    {
+        return;
+    }
+
+    if (BAL_UNLIKELY(rd > 31))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "Rd X%u out of range (0-31).", rd);
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    if (BAL_UNLIKELY(rn > 31))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "Rn X%u out of range (0-31).", rn);
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    if (BAL_UNLIKELY(rm > 31))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "Rm X%u out of range (0-31).", rm);
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    if (BAL_UNLIKELY(shift > 63))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "%u is not a valid shift amount (0-63).", shift);
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    if (BAL_UNLIKELY(shift_type > 2))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "%u is not a valid shift type (0-2).", shift_type);
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    const uint32_t sf          = 1U;
+    const uint32_t opcode      = 0x0BU;
+    uint32_t       instruction = 0;
+    instruction |= sf << 31;
+    instruction |= opcode << 24;
+    instruction |= (uint32_t)shift_type << 22;
+    instruction |= (uint32_t)rm << 16;
+    instruction |= (uint32_t)rn << 5;
+    instruction |= (uint32_t)rd;
+
+    const char *mnemonic = "ADD (Shifted Register)";
+    BAL_LOG_TRACE(&assembler->logger,
+                  "[+0X%04zx] %08x %s X%u, X%u, X%u, shift %u",
+                  assembler->offset * sizeof(uint32_t),
+                  instruction,
+                  mnemonic,
+                  rd,
+                  rn,
+                  rm,
+                  shift);
+    (void)mnemonic;
+    assembler->buffer[assembler->offset++] = instruction;
+}
+
+void
 bal_emit_b(bal_assembler_t *assembler, const int32_t offset)
 {
     if (BAL_UNLIKELY(NULL == assembler))
@@ -367,8 +459,9 @@ can_emit(bal_assembler_t *assembler)
 {
     if (assembler->offset >= assembler->capacity)
     {
-        BAL_LOG_ERROR(
-            &assembler->logger, "Assembler Overflow. Capacity %zu reached.", assembler->capacity);
+        BAL_LOG_ERROR(&assembler->logger,
+                      "Aborting function: Assembler Overflow. Capacity %zu reached.",
+                      assembler->capacity);
         assembler->status = BAL_ERROR_INSTRUCTION_OVERFLOW;
         return false;
     }

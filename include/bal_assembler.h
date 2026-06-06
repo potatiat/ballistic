@@ -95,6 +95,23 @@ extern "C"
                                 uint16_t             imm12,
                                 uint8_t              shift);
 
+    /// Emits a `ADD` (Shifted Register) instruction.
+    ///
+    /// Adds a register value `rn` and a shifted register `rm`, and writes the result to `rd`.
+    ///
+    /// # Safety
+    ///
+    /// * `rd`, `rn`, `rm` must be valid registers (0-31).
+    /// * `shift` must be between 0 and 63.
+    /// * `shift_type` must be 0 (LSL), 1 (LSR), or 2 (ASR).
+    /// * Function does not emit instructions if `assembler->status` != [`BAL_SUCCESS`].
+    void bal_emit_add_shifted_register(bal_assembler_t     *assembler,
+                                       bal_register_index_t rd,
+                                       bal_register_index_t rn,
+                                       bal_register_index_t rm,
+                                       uint8_t              shift,
+                                       uint8_t              shift_type);
+
     /// Emits a `B` (Branch) instruction.
     ///
     /// Branches unconditionally to a PC-relative offset.
