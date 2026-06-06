@@ -157,6 +157,21 @@ extern "C"
                                                int32_t              offset,
                                                int32_t              immediate);
 
+    /// Emits an add 64-bit register to another 64-bit register.
+    ///
+    /// Assembly equivalent: `add destination, source`
+    ///
+    /// # Warning
+    ///
+    /// This function fails if:
+    ///
+    /// - `assembler` is `NULL`
+    /// - `assembler->status` != [`BAL_SUCCESS`]
+    /// - `assembler->buffer` is full.
+    void bal_x86_emit_add_r64_r64(bal_x86_assembler_t *assembler,
+                                  bal_x86_register_t   destination,
+                                  bal_x86_register_t   source);
+
     /// Emits a bitwise AND instruction between two 64-bit registers.
     ///
     /// Assembly equivalent: `and destination, source`.
