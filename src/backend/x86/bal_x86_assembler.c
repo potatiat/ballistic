@@ -993,6 +993,74 @@ bal_x86_emit_add_r64_r64(bal_x86_assembler_t     *assembler,
                    instruction_size_bytes);
 }
 
+void
+bal_x86_emit_add_r64_imm32(bal_x86_assembler_t     *assembler,
+                           const bal_x86_register_t destination,
+                           const int32_t            immediate)
+{
+    if (BAL_UNLIKELY(NULL == assembler))
+    {
+        return;
+    }
+
+    if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->status != BAL_SUCCESS");
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    const bool is_valid_register_result = is_valid_register(destination);
+
+    if (BAL_UNLIKELY(false == is_valid_register_result))
+    {
+        BAL_LOG_ERROR(
+            &assembler->logger, "Aborting function: invalid destination register: %d", destination);
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    const bool fit_in_8_bits = immediate >= -128 && immediate < 127;
+
+    // WARNING: Destination is verified by is_valid_register().
+    const uint8_t b = (uint8_t)destination >> 3;
+
+    const size_t instruction_size_bytes = true == fit_in_8_bits ? 4 : 7;
+    const bool   can_emit_status        = can_emit(assembler, instruction_size_bytes);
+
+    if (BAL_UNLIKELY(false == can_emit_status))
+    {
+        return;
+    }
+
+    BAL_LOG_DEBUG(
+        &assembler->logger, "[+0x%04zx] add r%d, 0x%X", assembler->offset, destination, immediate);
+    const size_t  old_offset = assembler->offset;
+    const uint8_t w          = 1;
+    const uint8_t r          = 0;
+    emit_rex(assembler->buffer, &assembler->offset, w, r, b);
+    const uint8_t opcode = true == fit_in_8_bits ? 0x83 : 0x81;
+    emit8(assembler->buffer, &assembler->offset, opcode);
+    emit_modrm_register(assembler->buffer, &assembler->offset, BAL_X86_RAX, destination);
+
+    if (true == fit_in_8_bits)
+    {
+        // WARNING: Cast is safe if fit_in_8_bits is true.
+        emit8(assembler->buffer, &assembler->offset, (uint8_t)immediate);
+    }
+    else
+    {
+        // WARNING: Bit pattern of int32_t is preserved.
+        emit32(assembler->buffer, &assembler->offset, (uint32_t)immediate);
+    }
+
+    const size_t bytes_emitted = assembler->offset - old_offset;
+    BAL_ASSERT_MSG(bytes_emitted == instruction_size_bytes,
+                   "Bytes emitted %d does not match instruction size %d",
+                   bytes_emitted,
+                   instruction_size_bytes);
+}
+
 bool
 is_valid_register(const bal_x86_register_t reg)
 {
