@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 3.17)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -36,15 +36,34 @@ foreach (CONFIG IN ITEMS "" _DEBUG _RELEASE _MINSIZEREL _RELWITHDEBINFO)
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY${CONFIG} "${BALLISTIC_LIBRARIES_DIRECTORY}")
 endforeach ()
 
+
+message(STATUS "==================================================================")
+message(STATUS "[Ballistic] Configuring Ballistic JIT Compiler v${PROJECT_VERSION}")
+message(STATUS "[Ballistic] Build Type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "[Ballistic] Target OS:  ${CMAKE_SYSTEM_NAME}")
+message(STATUS "[Ballistic] Compiler:   ${CMAKE_C_COMPILER_ID} ${CMAKE_C_COMPILER_VERSION}")
+message(STATUS "[Ballistic] Binaries:   ${BALLISTIC_BINARIES_DIRECTORY}")
+message(STATUS "[Ballistic] Libraries:  ${BALLISTIC_LIBRARIES_DIRECTORY}")
+message(STATUS "==================================================================")
+
+
 # option(BALLISTIC_ENABLE_CPU_FEATURE_DETECTION "Makes Ballistic able to detect CPU features of the host" ON)
-option(BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION "Enables LTO for Ballistic (improves performance)" ON)
+option(BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION "Enables LTO for Ballistic" ON)
 option(BALLISTIC_BUILD_TESTS "Enables Ballistic tests" ON)
 
 # -----------------------------------------------------------------------------
 # Compile Ballistic
 # -----------------------------------------------------------------------------
 
-find_package(Python3 REQUIRED)
+message(STATUS "[Ballistic] Verifying dependencies before generating ARM64 Decoder Lookup Table.")
+find_package(Python3)
+
+if (NOT Python3_FOUND)
+    message(FATAL_ERROR "[Ballistic] Python3 is REQUIRED to generate ARM64 decoder tables. "
+            "Please install Python3 and ensure it is in your PATH.")
+endif ()
+
+message(STATUS "[Ballistic] Found Python3: ${Python3_EXECUTABLE}")
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     set(BUILD_SHARED_LIBS ON CACHE BOOL "Build the CMark library as shared" FORCE)
@@ -58,12 +77,24 @@ set(GENERATED_DECODER_TABLE_SOURCE ${CMAKE_SOURCE_DIR}/src/bal_decoder_table_gen
 set(ARM_SPECIFICATION_PATH ${CMAKE_SOURCE_DIR}/spec/arm64_xml)
 set(OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/src/)
 
+if (NOT EXISTS "${SCRIPT_GENERATE_DECODER_TABLE}")
+    message(FATAL_ERROR "[Ballistic] Missing decoder generation script at: ${SCRIPT_GENERATE_DECODER_TABLE}. "
+            "Did you clone this repo correctly?")
+endif ()
+
+if (NOT EXISTS ${ARM_SPECIFICATION_PATH})
+    message(STATUS "[Ballistic] Missing ARM64 XML specification at: ${ARM_SPECIFICATION_PATH}. "
+            "Did you clone this repo correctly?")
+endif ()
+
 add_custom_command(
         OUTPUT ${GENERATED_DECODER_TABLE_HEADER} ${GENERATED_DECODER_TABLE_SOURCE}
         COMMAND Python3::Interpreter ${SCRIPT_GENERATE_DECODER_TABLE} --xml-directory ${ARM_SPECIFICATION_PATH} --output-directory ${OUTPUT_DIRECTORY}
         DEPENDS ${SCRIPT_GENERATE_DECODER_TABLE}
-        COMMENT "Generating ARM64 Decoder Tables"
+        COMMENT "Generating ARM64 Decoder Tables..."
 )
+
+message(STATUS "[Ballistic] Configuring Ballistic Static Library...")
 
 if (MSVC)
     add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
@@ -101,12 +132,19 @@ target_include_directories(Ballistic PRIVATE src)
 target_compile_definitions(Ballistic PUBLIC BAL_MAX_LOG_LEVEL=4)
 
 if (BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION)
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
-endif ()
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT ipo_supported OUTPUT ipo_error)
 
-# Debugging and Sanitizers (Catch UB/Segfaults early)
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_compile_options(-g -fno-omit-frame-pointer)
+    if (ipo_supported)
+        message(STATUS "[Ballistic] Link Time Optimization is ENABLED and supported.")
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+    else ()
+        message(WARNING "[Ballistic] Link Time Optimization was requested but is NOT supported by your compiler, disabling LTO. "
+                "Reason: ${ipo_error}")
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF)
+    endif ()
+else ()
+    message(STATUS "[Ballistic] Link Time Optimization is DISABLED via CMake options.")
 endif ()
 
 if (WIN32)
@@ -120,6 +158,7 @@ endif ()
 # -----------------------------------------------------------------------------
 # Compile Tools
 # -----------------------------------------------------------------------------
+message(STATUS "[Ballistic] Configuring developer tools...")
 set(DECODER_CLI_NAME "decoder_cli")
 add_executable(${DECODER_CLI_NAME} tools/decoder_cli.c)
 target_link_libraries(${DECODER_CLI_NAME} PRIVATE ${PROJECT_NAME})
@@ -136,9 +175,17 @@ target_link_libraries(${COVERAGE_CLI_NAME} PRIVATE ${PROJECT_NAME})
 # compatable machines for parsing C code. I do not have a Windows machine to
 # to test this so only Linux and macOS are supported.
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    message(STATUS "[Ballistic] Unix environment detected. Configuring 'cdoc' documentation generator.")
     set(CDOC_NAME "cdoc")
-    find_library(CLANG_LIBRARY NAMES clang libclang REQUIRED)
-    find_path(CLANG_INCLUDE_DIR NAMES clang-c/Index.h REQUIRED)
+    find_library(CLANG_LIBRARY NAMES clang libclang)
+    find_path(CLANG_INCLUDE_DIR NAMES clang-c/Index.h)
+
+    if (NOT CLANG_LIBRARY OR NOT CLANG_INCLUDE_DIR)
+        message(FATAL_ERROR "[Ballistic] 'libclang' is REQUIRED to build the 'cdoc' tool on Unix. "
+                "Please install libclang-dev (Linux) or llvm (macOS).")
+    endif ()
+
+    message(STATUS "[Ballistic] Found libclang at: ${CLANG_LIBRARY}.")
 
     add_executable(${CDOC_NAME} tools/cdoc.c)
     target_include_directories(${CDOC_NAME} PRIVATE ${CLANG_INCLUDE_DIR}
@@ -174,9 +221,9 @@ endif ()
 # Compile Tests
 # -----------------------------------------------------------------------------
 if (BALLISTIC_BUILD_TESTS)
+    message(STATUS "[Ballistic] Test suite ENABLED, configuring GoogleTest and LuaJIT...")
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
     add_subdirectory(extern/googletest-1.17.0)
-    target_compile_options(gtest PUBLIC -Wno-error -w)
     include(GoogleTest)
     enable_testing()
 
@@ -201,20 +248,6 @@ if (BALLISTIC_BUILD_TESTS)
     gtest_discover_tests(${DECODER_TEST})
     gtest_discover_tests(${MEMORY_TEST})
 
-    #    set(TRANSLATION_TESTS movk movn movz ret sub)
-    #    foreach (test_name ${TRANSLATION_TESTS})
-    #        set(target_name "test_${test_name}")
-    #        add_executable(${target_name} "tests/translation/${target_name}.cpp")
-    #        target_link_libraries(${target_name} PRIVATE Ballistic gtest gtest_main)
-    #        target_include_directories(${target_name} PRIVATE tests/translation)
-    #
-    #        if (NOT MSVC)
-    #            target_compile_options(${MEMORY_TEST} PRIVATE -Wall -Wextra -Werror)
-    #        endif ()
-    #
-    #        gtest_discover_tests(${target_name})
-    #    endforeach ()
-
     set(BACKEND_X86_TESTS x86_assembler x86_sliding_window)
     foreach (test_name ${BACKEND_X86_TESTS})
         set(target_name "test_${test_name}")
@@ -228,17 +261,47 @@ if (BALLISTIC_BUILD_TESTS)
         gtest_discover_tests(${target_name})
     endforeach ()
 
+    add_subdirectory(extern/luajit-2.1)
+
     add_test(
-            NAME doc_test
-            COMMAND Python3::Interpreter ${CMAKE_SOURCE_DIR}/tools/doctest.py
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/bal_logging.h
+            NAME doctest
+            COMMAND luajit ${CMAKE_SOURCE_DIR}/tools/doctest.lua
             ${CMAKE_CURRENT_SOURCE_DIR}/include/bal_assembler.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/bal_logging.h
             ${CMAKE_CURRENT_SOURCE_DIR}/include/backend/x86/bal_x86_sliding_window.h
-            --sources ${CMAKE_CURRENT_SOURCE_DIR}/src/bal_logging.c
-            ${CMAKE_CURRENT_SOURCE_DIR}/src/bal_assembler.c
-            ${CMAKE_CURRENT_SOURCE_DIR}/src/bal_assert.c
-            ${CMAKE_CURRENT_SOURCE_DIR}/src/backend/x86/bal_x86_sliding_window.c
-            ${CMAKE_CURRENT_SOURCE_DIR}/src/backend/x86/bal_x86_assembler.c
-            --includes ${CMAKE_CURRENT_SOURCE_DIR}/include
+            WORKING_DIRECTORY ${BALLISTIC_LIBRARIES_DIRECTORY}
     )
+
+    message(STATUS "[Ballistic] Configuring library search paths for doctest...")
+
+    if (NOT WIN32)
+        set(LUA_LD_PATH "${BALLISTIC_LIBRARIES_DIRECTORY}")
+        set(LUA_DYLD_PATH "${BALLISTIC_LIBRARIES_DIRECTORY}")
+
+        if (DEFINED ENV{LD_LIBRARY_PATH})
+            message(STATUS "[Ballistic] Detected $LD_LIBRARY_PATH, appending compiled libraries to it...")
+            set(LUA_LD_PATH "${BALLISTIC_LIBRARIES_DIRECTORY}:$ENV{LD_LIBRARY_PATH}")
+        endif ()
+
+        if (DEFINED ENV{DYLD_LIBRARY_PATH})
+            message(STATUS "[Ballistic] Detected $DYLD_LIBRARY_PATH, appending compiled libraries to it...")
+            set(LUA_DYLD_PATH "${BALLISTIC_LIBRARIES_DIRECTORY}:$ENV{DYLD_LIBRARY_PATH}")
+        endif ()
+    endif ()
+
+    message(STATUS "[Ballistic] Propagating active compiler and compiler flags to doctest...")
+    set(DOCTEST_CC "${CMAKE_C_COMPILER}")
+    string(TOUPPER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_UPPER)
+    set(DOCTEST_CFLAGS ${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_${CMAKE_BUILD_TYPE_UPPER}})
+    set(DOCTEST_LTO "$<BOOL:${BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION}>")
+
+    set_tests_properties(doctest PROPERTIES
+            ENVIRONMENT "LD_LIBRARY_PATH=${LUA_LD_PATH};DYLD_LIBRARY_PATH=${LUA_DYLD_LIBRARY_PATH};DOCTEST_CC=${DOCTEST_CC};DOCTEST_CFLAGS=${DOCTEST_CFLAGS};DOCTEST_LTO=${DOCTEST_LTO}"
+    )
+else ()
+    message(STATUS "[Ballistic] Test suite is DISABLED.")
 endif ()
+
+message(STATUS "==================================================================")
+message(STATUS "[Ballistic] Cmake configuration completed successfully.")
+message(STATUS "==================================================================")

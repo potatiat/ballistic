@@ -1,0 +1,244 @@
+-- doctest.lua
+-- Extracts and tests C code blocks from Ballistic headers.
+
+local function log_info(message)
+    io.stdout:write("[INFO] " .. message .. "\n")
+    io.stdout:flush()
+end
+
+local function log_warn(message)
+    io.stdout:write("[WARN] " .. message .. "\n")
+    io.stdout:flush()
+end
+
+local function log_error(message)
+    io.stderr:write("[ERROR] " .. message .. "\n")
+    io.stderr:flush()
+end
+
+local function file_exists (name)
+    local file = io.open(name, "r")
+
+    if file then
+        file:close()
+        return true
+    end
+end
+
+local function extract_code_blocks(filename)
+    local file, error = io.open(filename, "r")
+
+    if not file then
+        log_error("Could not open file:" .. filename .. " (" .. tostring(error) .. ").")
+        return nil
+    end
+
+    local blocks = {}
+    local current_block = {}
+    local in_code_block = false
+
+    for line in file:lines() do
+        local raw_line = line:match("^%s*(.-)%s*$")
+        local content = ""
+
+        if raw_line == nil then
+            goto continue
+        end
+
+        if raw_line:sub(1, 3) == "//!" then
+            content = raw_line:sub(4)
+        elseif raw_line:sub(1, 3) == "///" then
+            content = raw_line:sub(4)
+        else
+            goto continue
+        end
+
+        if content:sub(1, 1) == " " then
+            content = content:sub(2)
+        end
+
+        if content:sub(1, 4) == "```c" then
+            in_code_block = true
+            goto continue
+        end
+
+        if content:sub(1, 3) == "```" and in_code_block then
+            in_code_block = false
+
+            if #current_block > 0 then
+                table.insert(blocks, table.concat(current_block, "\n"))
+                current_block = {}
+            end
+
+            goto continue
+        end
+
+        if in_code_block then
+            table.insert(current_block, content)
+        end
+
+        :: continue ::
+    end
+
+    file:close()
+
+    if #blocks == 0 then
+        return nil
+    end
+
+    return blocks
+end
+
+local function test_file(header_file)
+    log_info("Testing examples in " .. header_file .. ".")
+    local blocks = extract_code_blocks(header_file)
+
+    if not blocks then
+        log_error("Found no blocks in " .. header_file .. ".")
+        return false
+    end
+
+    local success = true
+
+    for i, code in ipairs(blocks) do
+        local source_file = ""
+        local global_section, main_section = code:match("^(.-)// %-%-%-(.*)$")
+        if global_section and main_section then
+            source_file = global_section .. "\nint main(void) {\n" .. main_section .. "\nreturn 0;\n}\n"
+        else
+            local global_lines = {}
+            local main_lines = {}
+
+            for line in (code .. "\n"):gmatch("(.-)\r?\n") do
+                if line:match("^%s*#%s*include") or line:match("^%s*#%s*define") then
+                    table.insert(global_lines, line)
+                else
+                    table.insert(main_lines, line)
+                end
+            end
+
+            local global_part = table.concat(global_lines, "\n")
+            local main_part = table.concat(main_lines, "\n")
+            source_file = global_part .. "\nint main(void) {\n" .. main_part .. "\nreturn 0;\n}\n"
+        end
+
+        local temp_file_name = "doctest_tmp_" .. i .. ".c"
+
+        local temp_executable_name = "doctest_tmp_" .. i
+
+        if is_windows then
+            temp_executable_name = temp_executable_name .. exe_extension
+        end
+
+        local temp_file, error = io.open(temp_file_name, "w")
+
+        if not temp_file then
+            log_error("Failed to create temp file " .. temp_file_name .. ": " .. tostring(error) .. ".")
+            return false
+        end
+
+        temp_file:write(source_file)
+        temp_file:close()
+
+        local compile_command = string.format(
+                '"%s" %s %s -DBAL_MAX_LOG_LEVEL=4 -I"%s" -I"%s" "%s" %s -o "%s"',
+                compiler, compiler_flags, lto_flag, include_directory, source_directory, temp_file_name, library_link, temp_executable_name
+        )
+
+        if is_windows then
+            compile_command = '"' .. compile_command .. '"'
+        end
+
+        log_info("Compiling: " .. compile_command)
+        local compile_result = os.execute(compile_command)
+
+        if compile_result ~= true and compile_result ~= 0 then
+            log_error("Compilation failed for Example " .. i .. " in " .. header_file .. ".")
+            success = false
+        else
+            local run_command = is_windows and temp_executable_name or ("./" .. temp_executable_name)
+            log_info("Running: " .. run_command)
+            local run_result = os.execute(run_command)
+
+            if run_result ~= true and run_result ~= 0 then
+                log_error("Executable failed for Example " .. i .. " in " .. header_file)
+                success = false
+            else
+                log_info("Example " .. i .. " passed.")
+            end
+        end
+
+        pcall(os.remove, temp_file_name)
+        pcall(os.remove, temp_executable_name)
+
+        if is_windows then
+            pcall(os.remove, temp_executable_name .. ".ilk")
+            pcall(os.remove, temp_executable_name .. ".pdb")
+        end
+
+        return success
+    end
+end
+
+local args = { ... }
+
+if #args == 0 then
+    log_error("Aborting script: no header files provided to parse.")
+    os.exit(1)
+end
+
+is_windows = package.config:sub(1, 1) == "\\"
+exe_extension = is_windows and ".exe" or ""
+compiler = os.getenv("DOCTEST_CC") or os.getenv("CC") or "clang"
+compiler_flags = os.getenv("DOCTEST_CFLAGS") or "-w"
+use_lto = os.getenv("DOCTEST_LTO") == "ON" or os.getenv("DOCTEST_LTO") == "1" or os.getenv("DOCTEST_LTO") == "TRUE"
+lto_flag = ""
+
+if use_lto and not is_windows then
+    lto_flag = "-flto"
+    log_info("Link-Time Optimization detected, appending -flto flag")
+end
+
+project_root = "."
+string_index = args[1]:find("[/\\]include[/\\]")
+
+if string_index then
+    project_root = args[1]:sub(1, string_index - 1);
+
+    if project_root == "" then
+        project_root = "."
+    end
+end
+
+include_directory = project_root .. "/include"
+source_directory = project_root .. "/src"
+library_link = nil
+
+if is_windows and compiler == "cl.exe" then
+    library_link = "Ballistic.lib"
+else
+    library_link = "libBallistic.a"
+end
+
+if not file_exists(library_link) then
+    log_warn("Could not locate " .. library_link .. ". Hoping compiler finds it.")
+end
+
+local all_passed = true
+
+for _, header in ipairs(args) do
+    local test_file_status = test_file(header)
+    log_info("===============================================")
+
+    if not test_file_status then
+        all_passed = false
+    end
+end
+
+if not all_passed then
+    log_error("One or more doctests failed.")
+    os.exit(1)
+end
+
+log_info("All doctests passed successfully.")
+os.exit(0)

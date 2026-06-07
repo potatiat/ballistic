@@ -70,22 +70,25 @@ jobs:
             deps_cmd: sudo apt-get update && sudo apt-get install -y ninja-build ccache clang-18 libclang-18-dev pkg-config
 
           - os: windows-latest
-            cc: clang-cl
-            cxx: clang-cl
-            flags_debug: "/Zi /Od -Wno-unknown-argument"
+            cc: gcc
+            cxx: g++
+            flags_debug: ""
             deps_cmd: choco install ccache
 
           - os: macos-14
-            cc: $(brew --prefix llvm@18)/bin/clang
-            cxx: $(brew --prefix llvm@18)/bin/clang++
+            cc: $(brew --prefix llvm)/bin/clang
+            cxx: $(brew --prefix llvm)/bin/clang++
             flags_debug: "-fsanitize=address,undefined"
-            deps_cmd: brew install ninja ccache llvm@18
+            deps_cmd: brew install ninja ccache llvm luajit
 
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 1
+
+      - name: Setup Mold
+        uses: rui314/setup-mold@v1
 
       - name: Setup Python
         uses: actions/setup-python@v5
