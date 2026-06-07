@@ -39,13 +39,13 @@ brew install cmake python3 llvm
 
 ```bash
 sudo apt update
-sudo apt install build-essential cmake python3 libclang-dev llvm-dev
+sudo apt install build-essential cmake python3
 ```
 
 ### Fedora
 
 ```bash
-sudo dnf install cmake python3 gcc-c++ clang-devel llvm-devel
+sudo dnf install cmake python3 gcc-c++
 ```
 
 ## Configure CMake
@@ -54,12 +54,6 @@ sudo dnf install cmake python3 gcc-c++ clang-devel llvm-devel
 mkdir build
 cd build
 cmake ..
-```
-
-### macOS (If LLVM is not found)
-
-```bash
-cmake -DCMAKE_PREFIX_PATH=$(brew --prefix llvm) ..
 ```
 
 ## Build Binaries

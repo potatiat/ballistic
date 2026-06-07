@@ -181,40 +181,41 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     find_path(CLANG_INCLUDE_DIR NAMES clang-c/Index.h)
 
     if (NOT CLANG_LIBRARY OR NOT CLANG_INCLUDE_DIR)
-        message(FATAL_ERROR "[Ballistic] 'libclang' is REQUIRED to build the 'cdoc' tool on Unix. "
+        message(WARNING "[Ballistic] 'libclang' is required to build the 'cdoc' tool on Unix. "
                 "Please install libclang-dev (Linux) or llvm (macOS).")
+    else ()
+
+        message(STATUS "[Ballistic] Found libclang at: ${CLANG_LIBRARY}.")
+
+        add_executable(${CDOC_NAME} tools/cdoc.c)
+        target_include_directories(${CDOC_NAME} PRIVATE ${CLANG_INCLUDE_DIR}
+                ${CMAKE_CURRENT_SOURCE_DIR}/extern/cmark/src
+                ${CMAKE_CURRENT_BINARY_DIR}/extern/cmark/src/)
+        target_link_libraries(${CDOC_NAME} PRIVATE ${CLANG_LIBRARY} cmark)
+        set(PROJECT_HEADERS
+                include/bal_engine.h
+                include/bal_engine_flags.h
+                include/bal_decoder.h
+                include/bal_memory.h
+                include/bal_types.h
+                include/bal_errors.h
+                include/bal_logging.h
+                include/bal_assembler.h
+                include/bal_tier2_worker.h
+                include/bal_spsc_queue.h
+                include/backend/bal_cpu.h
+                include/backend/x86/bal_x86_assembler.h
+                include/backend/x86/bal_x86_sliding_window.h
+                include/backend/x86/bal_x86_tier1_compiler.h
+        )
+
+        add_custom_target(doc ALL
+                COMMAND $<TARGET_FILE:cdoc> docs/cdoc ${PROJECT_HEADERS}
+                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+                COMMENT "Generating Documentation..."
+                DEPENDS cdoc
+        )
     endif ()
-
-    message(STATUS "[Ballistic] Found libclang at: ${CLANG_LIBRARY}.")
-
-    add_executable(${CDOC_NAME} tools/cdoc.c)
-    target_include_directories(${CDOC_NAME} PRIVATE ${CLANG_INCLUDE_DIR}
-            ${CMAKE_CURRENT_SOURCE_DIR}/extern/cmark/src
-            ${CMAKE_CURRENT_BINARY_DIR}/extern/cmark/src/)
-    target_link_libraries(${CDOC_NAME} PRIVATE ${CLANG_LIBRARY} cmark)
-    set(PROJECT_HEADERS
-            include/bal_engine.h
-            include/bal_engine_flags.h
-            include/bal_decoder.h
-            include/bal_memory.h
-            include/bal_types.h
-            include/bal_errors.h
-            include/bal_logging.h
-            include/bal_assembler.h
-            include/bal_tier2_worker.h
-            include/bal_spsc_queue.h
-            include/backend/bal_cpu.h
-            include/backend/x86/bal_x86_assembler.h
-            include/backend/x86/bal_x86_sliding_window.h
-            include/backend/x86/bal_x86_tier1_compiler.h
-    )
-
-    add_custom_target(doc ALL
-            COMMAND $<TARGET_FILE:cdoc> docs/cdoc ${PROJECT_HEADERS}
-            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-            COMMENT "Generating Documentation..."
-            DEPENDS cdoc
-    )
 endif ()
 
 # -----------------------------------------------------------------------------
