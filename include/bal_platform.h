@@ -36,7 +36,7 @@ extern "C"
 #if defined(__aarch64__)
 #define BAL_ARCHITECTURE_X86 0
 
-#elif defined(__x86_64__)
+#elif defined(__x86_64__) || defined(_M_X64)
 
 #define BAL_ARCHITECTURE_ARM 0
 #define BAL_ARCHITECTURE_X86 1
