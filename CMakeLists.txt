@@ -218,6 +218,21 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     endif ()
 endif ()
 
+message(STATUS "[Ballistic] Setting up environment for GUI Dashboard...")
+message(STATUS "[Ballistic] Configuring GLFW...")
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+add_subdirectory(extern/glfw)
+
+message(STATUS "[Ballistic] Configuring C Bindings for ImGui...")
+set(IMPL_SDL OFF CACHE BOOL "" FORCE)
+set(IMPL_SDL3 OFF CACHE BOOL "" FORCE)
+add_subdirectory(extern/LuaJIT-ImGui)
+
+message(STATUS "[Ballistic] Configuring GUI Dashboard...")
+add_subdirectory(tools/dashboard)
+
 # -----------------------------------------------------------------------------
 # Compile Tests
 # -----------------------------------------------------------------------------

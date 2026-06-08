@@ -28,7 +28,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install Dependencies
-        run: sudo apt-get update && sudo apt-get install -y clang-tidy-19 clang-format-19 cmake ninja-build libclang-19-dev pkg-config
+        run: sudo apt-get update && sudo apt-get install -y clang-tidy-19 clang-format-19 cmake ninja-build libclang-19-dev pkg-config libwayland-dev libxkbcommon-dev xorg-dev
 
       #      - name: Run Clang-Format
       #        run: |
@@ -38,6 +38,8 @@ jobs:
 
       - name: Generate Compilation Database
         run: |
+          git submodule update --init --recursive                                      
+
           ARCH_TRIPLET=$(gcc -dumpmachine)
           cmake -S . -B ${{ env.BUILD_DIR }} -G Ninja \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
@@ -67,7 +69,7 @@ jobs:
             cc: clang-18
             cxx: clang++-18
             flags_debug: "-fsanitize=address,undefined -fno-omit-frame-pointer"
-            deps_cmd: sudo apt-get update && sudo apt-get install -y ninja-build ccache clang-18 libclang-18-dev pkg-config
+            deps_cmd: sudo apt-get update && sudo apt-get install -y ninja-build ccache clang-18 libclang-18-dev pkg-config libwayland-dev libxkbcommon-dev xorg-dev
 
           - os: windows-latest
             cc: gcc
@@ -79,7 +81,7 @@ jobs:
             cc: $(brew --prefix llvm)/bin/clang
             cxx: $(brew --prefix llvm)/bin/clang++
             flags_debug: "-fsanitize=address,undefined"
-            deps_cmd: brew install ninja ccache llvm luajit
+            deps_cmd: brew install ninja ccache llvm luajit mesa-glu
 
     steps:
       - uses: actions/checkout@v4
@@ -127,7 +129,9 @@ jobs:
           fi
 
           export CCACHE_DIR=${{ runner.os == 'Windows' && '~/AppData/Local/ccache' || '~/.ccache' }}
-          export CCACHE_MAXSIZE=500M
+          export CCACHE_MAXSIZE=10GB
+          
+          git submodule update --init --recursive                                      
           
           cmake -G Ninja -B build \
             -DCMAKE_BUILD_TYPE=${{ matrix.type }} \
@@ -176,9 +180,11 @@ jobs:
           name: do-not-use-${{ matrix.os }}
           if-no-files-found: ignore
           path: |
+            CMakeLists.txt
             include/
             src/
             tools/
+            !tools/dashboard/scripts/imgui
             tests/
             docs/*.md
             !src/bal_decoder_table*
