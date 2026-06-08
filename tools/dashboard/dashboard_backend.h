@@ -12,6 +12,7 @@ extern "C"
     void                      dashboard_backend_new_frame(void);
     void                      dashboard_backend_render(void);
     void                      dashboard_backend_shutdown(void);
+    void                      dashboard_backend_recover(GLFWwindow *window);
 
 #ifdef __cplusplus
 }

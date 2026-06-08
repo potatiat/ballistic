@@ -47,6 +47,7 @@ extern "C"
 
     void dashboard_backend_render(void)
     {
+        (void)ImGui::GetCurrentContext();
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
@@ -58,4 +59,12 @@ extern "C"
         ImGui::DestroyContext();
     }
 }
+
+void
+dashboard_backend_recover(GLFWwindow *window)
+{
+    dashboard_backend_shutdown();
+    dashboard_backend_init(window);
+}
+
 /*** end of file ***/

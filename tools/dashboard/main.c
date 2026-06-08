@@ -63,12 +63,7 @@ main(void)
     lua_getfield(dashboard_context.lua, -1, "path");
     const char *current_path = lua_tostring(dashboard_context.lua, -1);
 
-    bool hot_reload_status = reload_lua_script(dashboard_context.lua, &logger);
-
-    if (false == hot_reload_status)
-    {
-        return EXIT_FAILURE;
-    }
+    bool is_script_valid = reload_lua_script(dashboard_context.lua, &logger);
 
     GLFWwindow *BAL_RESTRICT window     = dashboard_context.window;
     lua_State *BAL_RESTRICT  lua        = dashboard_context.lua;
@@ -83,40 +78,50 @@ main(void)
         // Hot-Reloading Check.
         if (current_mtime > last_mtime)
         {
-            last_mtime        = current_mtime;
-            hot_reload_status = reload_lua_script(lua, &logger);
+            const bool previous_hot_reload_failed = !is_script_valid;
+            last_mtime                            = current_mtime;
+            is_script_valid                       = reload_lua_script(lua, &logger);
 
-            if (false == hot_reload_status)
+            if (BAL_UNLIKELY(is_script_valid && previous_hot_reload_failed))
             {
-                break;
+                BAL_LOG_INFO(&logger, "Lua script reloaded successfully.");
             }
         }
 
         dashboard_backend_new_frame();
-        lua_getglobal(lua, "dashboard_render");
-        const int top_of_stack = -1;
 
-        if (lua_isfunction(lua, top_of_stack))
+        if (BAL_LIKELY(true == is_script_valid))
         {
-            lua_pushlightuserdata(lua, dashboard_backend_get_context());
-            const int function_arguments     = 1;
-            const int function_return_values = 0;
-            const int function_error_handler = 0;
-            if (lua_pcall(lua, function_arguments, function_return_values, function_error_handler)
-                != LUA_OK)
+            lua_getglobal(lua, "dashboard_render");
+            const int top_of_stack = -1;
+
+            if (BAL_LIKELY(lua_isfunction(lua, top_of_stack)))
             {
-                BAL_LOG_ERROR(&logger,
-                              "Failed to call render lua render: %s",
-                              lua_tostring(lua, top_of_stack));
+                lua_pushlightuserdata(lua, dashboard_backend_get_context());
+                const int function_arguments     = 1;
+                const int function_return_values = 0;
+                const int function_error_handler = 0;
+                if (lua_pcall(
+                        lua, function_arguments, function_return_values, function_error_handler)
+                    != LUA_OK)
+                {
+                    BAL_LOG_ERROR(&logger,
+                                  "Failed to call render lua render: %s",
+                                  lua_tostring(lua, top_of_stack));
+                    const int elements_to_pop_from_stack = 1;
+                    lua_pop(lua, elements_to_pop_from_stack);
+                    is_script_valid = false;
+                    dashboard_backend_recover(window);
+                }
+            }
+            else
+            {
+                BAL_LOG_ERROR(&logger, "Failed to hot reload, lua render is missing.");
                 const int elements_to_pop_from_stack = 1;
                 lua_pop(lua, elements_to_pop_from_stack);
+                is_script_valid = false;
+                dashboard_backend_recover(window);
             }
-        }
-        else
-        {
-            BAL_LOG_ERROR(&logger, "Failed to hot reload, lua render is missing.");
-            const int elements_to_pop_from_stack = 1;
-            lua_pop(lua, elements_to_pop_from_stack);
         }
 
         dashboard_backend_render();
@@ -158,9 +163,7 @@ reload_lua_script(lua_State *BAL_RESTRICT lua, bal_logger_t *BAL_RESTRICT logger
     if (luaL_dofile(lua, LUA_SCRIPT_PATH) != LUA_OK)
     {
         const int top_of_stack = -1;
-        BAL_LOG_ERROR(logger,
-                      "Aborting Program: failed to load Lua script: %s",
-                      lua_tostring(lua, top_of_stack));
+        BAL_LOG_ERROR(logger, "Failed to load Lua script: %s.", lua_tostring(lua, top_of_stack));
         const int elements_to_pop_from_stack = 1;
         lua_pop(lua, elements_to_pop_from_stack);
         return false;
