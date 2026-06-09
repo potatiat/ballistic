@@ -2,6 +2,7 @@
 #include "bal_logging.h"
 #include "dashboard.h"
 #include "dashboard_backend.h"
+#include "dashboard_file_dialog.h"
 #include "lauxlib.h"
 #include "lualib.h"
 #include <stdlib.h>
@@ -46,6 +47,8 @@ main(void)
 
     glfwMakeContextCurrent(dashboard_context.window);
     glfwSwapInterval(1); // Enable Vsync.
+
+    dashboard_file_dialog_init(&dashboard_context.file_dialog);
     dashboard_backend_init(dashboard_context.window);
     dashboard_context.lua = luaL_newstate();
 
@@ -98,7 +101,8 @@ main(void)
             if (BAL_LIKELY(lua_isfunction(lua, top_of_stack)))
             {
                 lua_pushlightuserdata(lua, dashboard_backend_get_context());
-                const int function_arguments     = 1;
+                lua_pushlightuserdata(lua, &dashboard_context.file_dialog);
+                const int function_arguments     = 2;
                 const int function_return_values = 0;
                 const int function_error_handler = 0;
                 if (lua_pcall(
@@ -128,6 +132,7 @@ main(void)
         glfwSwapBuffers(window);
     }
 
+    dashboard_file_dialog_shutdown(&dashboard_context.file_dialog);
     lua_close(lua);
     dashboard_backend_shutdown();
     glfwTerminate();

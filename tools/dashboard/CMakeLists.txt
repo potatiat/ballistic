@@ -10,6 +10,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_executable(${PROJECT_NAME}
         main.c
         dashboard_backend.cpp
+        dashboard_file_dialog.cpp
         ${cimgui_SOURCE_DIR}/cimgui/cimgui.cpp
         ${cimgui_SOURCE_DIR}/cimgui/imgui/imgui.cpp
         ${cimgui_SOURCE_DIR}/cimgui/imgui/imgui_draw.cpp
@@ -22,6 +23,7 @@ add_executable(${PROJECT_NAME}
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
         -DDASHBOARD_DIRECTORY="${CMAKE_CURRENT_SOURCE_DIR}"
+        -DBALLISTIC_DIRECTORY="${CMAKE_SOURCE_DIR}"
         -DCIMGUI_USE_OPENGL3
         -DCIMGUI_USE_GLFW)
 target_include_directories(${PROJECT_NAME} PRIVATE
@@ -32,6 +34,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 
 # TODO: find_package(OpenGL) for macOS.
 target_link_libraries(${PROJECT_NAME} PRIVATE Ballistic glfw cimgui_glfw luajit_lib)
+
+set_target_properties(${PROJECT_NAME} PROPERTIES ENABLE_EXPORTS TRUE)
 
 if (NOT MSVC)
     target_link_libraries(${PROJECT_NAME} PRIVATE m dl)
