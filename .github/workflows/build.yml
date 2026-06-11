@@ -89,6 +89,9 @@ jobs:
           submodules: recursive
           fetch-depth: 1
 
+      - name: Setup Developer Command Prompt
+        uses: ilammy/msvc-dev-cmd@v1
+
       - name: Setup Mold
         uses: rui314/setup-mold@v1
 
