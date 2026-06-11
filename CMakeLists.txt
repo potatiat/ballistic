@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.17)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF) # Strict ISO C
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -12,6 +12,24 @@ if (NOT CMAKE_BUILD_TYPE)
 endif ()
 
 project(Ballistic LANGUAGES C CXX VERSION 0.4.0)
+
+# Macro to add external without compiler warnings.
+macro(add_external_subdirectory directory)
+    set(_EXTERNAL_OLD_C_FLAGS "${CMAKE_C_FLAGS}")
+    set(_EXTERNAL_OLD_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+
+    if (MSVC)
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W0")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W0")
+    else ()
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -w")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")
+    endif ()
+
+    add_subdirectory(${directory} ${ARGN})
+    set(CMAKE_C_FLAGS "${_EXTERNAL_OLD_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${_EXTERNAL_OLD_CXX_FLAGS}")
+endmacro()
 
 # -----------------------------------------------------------------------------
 # Setup Build Directory
@@ -68,7 +86,7 @@ message(STATUS "[Ballistic] Found Python3: ${Python3_EXECUTABLE}")
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     set(BUILD_SHARED_LIBS ON CACHE BOOL "Build the CMark library as shared" FORCE)
     set(CMARK_LIB_FUZZER OFF CACHE BOOL "Disable building CMark fuzzing harness" FORCE)
-    add_subdirectory(extern/cmark EXCLUDE_FROM_ALL)
+    add_external_subdirectory(extern/cmark EXCLUDE_FROM_ALL)
 endif ()
 
 set(SCRIPT_GENERATE_DECODER_TABLE ${CMAKE_SOURCE_DIR}/tools/generate_a64_table.py)
@@ -130,6 +148,12 @@ add_library(Ballistic STATIC
 target_include_directories(Ballistic PUBLIC include)
 target_include_directories(Ballistic PRIVATE src)
 target_compile_definitions(Ballistic PUBLIC BAL_MAX_LOG_LEVEL=4)
+
+if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    target_compile_options(Ballistic PUBLIC
+            /Zc:preprocessor /experimental:c11atomics)
+endif ()
+
 
 if (BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION)
     include(CheckIPOSupported)
@@ -218,13 +242,28 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     endif ()
 endif ()
 
+message(STATUS "[Ballistic] Setting up environment for GUI Dashboard...")
+message(STATUS "[Ballistic] Configuring GLFW...")
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+add_external_subdirectory(extern/glfw)
+
+message(STATUS "[Ballistic] Configuring C Bindings for ImGui...")
+set(IMPL_SDL OFF CACHE BOOL "" FORCE)
+set(IMPL_SDL3 OFF CACHE BOOL "" FORCE)
+add_external_subdirectory(extern/luajit-imgui)
+
+message(STATUS "[Ballistic] Configuring GUI Dashboard...")
+add_external_subdirectory(tools/dashboard)
+
 # -----------------------------------------------------------------------------
 # Compile Tests
 # -----------------------------------------------------------------------------
 if (BALLISTIC_BUILD_TESTS)
     message(STATUS "[Ballistic] Test suite ENABLED, configuring GoogleTest and LuaJIT...")
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-    add_subdirectory(extern/googletest-1.17.0)
+    add_external_subdirectory(extern/googletest-1.17.0)
     include(GoogleTest)
     enable_testing()
 
@@ -262,11 +301,11 @@ if (BALLISTIC_BUILD_TESTS)
         gtest_discover_tests(${target_name})
     endforeach ()
 
-    add_subdirectory(extern/luajit-2.1)
+    add_external_subdirectory(extern/LuaJIT-2.1)
 
     add_test(
             NAME doctest
-            COMMAND luajit ${CMAKE_SOURCE_DIR}/tools/doctest.lua
+            COMMAND $<TARGET_FILE:luajit_exe> ${CMAKE_SOURCE_DIR}/tools/doctest.lua
             ${CMAKE_CURRENT_SOURCE_DIR}/include/bal_assembler.h
             ${CMAKE_CURRENT_SOURCE_DIR}/include/bal_logging.h
             ${CMAKE_CURRENT_SOURCE_DIR}/include/backend/x86/bal_x86_sliding_window.h
@@ -297,7 +336,7 @@ if (BALLISTIC_BUILD_TESTS)
     set(DOCTEST_LTO "$<BOOL:${BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION}>")
 
     set_tests_properties(doctest PROPERTIES
-            ENVIRONMENT "LD_LIBRARY_PATH=${LUA_LD_PATH};DYLD_LIBRARY_PATH=${LUA_DYLD_LIBRARY_PATH};DOCTEST_CC=${DOCTEST_CC};DOCTEST_CFLAGS=${DOCTEST_CFLAGS};DOCTEST_LTO=${DOCTEST_LTO}"
+            ENVIRONMENT "LD_LIBRARY_PATH=${LUA_LD_PATH};DYLD_LIBRARY_PATH=${LUA_DYLD_LIBRARY_PATH};DOCTEST_CC=${DOCTEST_CC};DOCTEST_CFLAGS=${DOCTEST_CFLAGS};DOCTEST_LTO=${DOCTEST_LTO};DOCTEST_LIB_DIR=${BALLISTIC_LIBRARIES_DIRECTORY}"
     )
 else ()
     message(STATUS "[Ballistic] Test suite is DISABLED.")

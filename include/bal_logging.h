@@ -64,6 +64,16 @@ extern "C"
 {
 #endif /* __cplusplus */
 
+#if BAL_COMPILER_MSVC
+
+#define BAL_FILENAME __FILE__
+
+#else
+
+#define BAL_FILENAME __FILE_NAME__
+
+#endif // BAL_PLATFORM_MSVC
+
     /// Defines the severity of a log message.
     typedef enum
     {
@@ -167,36 +177,31 @@ extern "C"
     /// `logger` must NOT be `NULL`.
     BAL_COLD void bal_logger_init_default(bal_logger_t *logger);
 
-#define BAL_LOG_ERROR(logger, format, ...)       \
-    bal_log_message((logger),                    \
-                    BAL_LOG_LEVEL_ERROR,         \
-                    (const char *)__FILE_NAME__, \
-                    (const char *)__FUNCTION__,  \
-                    __LINE__,                    \
-                    format,                      \
+#define BAL_LOG_ERROR(logger, format, ...)      \
+    bal_log_message((logger),                   \
+                    BAL_LOG_LEVEL_ERROR,        \
+                    (const char *)BAL_FILENAME, \
+                    (const char *)__FUNCTION__, \
+                    __LINE__,                   \
+                    format,                     \
                     ##__VA_ARGS__)
 #define BAL_LOG_WARN(logger, format, ...) \
-    bal_log_message((logger),             \
-                    BAL_LOG_LEVEL_WARN,   \
-                    __FILE_NAME__,        \
-                    __FUNCTION__,         \
-                    __LINE__,             \
-                    format,               \
-                    ##__VA_ARGS__)
-#define BAL_LOG_INFO(logger, format, ...)        \
-    bal_log_message((logger),                    \
-                    BAL_LOG_LEVEL_INFO,          \
-                    (const char *)__FILE_NAME__, \
-                    (const char *)__FUNCTION__,  \
-                    __LINE__,                    \
-                    format,                      \
+    bal_log_message(                      \
+        (logger), BAL_LOG_LEVEL_WARN, BAL_FILENAME, __FUNCTION__, __LINE__, format, ##__VA_ARGS__)
+#define BAL_LOG_INFO(logger, format, ...)       \
+    bal_log_message((logger),                   \
+                    BAL_LOG_LEVEL_INFO,         \
+                    (const char *)BAL_FILENAME, \
+                    (const char *)__FUNCTION__, \
+                    __LINE__,                   \
+                    format,                     \
                     ##__VA_ARGS__)
 
 #ifndef NDEBUG
 #define BAL_LOG_DEBUG(logger, format, ...) \
     bal_log_message((logger),              \
                     BAL_LOG_LEVEL_DEBUG,   \
-                    __FILE_NAME__,         \
+                    BAL_FILENAME,          \
                     __FUNCTION__,          \
                     __LINE__,              \
                     format,                \
@@ -204,7 +209,7 @@ extern "C"
 #define BAL_LOG_TRACE(logger, format, ...) \
     bal_log_message((logger),              \
                     BAL_LOG_LEVEL_TRACE,   \
-                    __FILE_NAME__,         \
+                    BAL_FILENAME,          \
                     __FUNCTION__,          \
                     __LINE__,              \
                     format,                \

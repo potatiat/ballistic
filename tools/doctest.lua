@@ -25,6 +25,50 @@ local function file_exists (name)
     end
 end
 
+local function find_vcvarsall(compiler_path)
+    local path = compiler_path:gsub("/", "\\")
+    local vc_dir = path:match("(.-\\VC\\)")
+
+    if vc_dir then
+        local vcvarsall = vc_dir .. "Auxiliary\\Build\\vcvarsall.bat"
+
+        if file_exists(vcvarsall) then
+            return vcvarsall
+        end
+    end
+
+    local vsinstall = os.getenv("VSINSTALLDIR")
+
+    if vsinstall then
+        local vcvarsall = vsinstall .. "VC\\Auxiliary\\Build\\vcvarsall.bat"
+
+        if file_exists(vcvarsall) then
+            return vcvarsall
+        end
+    end
+
+    local vswhere = "C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\vswhere.exe"
+
+    if file_exists(vswhere) then
+        local handle = io.popen('"' .. vswhere .. '" -latest -property installationPath')
+
+        if handle then
+            local vs_path = handle:read("*a"):gsub("%s+", "")
+            handle:close()
+
+            if vs_path and vs_path ~= "" then
+                local vcvarsall = vs_path .. "\\VC\\Auxiliary\\Build\\vcvarsall.bat"
+
+                if file_exists(vcvarsall) then
+                    return vcvarsall
+                end
+            end
+        end
+    end
+
+    return nil
+end
+
 local function extract_code_blocks(filename)
     local file, error = io.open(filename, "r")
 
@@ -140,13 +184,33 @@ local function test_file(header_file)
         temp_file:write(source_file)
         temp_file:close()
 
-        local compile_command = string.format(
-                '"%s" %s %s -DBAL_MAX_LOG_LEVEL=4 -I"%s" -I"%s" "%s" %s -o "%s"',
-                compiler, compiler_flags, lto_flag, include_directory, source_directory, temp_file_name, library_link, temp_executable_name
-        )
+        local compile_command
 
-        if is_windows then
+        if is_msvc then
+            local environment_prefix = ""
+
+            if not os.getenv("INCLUDE") then
+                local vcvarsall = find_vcvarsall(compiler)
+
+                if vcvarsall then
+                    environment_prefix = string.format('call "%s" x64 >nul && ', vcvarsall)
+                else
+                    log_error("Could not find vcvarsall.bat. Please run from a Visual Studio Developer Command Prompt.")
+                end
+            end
+
+            compile_command = string.format(
+                    '%s"%s" /nologo %s %s -DBAL_MAX_LOG_LEVEL=4 -I"%s" -I"%s" "%s" /Fe"%s" /link %s',
+                    environment_prefix, compiler, compiler_flags, lto_flag, include_directory, source_directory, temp_file_name, temp_executable_name, library_link_flags
+            )
+
             compile_command = '"' .. compile_command .. '"'
+        else
+            compile_command = string.format(
+                    '"%s" %s %s -DBAL_MAX_LOG_LEVEL=4 -I"%s" -I"%s" "%s" %s -o "%s"',
+                    compiler, compiler_flags, lto_flag,
+                    include_directory, source_directory, temp_file_name, library_link_flags, temp_executable_name
+            )
         end
 
         log_info("Compiling: " .. compile_command)
@@ -212,16 +276,16 @@ end
 
 include_directory = project_root .. "/include"
 source_directory = project_root .. "/src"
-library_link = nil
 
-if is_windows and compiler == "cl.exe" then
-    library_link = "Ballistic.lib"
+compiler_flags = compiler_flags:gsub("\n", " ")
+library_directory = os.getenv("DOCTEST_LIB_DIR") or "."
+library_link_flags = ""
+is_msvc = is_windows and compiler:match("cl%.exe$")
+
+if is_msvc then
+    library_link_flags = string.format('/LIBPATH:"%s" Ballistic.lib', library_directory)
 else
-    library_link = "libBallistic.a"
-end
-
-if not file_exists(library_link) then
-    log_warn("Could not locate " .. library_link .. ". Hoping compiler finds it.")
+    library_link_flags = string.format('-L"%s" -lBallistic', library_directory)
 end
 
 local all_passed = true

@@ -5,13 +5,9 @@
 
 #ifndef NDEBUG
 
+// Strings MUST match the enum value order in bal_x86_macro_t.
 static const char *const BAL_X86_CONDITION_CODES[] = {
-    [BAL_X86_COND_O] = "o",   [BAL_X86_COND_NO] = "no", [BAL_X86_COND_B] = "b",
-    [BAL_X86_COND_AE] = "ae", [BAL_X86_COND_E] = "e",   [BAL_X86_COND_NE] = "ne",
-    [BAL_X86_COND_BE] = "be", [BAL_X86_COND_A] = "a",   [BAL_X86_COND_S] = "s",
-    [BAL_X86_COND_NS] = "ns", [BAL_X86_COND_P] = "p",   [BAL_X86_COND_NP] = "np",
-    [BAL_X86_COND_L] = "l",   [BAL_X86_COND_GE] = "ge", [BAL_X86_COND_LE] = "le",
-    [BAL_X86_COND_G] = "g",
+    "o", "no", "b", "ae", "e", "ne", "be", "a", "s", "ns", "p", "np", "l", "ge", "le", "g",
 };
 
 static inline const char *
