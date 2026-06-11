@@ -1,11 +1,19 @@
 #include "dashboard_file_dialog.h"
 
-#include <dirent.h>
 #include <imgui.h>
 #include <stdbool.h>
 #include <stdlib.h>
+
+#if BAL_PLATFORM_WINDOWS
+
+#include <windows.h>
+
+#else
+#include <dirent.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+#endif // BAL_PLATFORM_WINDOWS
 
 static int  compare_entries(const void *a, const void *b);
 static void fast_strcat(char *BAL_RESTRICT destination, const char *source);
@@ -32,7 +40,7 @@ extern "C"
 
 #if BAL_PLATFORM_WINDOWS
 
-        GetCurrentDirectoryA(FILE_ENTRY_PATH_SIZE, current_path);
+        GetCurrentDirectoryA(FILE_ENTRY_PATH_SIZE, dialog->current_path);
 
 #else
 
@@ -303,8 +311,79 @@ fast_strcpy(char *destination, const char *source)
 }
 
 void
-load_directory(bal_file_dialog_t *dialog)
+load_directory(bal_file_dialog_t *BAL_RESTRICT dialog)
 {
+    bal_file_entry_t *entries       = dialog->file_entries;
+    uint32_t          entries_count = dialog->file_entries_count;
+
+#if BAL_PLATFORM_WINDOWS
+
+    size_t path_length = 0;
+
+    if (path_length >= FILE_ENTRY_PATH_SIZE - 4)
+    {
+        return;
+    }
+
+    char                     search_path[FILE_ENTRY_PATH_SIZE] = { 0 };
+    const char *BAL_RESTRICT current_path                      = dialog->current_path;
+
+    while (current_path[path_length] != '\0')
+    {
+        search_path[path_length] = current_path[path_length];
+        ++path_length;
+    }
+
+    // Prevent double slashes before adding wildcard.
+
+    if (path_length > 0 && search_path[path_length - 1] != '\\'
+        && search_path[path_length - 1] != '/')
+    {
+        search_path[path_length++] = '\\';
+    }
+
+    search_path[path_length++] = '*';
+    search_path[path_length]   = '\0';
+
+    WIN32_FIND_DATAA fd;
+    HANDLE           hFind = FindFirstFileA(search_path, &fd);
+
+    if (hFind == INVALID_HANDLE_VALUE)
+    {
+        const uint32_t                 entries_count = dialog->file_entries_count;
+        bal_file_entry_t *BAL_RESTRICT entries       = dialog->file_entries;
+
+        do
+        {
+            if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+            {
+                if (fd.cFileName[0] == '.')
+                {
+                    if (fd.cFileName[1] == '\0')
+                    {
+                        continue;
+                    }
+
+                    if (fd.cFileName[1] == '.' && fd.cFileName[2] == '\0')
+                    {
+                        continue;
+                    }
+                }
+
+                if (entries_count < dialog->file_entries_capacity)
+                {
+                    bal_file_entry_t *entry = &entries[dialog->file_entries_count];
+                    fast_strcpy(entry->name, fd.cFileName);
+                    entry->is_directory = true;
+                }
+            }
+        } while (FindNextFileA(hFind, &fd));
+
+        FindClose(hFind);
+    }
+
+#else
+
     // TODO: Add Windows support.
     dialog->file_entries_count = 0;
     if (dialog->file_entries_count < dialog->file_entries_capacity)
@@ -325,10 +404,7 @@ load_directory(bal_file_dialog_t *dialog)
     }
 
     struct dirent *BAL_RESTRICT dirent;
-    const char *BAL_RESTRICT    current_path     = dialog->current_path;
-    bal_file_entry_t           *entries          = dialog->file_entries;
-    const uint32_t              entries_capacity = dialog->file_entries_capacity;
-    uint32_t                    entries_count    = dialog->file_entries_count;
+    const char *BAL_RESTRICT    current_path = dialog->current_path;
 
     while ((dirent = readdir(directory)) != NULL)
     {
@@ -398,7 +474,7 @@ load_directory(bal_file_dialog_t *dialog)
 
         if (true == is_directory)
         {
-            if (entries_count < entries_capacity)
+            if (entries_count < dialog->file_entries_capacity)
             {
                 bal_file_entry_t *BAL_RESTRICT entry = &entries[entries_count++];
                 fast_strcpy(entry->name, dirent->d_name);
@@ -408,9 +484,11 @@ load_directory(bal_file_dialog_t *dialog)
     }
 
     closedir(directory);
+
+#endif // BAL_PLATFORM_WINDOWS
+
     qsort(entries, entries_count, sizeof(bal_file_entry_t), compare_entries);
-    dialog->file_entries_count    = entries_count;
-    dialog->file_entries_capacity = entries_capacity;
+    dialog->file_entries_count = entries_count;
 }
 
 static void
@@ -516,7 +594,7 @@ path_append(char *path, const char *name)
     {
         path[current_length++] = '\\';
     }
-    else if (current_length > &&current_length < FILE_ENTRY_PATH_SIZE - 1)
+    else if (current_length > 0 && current_length < FILE_ENTRY_PATH_SIZE - 1)
     {
         path[current_length++] = '\\';
     }

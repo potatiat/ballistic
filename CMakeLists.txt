@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.17)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF) # Strict ISO C
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -130,6 +130,12 @@ add_library(Ballistic STATIC
 target_include_directories(Ballistic PUBLIC include)
 target_include_directories(Ballistic PRIVATE src)
 target_compile_definitions(Ballistic PUBLIC BAL_MAX_LOG_LEVEL=4)
+
+if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    target_compile_options(Ballistic PUBLIC
+            /Zc:preprocessor /experimental:c11atomics)
+endif ()
+
 
 if (BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION)
     include(CheckIPOSupported)

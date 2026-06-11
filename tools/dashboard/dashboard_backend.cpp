@@ -10,6 +10,13 @@
 
 #else
 
+// Windows needs to include windows.h before gl.h.
+#if BAL_PLATFORM_WINDOWS
+
+#include <windows.h>
+
+#endif // BAL_PLATFORM_WINDOWS
+
 #include <GL/gl.h>
 
 #endif // BAL_PLATFORM_APPLE

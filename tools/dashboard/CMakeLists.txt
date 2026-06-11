@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.25)
 project(BallisticDashboard LANGUAGES C CXX VERSION 0.1.0)
-set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF) # Strict ISO C
 set(CMAKE_CXX_STANDARD 17)
@@ -37,6 +37,9 @@ target_link_libraries(${PROJECT_NAME} PRIVATE Ballistic glfw cimgui_glfw luajit_
 
 set_target_properties(${PROJECT_NAME} PROPERTIES ENABLE_EXPORTS TRUE)
 
-if (NOT MSVC)
+if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    target_link_libraries(${PROJECT_NAME} PRIVATE kernel32)
+    target_compile_options(${PROJECT_NAME} PRIVATE -DNOMINMAX -DWIN32_LEAN_AND_MEAN)
+else ()
     target_link_libraries(${PROJECT_NAME} PRIVATE m dl)
 endif ()

@@ -36,9 +36,6 @@ if (LUAJIT_LIB_FILES)
     list(GET LUAJIT_LIB_FILES 0 LUAJIT_IMPLIB)
 endif ()
 
-add_executable(luajit IMPORTED GLOBAL)
-set_target_properties(luajit PROPERTIES IMPORTED_LOCATION "${LUAJIT_EXECUTABLE}")
-
 if (LUAJIT_DLL)
     add_library(luajit_lib SHARED IMPORTED GLOBAL)
     set_target_properties(luajit_lib PROPERTIES
@@ -47,6 +44,10 @@ if (LUAJIT_DLL)
             INTERFACE_INCLUDE_DIRECTORIES "${LUAJIT_HEADERS_DIRECTORY}")
     message(STATUS "[LuaJIT-Windows] Exported library target 'luajit_lib' linked to ${LUAJIT_DLL}.")
 endif ()
+
+add_executable(luajit IMPORTED GLOBAL)
+set_target_properties(luajit PROPERTIES IMPORTED_LOCATION "${LUAJIT_EXECUTABLE}")
+target_link_libraries(luajit INTERFACE luajit_lib)
 
 message(STATUS "==================================================================")
 message(STATUS "[LuaJIT-Windows] Pre-compiled targets successfully configured.")

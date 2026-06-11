@@ -4,20 +4,21 @@
 
 #ifndef NDEBUG
 
+// Strings MUST match the enum value order in bal_x86_macro_t.
 static const char *const BAL_X86_MACRO_NAMES[] = {
-    [BAL_X86_MACRO_NOP]                    = "NOP",
-    [BAL_X86_MACRO_ADD_CPU_ICOUNT]         = "ADD_CPU_ICOUNT",
-    [BAL_X86_MACRO_AND_REGISTER_IMMEDIATE] = "AND_REGISTER_IMMEDIATE",
-    [BAL_X86_MACRO_JCC_RELATIVE]           = "JCC_RELATIVE",
-    [BAL_X86_MACRO_JMP_REGISTER]           = "JMP_REGISTER",
-    [BAL_X86_MACRO_JMP_RELATIVE]           = "JMP_RELATIVE",
-    [BAL_X86_MACRO_OR_REGISTER_IMMEDIATE]  = "OR_REGISTER_IMMEDIATE",
-    [BAL_X86_MACRO_MOV_REGISTER_IMMEDIATE] = "MOV_REGISTER_IMMEDIATE",
-    [BAL_X86_MACRO_MOV_REGISTER_REGISTER]  = "MOV_REGISTER_REGISTER",
-    [BAL_X86_MACRO_LOAD]                   = "LOAD",
-    [BAL_X86_MACRO_STORE]                  = "STORE",
-    [BAL_X86_MACRO_RET]                    = "RET",
-    [BAL_X86_MACRO_SETCC]                  = "SETCC",
+    "NOP",
+    "ADD_CPU_ICOUNT",
+    "AND_REGISTER_IMMEDIATE",
+    "JCC_RELATIVE",
+    "JMP_REGISTER",
+    "JMP_RELATIVE",
+    "OR_REGISTER_IMMEDIATE",
+    "MOV_REGISTER_IMMEDIATE",
+    "MOV_REGISTER_REGISTER",
+    "LOAD",
+    "STORE",
+    "RET",
+    "SETCC",
 };
 
 static inline const char *
