@@ -40,19 +40,18 @@ else ()
     endif ()
 
     set(LUAJIT_BUILD_COMMAND "${MAKE_EXECUTABLE}" "-C" "${CMAKE_CURRENT_SOURCE_DIR}" "-j")
-    set(SRC_LIB "${CMAKE_CURRENT_SOURCE_DIR}/src/libluajit.a")
-    set(TARGET_LIB "${BALLISTIC_LIBRARIES_DIRECTORY}/luajit.lib")
-
+   
     if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
         set(LUAJIT_BUILD_COMMAND "MACOSX_DEPLOYMENT_TARGET=11.0" ${LUAJIT_BUILD_COMMAND})
-        set(SRC_DLL " ${CMAKE_CURRENT_SOURCE_DIR}/src/libluajit.dylib")
-        set(TARGET_DLL "${BALLISTIC_LIBRARIES_DIRECTORY}/libluajit.dylib")
-    else ()
-        set(SRC_DLL "${CMAKE_CURRENT_SOURCE_DIR}/src/libluajit.so")
-        set(TARGET_DLL "${BALLISTIC_LIBRARIES_DIRECTORY}/libluajit.so")
     endif ()
 
     message(STATUS "[LuaJIT-Linux] Build command: ${LUAJIT_BUILD_COMMAND}")
+
+    set(SRC_LIB "${CMAKE_CURRENT_SOURCE_DIR}/src/libluajit.a")
+    set(TARGET_LIB "${BALLISTIC_LIBRARIES_DIRECTORY}/luajit.lib")
+    set(SRC_DLL "${CMAKE_CURRENT_SOURCE_DIR}/src/libluajit.so")
+    set(TARGET_DLL "${BALLISTIC_LIBRARIES_DIRECTORY}/libluajit.so")
+
     set(SRC_EXE "${CMAKE_CURRENT_SOURCE_DIR}/src/luajit")
     set(TARGET_EXE "${BALLISTIC_BINARIES_DIRECTORY}/luajit")
 endif ()
