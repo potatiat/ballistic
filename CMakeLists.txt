@@ -234,7 +234,7 @@ add_subdirectory(extern/glfw)
 message(STATUS "[Ballistic] Configuring C Bindings for ImGui...")
 set(IMPL_SDL OFF CACHE BOOL "" FORCE)
 set(IMPL_SDL3 OFF CACHE BOOL "" FORCE)
-add_subdirectory(extern/LuaJIT-ImGui)
+add_subdirectory(extern/luajit-imgui)
 
 message(STATUS "[Ballistic] Configuring GUI Dashboard...")
 add_subdirectory(tools/dashboard)
@@ -283,7 +283,7 @@ if (BALLISTIC_BUILD_TESTS)
         gtest_discover_tests(${target_name})
     endforeach ()
 
-    add_subdirectory(extern/luajit-2.1)
+    add_subdirectory(extern/LuaJIT-2.1)
 
     add_test(
             NAME doctest

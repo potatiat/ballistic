@@ -33,7 +33,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 )
 
 # TODO: find_package(OpenGL) for macOS.
-target_link_libraries(${PROJECT_NAME} PRIVATE Ballistic glfw cimgui_glfw luajit_lib)
+target_link_libraries(${PROJECT_NAME} PRIVATE Ballistic glfw cimgui_glfw LuaJIT)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES ENABLE_EXPORTS TRUE)
 
