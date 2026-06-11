@@ -287,7 +287,7 @@ if (BALLISTIC_BUILD_TESTS)
 
     add_test(
             NAME doctest
-            COMMAND luajit ${CMAKE_SOURCE_DIR}/tools/doctest.lua
+            COMMAND $<TARGET_FILE:LuaJIT> ${CMAKE_SOURCE_DIR}/tools/doctest.lua
             ${CMAKE_CURRENT_SOURCE_DIR}/include/bal_assembler.h
             ${CMAKE_CURRENT_SOURCE_DIR}/include/bal_logging.h
             ${CMAKE_CURRENT_SOURCE_DIR}/include/backend/x86/bal_x86_sliding_window.h
