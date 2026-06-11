@@ -72,8 +72,8 @@ jobs:
             deps_cmd: sudo apt-get update && sudo apt-get install -y ninja-build ccache clang-18 libclang-18-dev pkg-config libwayland-dev libxkbcommon-dev xorg-dev
 
           - os: windows-latest
-            cc: gcc
-            cxx: g++
+            cc: cl.exe
+            cxx: cl.exe
             flags_debug: ""
             deps_cmd: choco install ccache
 
