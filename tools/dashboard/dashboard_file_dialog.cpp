@@ -313,8 +313,10 @@ fast_strcpy(char *destination, const char *source)
 void
 load_directory(bal_file_dialog_t *BAL_RESTRICT dialog)
 {
-    bal_file_entry_t *entries       = dialog->file_entries;
-    uint32_t          entries_count = dialog->file_entries_count;
+    bal_file_entry_t        *entries       = dialog->file_entries;
+    uint32_t                 entries_count = dialog->file_entries_count;
+    const char *BAL_RESTRICT current_path  = dialog->current_path;
+    entries_count                          = 0;
 
 #if BAL_PLATFORM_WINDOWS
 
@@ -325,8 +327,7 @@ load_directory(bal_file_dialog_t *BAL_RESTRICT dialog)
         return;
     }
 
-    char                     search_path[FILE_ENTRY_PATH_SIZE] = { 0 };
-    const char *BAL_RESTRICT current_path                      = dialog->current_path;
+    char search_path[FILE_ENTRY_PATH_SIZE] = { 0 };
 
     while (current_path[path_length] != '\0')
     {
@@ -383,19 +384,7 @@ load_directory(bal_file_dialog_t *BAL_RESTRICT dialog)
     }
 
 #else
-
-    // TODO: Add Windows support.
-    dialog->file_entries_count = 0;
-    if (dialog->file_entries_count < dialog->file_entries_capacity)
-    {
-        bal_file_entry_t *entry = &dialog->file_entries[dialog->file_entries_count++];
-        entry->name[0]          = '.';
-        entry->name[1]          = '.';
-        entry->name[2]          = '\0';
-        entry->is_directory     = true;
-    }
-
-    DIR *directory = opendir(dialog->current_path);
+    DIR *directory = opendir(current_path);
 
     if (directory == NULL)
     {
@@ -404,7 +393,6 @@ load_directory(bal_file_dialog_t *BAL_RESTRICT dialog)
     }
 
     struct dirent *BAL_RESTRICT dirent;
-    const char *BAL_RESTRICT    current_path = dialog->current_path;
 
     while ((dirent = readdir(directory)) != NULL)
     {
