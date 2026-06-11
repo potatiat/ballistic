@@ -12,40 +12,34 @@ local LUA_VERSION = "5.1.5"
 local LUA_SOURCE
 
 local function usage()
-    io.stderr:write("Usage: ", arg and arg[0] or "genminilua",
-            " lua-", LUA_VERSION, "-source-dir\n")
-    os.exit(1)
+  io.stderr:write("Usage: ", arg and arg[0] or "genminilua",
+		  " lua-", LUA_VERSION, "-source-dir\n")
+  os.exit(1)
 end
 
 local function find_sources()
-    LUA_SOURCE = arg and arg[1]
-    if not LUA_SOURCE then
-        usage()
-    end
-    if sub(LUA_SOURCE, -1) ~= "/" then
-        LUA_SOURCE = LUA_SOURCE .. "/"
-    end
-    local fp = io.open(LUA_SOURCE .. "lua.h")
-    if not fp then
-        LUA_SOURCE = LUA_SOURCE .. "src/"
-        fp = io.open(LUA_SOURCE .. "lua.h")
-        if not fp then
-            usage()
-        end
-    end
-    local all = fp:read("*a")
-    fp:close()
-    if not match(all, 'LUA_RELEASE%s*"Lua ' .. LUA_VERSION .. '"') then
-        io.stderr:write("Error: version mismatch\n")
-        usage()
-    end
+  LUA_SOURCE = arg and arg[1]
+  if not LUA_SOURCE then usage() end
+  if sub(LUA_SOURCE, -1) ~= "/" then LUA_SOURCE = LUA_SOURCE.."/" end
+  local fp = io.open(LUA_SOURCE .. "lua.h")
+  if not fp then
+    LUA_SOURCE = LUA_SOURCE.."src/"
+    fp = io.open(LUA_SOURCE .. "lua.h")
+    if not fp then usage() end
+  end
+  local all = fp:read("*a")
+  fp:close()
+  if not match(all, 'LUA_RELEASE%s*"Lua '..LUA_VERSION..'"') then
+    io.stderr:write("Error: version mismatch\n")
+    usage()
+  end
 end
 
 local LUA_FILES = {
-    "lmem.c", "lobject.c", "ltm.c", "lfunc.c", "ldo.c", "lstring.c", "ltable.c",
-    "lgc.c", "lstate.c", "ldebug.c", "lzio.c", "lopcodes.c",
-    "llex.c", "lcode.c", "lparser.c", "lvm.c", "lapi.c", "lauxlib.c",
-    "lbaselib.c", "ltablib.c", "liolib.c", "loslib.c", "lstrlib.c", "linit.c",
+"lmem.c", "lobject.c", "ltm.c", "lfunc.c", "ldo.c", "lstring.c", "ltable.c",
+"lgc.c", "lstate.c", "ldebug.c", "lzio.c", "lopcodes.c",
+"llex.c", "lcode.c", "lparser.c", "lvm.c", "lapi.c", "lauxlib.c",
+"lbaselib.c", "ltablib.c", "liolib.c", "loslib.c", "lstrlib.c", "linit.c",
 }
 
 local REMOVE_LIB = {}
@@ -58,7 +52,7 @@ clock date difftime execute getenv rename setlocale time tmpname
 dump gfind len reverse
 LUA_LOADLIBNAME LUA_MATHLIBNAME LUA_DBLIBNAME
 ]], "%S+", function(name)
-    REMOVE_LIB[name] = true
+  REMOVE_LIB[name] = true
 end)
 
 local REMOVE_EXTINC = { ["<assert.h>"] = true, ["<locale.h>"] = true, }
@@ -146,299 +140,279 @@ int main(int argc, char **argv){
 ]]
 
 local function read_sources()
-    local t = {}
-    for i, name in ipairs(LUA_FILES) do
-        local fp = assert(io.open(LUA_SOURCE .. name, "r"))
-        t[i] = fp:read("*a")
-        assert(fp:close())
-    end
-    t[#t + 1] = CUSTOM_MAIN
-    return table.concat(t)
+  local t = {}
+  for i, name in ipairs(LUA_FILES) do
+    local fp = assert(io.open(LUA_SOURCE..name, "r"))
+    t[i] = fp:read("*a")
+    assert(fp:close())
+  end
+  t[#t+1] = CUSTOM_MAIN
+  return table.concat(t)
 end
 
 local includes = {}
 
 local function merge_includes(src)
-    return gsub(src, '#include%s*"([^"]*)"%s*\n', function(name)
-        if includes[name] then
-            return ""
-        end
-        includes[name] = true
-        local fp = assert(io.open(LUA_SOURCE .. name, "r"))
-        local inc = fp:read("*a")
-        assert(fp:close())
-        inc = gsub(inc, "#ifndef%s+%w+_h\n#define%s+%w+_h\n", "")
-        inc = gsub(inc, "#endif%s*$", "")
-        return merge_includes(inc)
-    end)
+  return gsub(src, '#include%s*"([^"]*)"%s*\n', function(name)
+    if includes[name] then return "" end
+    includes[name] = true
+    local fp = assert(io.open(LUA_SOURCE..name, "r"))
+    local inc = fp:read("*a")
+    assert(fp:close())
+    inc = gsub(inc, "#ifndef%s+%w+_h\n#define%s+%w+_h\n", "")
+    inc = gsub(inc, "#endif%s*$", "")
+    return merge_includes(inc)
+  end)
 end
 
 local function get_license(src)
-    return match(src, "/%*+\n%* Copyright %(.-%*/\n")
+  return match(src, "/%*+\n%* Copyright %(.-%*/\n")
 end
 
 local function fold_lines(src)
-    return gsub(src, "\\\n", " ")
+  return gsub(src, "\\\n", " ")
 end
 
 local strings = {}
 
 local function save_str(str)
-    local n = #strings + 1
-    strings[n] = str
-    return "\1" .. n .. "\2"
+  local n = #strings+1
+  strings[n] = str
+  return "\1"..n.."\2"
 end
 
 local function save_strings(src)
-    src = gsub(src, '"[^"\n]*"', save_str)
-    return gsub(src, "'[^'\n]*'", save_str)
+  src = gsub(src, '"[^"\n]*"', save_str)
+  return gsub(src, "'[^'\n]*'", save_str)
 end
 
 local function restore_strings(src)
-    return gsub(src, "\1(%d+)\2", function(numstr)
-        return strings[tonumber(numstr)]
-    end)
+  return gsub(src, "\1(%d+)\2", function(numstr)
+    return strings[tonumber(numstr)]
+  end)
 end
 
 local function def_istrue(def)
-    return def == "INT_MAX > 2147483640L" or
-            def == "LUAI_BITSINT >= 32" or
-            def == "SIZE_Bx < LUAI_BITSINT-1" or
-            def == "cast" or
-            def == "defined(LUA_CORE)" or
-            def == "MINSTRTABSIZE" or
-            def == "LUA_MINBUFFER" or
-            def == "HARDSTACKTESTS" or
-            def == "UNUSED"
+  return def == "INT_MAX > 2147483640L" or
+	 def == "LUAI_BITSINT >= 32" or
+	 def == "SIZE_Bx < LUAI_BITSINT-1" or
+	 def == "cast" or
+	 def == "defined(LUA_CORE)" or
+	 def == "MINSTRTABSIZE" or
+	 def == "LUA_MINBUFFER" or
+	 def == "HARDSTACKTESTS" or
+	 def == "UNUSED"
 end
 
-local head, defs = { [[
+local head, defs = {[[
 #ifdef _MSC_VER
 typedef unsigned __int64 U64;
 #else
 typedef unsigned long long U64;
 #endif
 int _CRT_glob = 0;
-]] }, {}
+]]}, {}
 
 local function preprocess(src)
-    local t = { match(src, "^(.-)#") }
-    local lvl, on, oldon = 0, true, {}
-    for pp, def, txt in string.gmatch(src, "#(%w+) *([^\n]*)\n([^#]*)") do
-        if pp == "if" or pp == "ifdef" or pp == "ifndef" then
-            lvl = lvl + 1
-            oldon[lvl] = on
-            on = def_istrue(def)
-        elseif pp == "else" then
-            if oldon[lvl] then
-                if on == false then
-                    on = true
-                else
-                    on = false
-                end
-            end
-        elseif pp == "elif" then
-            if oldon[lvl] then
-                on = def_istrue(def)
-            end
-        elseif pp == "endif" then
-            on = oldon[lvl]
-            lvl = lvl - 1
-        elseif on then
-            if pp == "include" then
-                if not head[def] and not REMOVE_EXTINC[def] then
-                    head[def] = true
-                    head[#head + 1] = "#include " .. def .. "\n"
-                end
-            elseif pp == "define" then
-                local k, sp, v = match(def, "([%w_]+)(%s*)(.*)")
-                if k and not (sp == "" and sub(v, 1, 1) == "(") then
-                    defs[k] = gsub(v, "%a[%w_]*", function(tok)
-                        return defs[tok] or tok
-                    end)
-                else
-                    t[#t + 1] = "#define " .. def .. "\n"
-                end
-            elseif pp ~= "undef" then
-                error("unexpected directive: " .. pp .. " " .. def)
-            end
-        end
-        if on then
-            t[#t + 1] = txt
-        end
+  local t = { match(src, "^(.-)#") }
+  local lvl, on, oldon = 0, true, {}
+  for pp, def, txt in string.gmatch(src, "#(%w+) *([^\n]*)\n([^#]*)") do
+    if pp == "if" or pp == "ifdef" or pp == "ifndef" then
+      lvl = lvl + 1
+      oldon[lvl] = on
+      on = def_istrue(def)
+    elseif pp == "else" then
+      if oldon[lvl] then
+	if on == false then on = true else on = false end
+      end
+    elseif pp == "elif" then
+      if oldon[lvl] then
+	on = def_istrue(def)
+      end
+    elseif pp == "endif" then
+      on = oldon[lvl]
+      lvl = lvl - 1
+    elseif on then
+      if pp == "include" then
+	if not head[def] and not REMOVE_EXTINC[def] then
+	  head[def] = true
+	  head[#head+1] = "#include "..def.."\n"
+	end
+      elseif pp == "define" then
+	local k, sp, v = match(def, "([%w_]+)(%s*)(.*)")
+	if k and not (sp == "" and sub(v, 1, 1) == "(") then
+	  defs[k] = gsub(v, "%a[%w_]*", function(tok)
+	    return defs[tok] or tok
+	  end)
+	else
+	  t[#t+1] = "#define "..def.."\n"
+	end
+      elseif pp ~= "undef" then
+	error("unexpected directive: "..pp.." "..def)
+      end
     end
-    return gsub(table.concat(t), "%a[%w_]*", function(tok)
-        return defs[tok] or tok
-    end)
+    if on then t[#t+1] = txt end
+  end
+  return gsub(table.concat(t), "%a[%w_]*", function(tok)
+    return defs[tok] or tok
+  end)
 end
 
 local function merge_header(src, license)
-    local hdr = string.format([[
+  local hdr = string.format([[
 /* This is a heavily customized and minimized copy of Lua %s. */
 /* It's only used to build LuaJIT. It does NOT have all standard functions! */
 ]], LUA_VERSION)
-    return hdr .. license .. table.concat(head) .. src
+  return hdr..license..table.concat(head)..src
 end
 
 local function strip_unused1(src)
-    return gsub(src, '(  {"?([%w_]+)"?,%s+%a[%w_]*},\n)', function(line, func)
-        return REMOVE_LIB[func] and "" or line
-    end)
+  return gsub(src, '(  {"?([%w_]+)"?,%s+%a[%w_]*},\n)', function(line, func)
+    return REMOVE_LIB[func] and "" or line
+  end)
 end
 
 local function strip_unused2(src)
-    return gsub(src, "Symbolic Execution.-}=", "")
+  return gsub(src, "Symbolic Execution.-}=", "")
 end
 
 local function strip_unused3(src)
-    src = gsub(src, "extern", "static")
-    src = gsub(src, "\nstatic([^\n]-)%(([^)]*)%)%(", "\nstatic%1 %2(")
-    src = gsub(src, "#define lua_assert[^\n]*\n", "")
-    src = gsub(src, "lua_assert%b();?", "")
-    src = gsub(src, "default:\n}", "default:;\n}")
-    src = gsub(src, "lua_lock%b();", "")
-    src = gsub(src, "lua_unlock%b();", "")
-    src = gsub(src, "luai_threadyield%b();", "")
-    src = gsub(src, "luai_userstateopen%b();", "{}")
-    src = gsub(src, "luai_userstate%w+%b();", "")
-    src = gsub(src, "%(%(c==.*luaY_parser%)", "luaY_parser")
-    src = gsub(src, "trydecpoint%(ls,seminfo%)",
-            "luaX_lexerror(ls,\"malformed number\",TK_NUMBER)")
-    src = gsub(src, "int c=luaZ_lookahead%b();", "")
-    src = gsub(src, "luaL_register%(L,[^,]*,co_funcs%);\nreturn 2;",
-            "return 1;")
-    src = gsub(src, "getfuncname%b():", "NULL:")
-    src = gsub(src, "getobjname%b():", "NULL:")
-    src = gsub(src, "if%([^\n]*hookmask[^\n]*%)\n[^\n]*\n", "")
-    src = gsub(src, "if%([^\n]*hookmask[^\n]*%)%b{}\n", "")
-    src = gsub(src, "if%([^\n]*hookmask[^\n]*&&\n[^\n]*%b{}\n", "")
-    src = gsub(src, "(twoto%b()%()", "%1(size_t)")
-    src = gsub(src, "i<sizenode", "i<(int)sizenode")
-    src = gsub(src, "cast%(unsigned int,key%-1%)", "cast(unsigned int,key)-1")
-    return gsub(src, "\n\n+", "\n")
+  src = gsub(src, "extern", "static")
+  src = gsub(src, "\nstatic([^\n]-)%(([^)]*)%)%(", "\nstatic%1 %2(")
+  src = gsub(src, "#define lua_assert[^\n]*\n", "")
+  src = gsub(src, "lua_assert%b();?", "")
+  src = gsub(src, "default:\n}", "default:;\n}")
+  src = gsub(src, "lua_lock%b();", "")
+  src = gsub(src, "lua_unlock%b();", "")
+  src = gsub(src, "luai_threadyield%b();", "")
+  src = gsub(src, "luai_userstateopen%b();", "{}")
+  src = gsub(src, "luai_userstate%w+%b();", "")
+  src = gsub(src, "%(%(c==.*luaY_parser%)", "luaY_parser")
+  src = gsub(src, "trydecpoint%(ls,seminfo%)",
+		  "luaX_lexerror(ls,\"malformed number\",TK_NUMBER)")
+  src = gsub(src, "int c=luaZ_lookahead%b();", "")
+  src = gsub(src, "luaL_register%(L,[^,]*,co_funcs%);\nreturn 2;",
+		  "return 1;")
+  src = gsub(src, "getfuncname%b():", "NULL:")
+  src = gsub(src, "getobjname%b():", "NULL:")
+  src = gsub(src, "if%([^\n]*hookmask[^\n]*%)\n[^\n]*\n", "")
+  src = gsub(src, "if%([^\n]*hookmask[^\n]*%)%b{}\n", "")
+  src = gsub(src, "if%([^\n]*hookmask[^\n]*&&\n[^\n]*%b{}\n", "")
+  src = gsub(src, "(twoto%b()%()", "%1(size_t)")
+  src = gsub(src, "i<sizenode", "i<(int)sizenode")
+  src = gsub(src, "cast%(unsigned int,key%-1%)", "cast(unsigned int,key)-1")
+  return gsub(src, "\n\n+", "\n")
 end
 
 local function strip_comments(src)
-    return gsub(src, "/%*.-%*/", " ")
+  return gsub(src, "/%*.-%*/", " ")
 end
 
 local function strip_whitespace(src)
-    src = gsub(src, "^%s+", "")
-    src = gsub(src, "%s*\n%s*", "\n")
-    src = gsub(src, "[ \t]+", " ")
-    src = gsub(src, "(%W) ", "%1")
-    return gsub(src, " (%W)", "%1")
+  src = gsub(src, "^%s+", "")
+  src = gsub(src, "%s*\n%s*", "\n")
+  src = gsub(src, "[ \t]+", " ")
+  src = gsub(src, "(%W) ", "%1")
+  return gsub(src, " (%W)", "%1")
 end
 
 local function rename_tokens1(src)
-    src = gsub(src, "getline", "getline_")
-    src = gsub(src, "struct ([%w_]+)", "ZX%1")
-    return gsub(src, "union ([%w_]+)", "ZY%1")
+  src = gsub(src, "getline", "getline_")
+  src = gsub(src, "struct ([%w_]+)", "ZX%1")
+  return gsub(src, "union ([%w_]+)", "ZY%1")
 end
 
 local function rename_tokens2(src)
-    src = gsub(src, "ZX([%w_]+)", "struct %1")
-    return gsub(src, "ZY([%w_]+)", "union %1")
+  src = gsub(src, "ZX([%w_]+)", "struct %1")
+  return gsub(src, "ZY([%w_]+)", "union %1")
 end
 
 local function fix_bugs_and_warnings(src)
-    src = gsub(src, "(luaD_checkstack%(L,p%->maxstacksize)%)", "%1+p->numparams)")
-    src = gsub(src, "if%(sep==%-1%)(return'%[';)\nelse (luaX_lexerror%b();)", "if (sep!=-1)%2\n%1")
-    return gsub(src, "(default:{\nNode%*n=mainposition)", "/*fallthrough*/\n%1")
+ src = gsub(src, "(luaD_checkstack%(L,p%->maxstacksize)%)", "%1+p->numparams)")
+ src = gsub(src, "if%(sep==%-1%)(return'%[';)\nelse (luaX_lexerror%b();)", "if (sep!=-1)%2\n%1")
+ return gsub(src, "(default:{\nNode%*n=mainposition)", "/*fallthrough*/\n%1")
 end
 
 local function func_gather(src)
-    local nodes, list = {}, {}
-    local pos, len = 1, #src
-    while pos < len do
-        local d, w = match(src, "^(#define ([%w_]+)[^\n]*\n)", pos)
-        if d then
-            local n = #list + 1
-            list[n] = d
-            nodes[w] = n
-        else
-            local s
-            d, w, s = match(src, "^(([%w_]+)[^\n]*([{;])\n)", pos)
-            if not d then
-                d, w, s = match(src, "^(([%w_]+)[^(]*%b()([{;])\n)", pos)
-                if not d then
-                    d = match(src, "^[^\n]*\n", pos)
-                end
-            end
-            if s == "{" then
-                d = d .. sub(match(src, "^%b{}[^;\n]*;?\n", pos + #d - 2), 3)
-                if sub(d, -2) == "{\n" then
-                    d = d .. sub(match(src, "^%b{}[^;\n]*;?\n", pos + #d - 2), 3)
-                end
-            end
-            local k, v = nil, d
-            if w == "typedef" then
-                if match(d, "^typedef enum") then
-                    head[#head + 1] = d
-                else
-                    k = match(d, "([%w_]+);\n$")
-                    if not k then
-                        k = match(d, "^.-%(.-([%w_]+)%)%(")
-                    end
-                end
-            elseif w == "enum" then
-                head[#head + 1] = v
-            elseif w ~= nil then
-                k = match(d, "^[^\n]-([%w_]+)[(%[=]")
-                if k then
-                    if w ~= "static" and k ~= "main" then
-                        v = "static " .. d
-                    end
-                else
-                    k = w
-                end
-            end
-            if w and k then
-                local o = nodes[k]
-                if o then
-                    nodes["*" .. k] = o
-                end
-                local n = #list + 1
-                list[n] = v
-                nodes[k] = n
-            end
-        end
-        pos = pos + #d
+  local nodes, list = {}, {}
+  local pos, len = 1, #src
+  while pos < len do
+    local d, w = match(src, "^(#define ([%w_]+)[^\n]*\n)", pos)
+    if d then
+      local n = #list+1
+      list[n] = d
+      nodes[w] = n
+    else
+      local s
+      d, w, s = match(src, "^(([%w_]+)[^\n]*([{;])\n)", pos)
+      if not d then
+	d, w, s = match(src, "^(([%w_]+)[^(]*%b()([{;])\n)", pos)
+	if not d then d = match(src, "^[^\n]*\n", pos) end
+      end
+      if s == "{" then
+	d = d..sub(match(src, "^%b{}[^;\n]*;?\n", pos+#d-2), 3)
+	if sub(d, -2) == "{\n" then
+	  d = d..sub(match(src, "^%b{}[^;\n]*;?\n", pos+#d-2), 3)
+	end
+      end
+      local k, v = nil, d
+      if w == "typedef" then
+	if match(d, "^typedef enum") then
+	  head[#head+1] = d
+	else
+	  k = match(d, "([%w_]+);\n$")
+	  if not k then k = match(d, "^.-%(.-([%w_]+)%)%(") end
+	end
+      elseif w == "enum" then
+	head[#head+1] = v
+      elseif w ~= nil then
+	k = match(d, "^[^\n]-([%w_]+)[(%[=]")
+	if k then
+	  if w ~= "static" and k ~= "main" then v = "static "..d end
+	else
+	  k = w
+	end
+      end
+      if w and k then
+	local o = nodes[k]
+	if o then nodes["*"..k] = o end
+	local n = #list+1
+	list[n] = v
+	nodes[k] = n
+      end
     end
-    return nodes, list
+    pos = pos + #d
+  end
+  return nodes, list
 end
 
 local function func_visit(nodes, list, used, n)
-    local i = nodes[n]
-    for m in string.gmatch(list[i], "[%w_]+") do
-        if nodes[m] then
-            local j = used[m]
-            if not j then
-                used[m] = i
-                func_visit(nodes, list, used, m)
-            elseif i < j then
-                used[m] = i
-            end
-        end
+  local i = nodes[n]
+  for m in string.gmatch(list[i], "[%w_]+") do
+    if nodes[m] then
+      local j = used[m]
+      if not j then
+	used[m] = i
+	func_visit(nodes, list, used, m)
+      elseif i < j then
+	used[m] = i
+      end
     end
+  end
 end
 
 local function func_collect(src)
-    local nodes, list = func_gather(src)
-    local used = {}
-    func_visit(nodes, list, used, "main")
-    for n, i in pairs(nodes) do
-        local j = used[n]
-        if j and j < i then
-            used["*" .. n] = j
-        end
-    end
-    for n, i in pairs(nodes) do
-        if not used[n] then
-            list[i] = ""
-        end
-    end
-    return table.concat(list)
+  local nodes, list = func_gather(src)
+  local used = {}
+  func_visit(nodes, list, used, "main")
+  for n,i in pairs(nodes) do
+    local j = used[n]
+    if j and j < i then used["*"..n] = j end
+  end
+  for n,i in pairs(nodes) do
+    if not used[n] then list[i] = "" end
+  end
+  return table.concat(list)
 end
 
 find_sources()
