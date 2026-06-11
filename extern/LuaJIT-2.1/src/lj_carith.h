@@ -6,6 +6,7 @@
 #ifndef _LJ_CARITH_H
 #define _LJ_CARITH_H
 
+#include "lj_ctype.h"
 #include "lj_obj.h"
 
 #if LJ_HASFFI
