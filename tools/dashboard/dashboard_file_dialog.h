@@ -33,7 +33,7 @@ extern "C"
         bool              just_opened;
         char              current_path[FILE_ENTRY_PATH_SIZE];
         char              selected_path[FILE_ENTRY_PATH_SIZE];
-        uint8_t           pad[42];
+        uint8_t           pad[46];
     } bal_file_dialog_t;
 
     static_assert(0 == sizeof(bal_file_dialog_t) % 64,
