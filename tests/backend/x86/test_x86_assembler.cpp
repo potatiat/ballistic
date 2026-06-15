@@ -311,6 +311,91 @@ TEST_F(Backendx86Assembler, Public_InvalidRegister_NoEmit)
 
 TEST_F(Backendx86Assembler, Public_FullBuffer_NoEmit)
 {
+    assembler.offset = sizeof(buffer);
+
+    bal_x86_emit_add_mem64_rbp_offset_imm(&assembler, 0, 0x1);
+    EXPECT_EQ(assembler.status, BAL_ERROR_INSTRUCTION_OVERFLOW);
+    EXPECT_EQ(assembler.offset, sizeof(buffer));
+
+    assembler.status = BAL_SUCCESS;
+    bal_x86_emit_add_r64_imm32(&assembler, BAL_X86_RAX, 0x1);
+    EXPECT_EQ(assembler.status, BAL_ERROR_INSTRUCTION_OVERFLOW);
+    EXPECT_EQ(assembler.offset, sizeof(buffer));
+
+    assembler.status = BAL_SUCCESS;
+    bal_x86_emit_add_r64_r64(&assembler, BAL_X86_RAX, BAL_X86_RAX);
+    EXPECT_EQ(assembler.status, BAL_ERROR_INSTRUCTION_OVERFLOW);
+    EXPECT_EQ(assembler.offset, sizeof(buffer));
+
+    assembler.status = BAL_SUCCESS;
+    bal_x86_emit_and_r64_r64(&assembler, BAL_X86_RAX, BAL_X86_RAX);
+    EXPECT_EQ(assembler.status, BAL_ERROR_INSTRUCTION_OVERFLOW);
+    EXPECT_EQ(assembler.offset, sizeof(buffer));
+
+    assembler.status = BAL_SUCCESS;
+    bal_x86_emit_jcc_rel32(&assembler, BAL_X86_COND_A, 0);
+    EXPECT_EQ(assembler.status, BAL_ERROR_INSTRUCTION_OVERFLOW);
+    EXPECT_EQ(assembler.offset, sizeof(buffer));
+
+    assembler.status = BAL_SUCCESS;
+    bal_x86_emit_jmp_r64(&assembler, BAL_X86_RAX);
+    EXPECT_EQ(assembler.status, BAL_ERROR_INSTRUCTION_OVERFLOW);
+    EXPECT_EQ(assembler.offset, sizeof(buffer));
+
+    assembler.status = BAL_SUCCESS;
+    bal_x86_emit_jmp_rel32(&assembler, 0);
+    EXPECT_EQ(assembler.status, BAL_ERROR_INSTRUCTION_OVERFLOW);
+    EXPECT_EQ(assembler.offset, sizeof(buffer));
+
+    assembler.status = BAL_SUCCESS;
+    bal_x86_emit_load_r64_rbp_offset(&assembler, BAL_X86_RAX, 0);
+    EXPECT_EQ(assembler.status, BAL_ERROR_INSTRUCTION_OVERFLOW);
+    EXPECT_EQ(assembler.offset, sizeof(buffer));
+
+    assembler.status = BAL_SUCCESS;
+    bal_x86_emit_mov_r64_r64(&assembler, BAL_X86_RAX, BAL_X86_RBX);
+    EXPECT_EQ(assembler.status, BAL_ERROR_INSTRUCTION_OVERFLOW);
+    EXPECT_EQ(assembler.offset, sizeof(buffer));
+
+    assembler.status = BAL_SUCCESS;
+    bal_x86_emit_mov_r64_imm64(&assembler, BAL_X86_RAX, 0);
+    EXPECT_EQ(assembler.status, BAL_ERROR_INSTRUCTION_OVERFLOW);
+    EXPECT_EQ(assembler.offset, sizeof(buffer));
+
+    assembler.status = BAL_SUCCESS;
+    bal_x86_emit_or_r64_r64(&assembler, BAL_X86_RAX, BAL_X86_RBP);
+    EXPECT_EQ(assembler.status, BAL_ERROR_INSTRUCTION_OVERFLOW);
+    EXPECT_EQ(assembler.offset, sizeof(buffer));
+
+    assembler.status = BAL_SUCCESS;
+    bal_x86_emit_pop_r64(&assembler, BAL_X86_RAX);
+    EXPECT_EQ(assembler.status, BAL_ERROR_INSTRUCTION_OVERFLOW);
+    EXPECT_EQ(assembler.offset, sizeof(buffer));
+
+    assembler.status = BAL_SUCCESS;
+    bal_x86_emit_push_r64(&assembler, BAL_X86_RAX);
+    EXPECT_EQ(assembler.status, BAL_ERROR_INSTRUCTION_OVERFLOW);
+    EXPECT_EQ(assembler.offset, sizeof(buffer));
+
+    assembler.status = BAL_SUCCESS;
+    bal_x86_emit_setcc_mem8_rbp_offset(&assembler, BAL_X86_COND_A, 0);
+    EXPECT_EQ(assembler.status, BAL_ERROR_INSTRUCTION_OVERFLOW);
+    EXPECT_EQ(assembler.offset, sizeof(buffer));
+
+    assembler.status = BAL_SUCCESS;
+    bal_x86_emit_store_r64_rbp_offset(&assembler, BAL_X86_RAX, 0);
+    EXPECT_EQ(assembler.status, BAL_ERROR_INSTRUCTION_OVERFLOW);
+    EXPECT_EQ(assembler.offset, sizeof(buffer));
+
+    assembler.status = BAL_SUCCESS;
+    bal_x86_emit_sub_r64_r64(&assembler, BAL_X86_RAX, BAL_X86_RBX);
+    EXPECT_EQ(assembler.status, BAL_ERROR_INSTRUCTION_OVERFLOW);
+    EXPECT_EQ(assembler.offset, sizeof(buffer));
+
+    assembler.status = BAL_SUCCESS;
+    bal_x86_emit_ret(&assembler);
+    EXPECT_EQ(assembler.status, BAL_ERROR_INSTRUCTION_OVERFLOW);
+    EXPECT_EQ(assembler.offset, sizeof(buffer));
 }
 
 TEST_F(Backendx86Assembler, Encode_Ret)
