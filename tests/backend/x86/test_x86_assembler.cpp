@@ -61,6 +61,26 @@ TEST_F(Backendx86Assembler, Init_Success)
     EXPECT_EQ(local_assembler.buffer, buffer);
 }
 
+TEST_F(Backendx86Assembler, Reset_NullAssembler)
+{
+    assembler.capacity = 100;
+    assembler.offset   = 20;
+    assembler.status   = BAL_ERROR_ALLOCATION_FAILED;
+    bal_x86_assembler_reset(nullptr);
+    EXPECT_EQ(assembler.capacity, 100);
+    EXPECT_EQ(assembler.offset, 20);
+    EXPECT_EQ(assembler.status, BAL_ERROR_ALLOCATION_FAILED);
+}
+
+TEST_F(Backendx86Assembler, Reset_Success)
+{
+    assembler.offset = 20;
+    assembler.status = BAL_ERROR_ALLOCATION_FAILED;
+    bal_x86_assembler_reset(&assembler);
+    EXPECT_EQ(assembler.offset, 0);
+    EXPECT_EQ(assembler.status, BAL_SUCCESS);
+}
+
 TEST_F(Backendx86Assembler, Internal_IsValidRegister)
 {
     EXPECT_TRUE(is_valid_register(BAL_X86_RAX));
@@ -143,10 +163,13 @@ TEST_F(Backendx86Assembler, Public_NullContext_NoCrash)
 TEST_F(Backendx86Assembler, Public_BadStatus_NoEmit)
 {
     assembler.status = BAL_ERROR_INVALID_ARGUMENT;
+
+    bal_x86_emit_add_mem64_rbp_offset_imm(&assembler, 0, 0x1);
+    EXPECT_EQ(assembler.offset, 0);
+
     bal_x86_emit_ret(&assembler);
     EXPECT_EQ(assembler.offset, 0);
 
-    assembler.status = BAL_ERROR_INVALID_ARGUMENT;
     bal_x86_emit_sub_r64_r64(&assembler, BAL_X86_RAX, BAL_X86_RBX);
     EXPECT_EQ(assembler.offset, 0);
 }
@@ -220,6 +243,10 @@ TEST_F(Backendx86Assembler, Public_InvalidRegister_NoEmit)
     assembler.status = BAL_SUCCESS;
     bal_x86_emit_pop_r64(&assembler, bad_register);
     EXPECT_EQ(assembler.status, BAL_ERROR_INVALID_ARGUMENT);
+}
+
+TEST_F(Backendx86Assembler, Public_FullBuffer_NoEmit)
+{
 }
 
 TEST_F(Backendx86Assembler, Encode_Ret)
