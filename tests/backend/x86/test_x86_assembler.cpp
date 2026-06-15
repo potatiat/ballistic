@@ -164,13 +164,55 @@ TEST_F(Backendx86Assembler, Public_BadStatus_NoEmit)
 {
     assembler.status = BAL_ERROR_INVALID_ARGUMENT;
 
-    bal_x86_emit_add_mem64_rbp_offset_imm(&assembler, 0, 0x1);
+    bal_x86_emit_add_mem64_rbp_offset_imm(&assembler, 0, 0);
     EXPECT_EQ(assembler.offset, 0);
 
-    bal_x86_emit_ret(&assembler);
+    bal_x86_emit_add_r64_r64(&assembler, BAL_X86_RAX, BAL_X86_RBX);
+    EXPECT_EQ(assembler.offset, 0);
+
+    bal_x86_emit_add_r64_imm32(&assembler, BAL_X86_RAX, 0);
+    EXPECT_EQ(assembler.offset, 0);
+
+    bal_x86_emit_and_r64_r64(&assembler, BAL_X86_RAX, BAL_X86_RBX);
+    EXPECT_EQ(assembler.offset, 0);
+
+    bal_x86_emit_jcc_rel32(&assembler, BAL_X86_COND_A, 0);
+    EXPECT_EQ(assembler.offset, 0);
+
+    bal_x86_emit_jmp_r64(&assembler, BAL_X86_RAX);
+    EXPECT_EQ(assembler.offset, 0);
+
+    bal_x86_emit_jmp_rel32(&assembler, BAL_X86_RAX);
+    EXPECT_EQ(assembler.offset, 0);
+
+    bal_x86_emit_load_r64_rbp_offset(&assembler, BAL_X86_RAX, 0);
+    EXPECT_EQ(assembler.offset, 0);
+
+    bal_x86_emit_mov_r64_r64(&assembler, BAL_X86_RAX, BAL_X86_RBX);
+    EXPECT_EQ(assembler.offset, 0);
+
+    bal_x86_emit_mov_r64_imm64(&assembler, BAL_X86_RAX, 0);
+    EXPECT_EQ(assembler.offset, 0);
+
+    bal_x86_emit_or_r64_r64(&assembler, BAL_X86_RAX, BAL_X86_RBX);
+    EXPECT_EQ(assembler.offset, 0);
+
+    bal_x86_emit_pop_r64(&assembler, BAL_X86_RAX);
+    EXPECT_EQ(assembler.offset, 0);
+
+    bal_x86_emit_push_r64(&assembler, BAL_X86_RAX);
+    EXPECT_EQ(assembler.offset, 0);
+
+    bal_x86_emit_setcc_mem8_rbp_offset(&assembler, BAL_X86_COND_E, 0);
+    EXPECT_EQ(assembler.offset, 0);
+
+    bal_x86_emit_store_r64_rbp_offset(&assembler, BAL_X86_RAX, 0);
     EXPECT_EQ(assembler.offset, 0);
 
     bal_x86_emit_sub_r64_r64(&assembler, BAL_X86_RAX, BAL_X86_RBX);
+    EXPECT_EQ(assembler.offset, 0);
+
+    bal_x86_emit_ret(&assembler);
     EXPECT_EQ(assembler.offset, 0);
 }
 
