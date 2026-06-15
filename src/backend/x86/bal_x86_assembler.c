@@ -318,11 +318,6 @@ bal_x86_emit_jmp_rel32(bal_x86_assembler_t *assembler, const int32_t offset)
         return;
     }
 
-    if (BAL_UNLIKELY(false == can_emit_status))
-    {
-        return;
-    }
-
     BAL_LOG_DEBUG(&assembler->logger, "[+0x%04zx] jmp 0x%X", assembler->offset, offset);
     const size_t  old_offset = assembler->offset;
     const uint8_t opcode     = 0xE9;
@@ -1002,8 +997,7 @@ bal_x86_emit_sub_r64_r64(bal_x86_assembler_t     *assembler,
 
     if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
     {
-        BAL_LOG_ERROR(&assembler->logger,
-                      "Aborting function: assembler->status != BAL_SUCCESS");
+        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->status != BAL_SUCCESS");
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -1012,9 +1006,7 @@ bal_x86_emit_sub_r64_r64(bal_x86_assembler_t     *assembler,
 
     if (BAL_UNLIKELY(false == is_valid_register_result))
     {
-        BAL_LOG_ERROR(&assembler->logger,
-                      "Aborting function: invalid source register: %d",
-                      source);
+        BAL_LOG_ERROR(&assembler->logger, "Aborting function: invalid source register: %d", source);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -1023,27 +1015,22 @@ bal_x86_emit_sub_r64_r64(bal_x86_assembler_t     *assembler,
 
     if (BAL_UNLIKELY(false == is_valid_register_result))
     {
-        BAL_LOG_ERROR(&assembler->logger,
-                      "Aborting function: invalid destination register: %d",
-                      destination);
+        BAL_LOG_ERROR(
+            &assembler->logger, "Aborting function: invalid destination register: %d", destination);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
 
     const size_t instruction_size_bytes = 3;
-    const bool   can_emit_status
-        = can_emit(assembler, instruction_size_bytes);
+    const bool   can_emit_status        = can_emit(assembler, instruction_size_bytes);
 
     if (BAL_UNLIKELY(false == can_emit_status))
     {
         return;
     }
 
-    BAL_LOG_DEBUG(&assembler->logger,
-                  "[+0x%04zx] sub r%d, r%d",
-                  assembler->offset,
-                  destination,
-                  source);
+    BAL_LOG_DEBUG(
+        &assembler->logger, "[+0x%04zx] sub r%d, r%d", assembler->offset, destination, source);
     const uint8_t w = 1;
 
     // WARNING: Destination is verified by is_valid_register().
@@ -1056,8 +1043,7 @@ bal_x86_emit_sub_r64_r64(bal_x86_assembler_t     *assembler,
     const size_t  old_offset = assembler->offset;
     emit_rex(assembler->buffer, &assembler->offset, w, r, b);
     emit8(assembler->buffer, &assembler->offset, opcode);
-    emit_modrm_register(
-        assembler->buffer, &assembler->offset, destination, source);
+    emit_modrm_register(assembler->buffer, &assembler->offset, destination, source);
     const size_t bytes_emitted = assembler->offset - old_offset;
     BAL_ASSERT_MSG(bytes_emitted == instruction_size_bytes,
                    "Bytes emitted %d does not match instruction size %d",
