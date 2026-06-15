@@ -115,6 +115,24 @@ TEST_F(Backendx86Assembler, Internal_CanEmit_BufferExhausted)
     EXPECT_FALSE(can_emit(&assembler, 1));
 }
 
+TEST_F(Backendx86Assembler, Internal_Emit8_NullBuffer)
+{
+    emit8(nullptr, 0, 0xFF);
+    EXPECT_EQ(buffer[0], 0);
+}
+
+TEST_F(Backendx86Assembler, Internal_Emit32_NullBuffer)
+{
+    emit32(nullptr, 0, 0xFFFFFFFF);
+    EXPECT_EQ(buffer[0], 0);
+}
+
+TEST_F(Backendx86Assembler, Internal_Emit64_NullBuffer)
+{
+    emit64(nullptr, 0, 0xFFFFFFFFFFFFFFFF);
+    EXPECT_EQ(buffer[0], 0);
+}
+
 // Test pass incorrect data to modrm/rex generators.
 TEST_F(Backendx86Assembler, Internal_BitwiseMasking)
 {
