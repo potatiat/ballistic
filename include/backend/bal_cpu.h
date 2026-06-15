@@ -28,6 +28,7 @@ extern "C"
         ///
         /// This only increments if the engine flag [`BAL_ENGINE_FLAG_INSTRUCTION_COUNTING`] is set.
         uint64_t instruction_count;
+        char     pad[40];
     } bal_cpu_t;
 
     /// The function signature of a JIT-compiled basic block.
