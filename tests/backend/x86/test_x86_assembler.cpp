@@ -154,7 +154,7 @@ TEST_F(Backendx86Assembler, Public_NullContext_NoCrash)
     bal_x86_emit_mov_r64_imm64(nullptr, BAL_X86_RAX, 0);
     bal_x86_emit_or_r64_r64(nullptr, BAL_X86_RAX, BAL_X86_RAX);
     bal_x86_emit_ret(nullptr);
-    bal_x86_emit_setcc_mem8_rbp_offset(&assembler, BAL_X86_COND_E, 0);
+    bal_x86_emit_setcc_mem8_rbp_offset(nullptr, BAL_X86_COND_E, 0);
     bal_x86_emit_push_r64(nullptr, BAL_X86_RAX);
     bal_x86_emit_pop_r64(nullptr, BAL_X86_RAX);
     SUCCEED();
