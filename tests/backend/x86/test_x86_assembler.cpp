@@ -267,6 +267,10 @@ TEST_F(Backendx86Assembler, Public_InvalidRegister_NoEmit)
     EXPECT_EQ(assembler.status, BAL_ERROR_INVALID_ARGUMENT);
 
     assembler.status = BAL_SUCCESS;
+    bal_x86_emit_mov_r64_r64(&assembler, BAL_X86_RAX, bad_register);
+    EXPECT_EQ(assembler.status, BAL_ERROR_INVALID_ARGUMENT);
+
+    assembler.status = BAL_SUCCESS;
     bal_x86_emit_mov_r64_imm64(&assembler, bad_register, 0);
     EXPECT_EQ(assembler.status, BAL_ERROR_INVALID_ARGUMENT);
 
