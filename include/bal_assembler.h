@@ -55,7 +55,8 @@ extern "C"
         /// be ignored until the assembler is reset.
         bal_error_t status;
 
-        uint32_t pad;
+        /// Integrity check.
+        uint32_t magic;
     } bal_assembler_t;
 
     /// Initializes the assembler with a specific memory buffer and the size of the buffer in
@@ -64,8 +65,10 @@ extern "C"
     /// # Returns
     ///
     /// * [`BAL_SUCCESS`] on success.
-    /// * [`BAL_ERROR_INVALID_ARGUMENT`] if `assembler` or `buffer` is NULL.
+    /// * [`BAL_ERROR_INVALID_ARGUMENT`] if `assembler` or `buffer` is NULL, or if `size` is `0`.
     /// * [`BAL_ERROR_MEMORY_ALIGNMENT`] if `buffer` is not 4-byte aligned.
+    /// * [`BAL_ERROR_CAPACITY_TOO_BIG`] if `size` is large enough to cause a `size_t` integer
+    ///   overflow.
     bal_error_t bal_assembler_init(bal_assembler_t *assembler,
                                    void            *buffer,
                                    size_t           size,

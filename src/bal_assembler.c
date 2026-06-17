@@ -1,4 +1,5 @@
 #include "bal_assembler.h"
+#include "bal_safety.h"
 #include <stdbool.h>
 #include <string.h>
 
@@ -17,16 +18,40 @@ bal_assembler_init(bal_assembler_t   *assembler,
         return BAL_ERROR_INVALID_ARGUMENT;
     }
 
+    assembler->buffer   = NULL;
+    assembler->capacity = 0;
+    assembler->offset   = 0;
+    assembler->logger   = logger;
+    assembler->status   = BAL_ERROR_INVALID_ARGUMENT;
+    assembler->magic    = 0;
+
     if (NULL == buffer)
     {
-        BAL_LOG_ERROR(&logger, "Buffer is NULL.");
-        return BAL_ERROR_INVALID_ARGUMENT;
+        BAL_LOG_ERROR(&logger, "Aborting function: Buffer is NULL.");
+        return assembler->status;
+    }
+
+    if (0 == size)
+    {
+        BAL_LOG_ERROR(&logger, "Aborting function: Buffer capacity is 0.");
+        return assembler->status;
     }
 
     if ((uintptr_t)buffer % 4 != 0)
     {
-        BAL_LOG_ERROR(&logger, "Buffer %p is not 4-byte aligned.", buffer);
-        return BAL_ERROR_MEMORY_ALIGNMENT;
+        BAL_LOG_ERROR(&logger, "Aborting function: Buffer %p is not 4-byte aligned.", buffer);
+        assembler->status = BAL_ERROR_MEMORY_ALIGNMENT;
+        return assembler->status;
+    }
+
+    if (size > (SIZE_MAX / sizeof(uint32_t)))
+    {
+        BAL_LOG_ERROR(&logger,
+                      "Aborting function: Buffer capacity %zu is too large and would "
+                      "cause integer overflow.",
+                      size);
+        assembler->status = BAL_ERROR_CAPACITY_TOO_BIG;
+        return assembler->status;
     }
 
     assembler->buffer   = (uint32_t *)buffer;
@@ -34,6 +59,7 @@ bal_assembler_init(bal_assembler_t   *assembler,
     assembler->offset   = 0;
     assembler->logger   = logger;
     assembler->status   = BAL_SUCCESS;
+    assembler->magic    = BAL_ASSEMBLER_MAGIC_ALIVE;
 
     BAL_LOG_INFO(
         &logger, "Assembler initialized. Buffer: %p, Capacity: %zu instructions.", buffer, size);
@@ -45,6 +71,26 @@ bal_assembler_reset(bal_assembler_t *assembler)
 {
     if (BAL_UNLIKELY(NULL == assembler))
     {
+        return;
+    }
+
+    BAL_CHECK_MAGIC_VOID(assembler,
+                         BAL_ASSEMBLER_MAGIC_ALIVE,
+                         BAL_ASSEMBLER_MAGIC_DEAD,
+                         "bal_assembler_t",
+                         assembler->logger);
+
+    if (BAL_UNLIKELY(NULL == assembler->buffer))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->buffer == NULL");
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    if (BAL_UNLIKELY(0 == assembler->capacity))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->capacity == 0");
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
 
