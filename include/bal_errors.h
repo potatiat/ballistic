@@ -23,11 +23,15 @@ extern "C"
 
         // Memory and Translation Errors
 
+        /// Buffer is not aligned to the required memory alignment.
         BAL_ERROR_MEMORY_ALIGNMENT = -50,
-        BAL_ERROR_MEMORY_FAULT     = -51,
+
+        /// Ballistic tried to access memory it was not allowed to access.
+        BAL_ERROR_MEMORY_FAULT = -51,
 
         /// Engine and Execution Errors
 
+        /// The engine is already executing guest code.
         BAL_ERROR_ENGINE_ALREADY_RUNNING = -100,
 
         /// Guest code tried to execute an unaligned instruction.
@@ -47,6 +51,7 @@ extern "C"
 
         // IR / Assembler Errors.
 
+        /// The instruction buffer is full.
         BAL_ERROR_INSTRUCTION_OVERFLOW = -200,
 
         /// The decoded register type does not match the expected type.
