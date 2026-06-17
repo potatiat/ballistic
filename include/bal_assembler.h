@@ -35,6 +35,14 @@ extern "C"
 
     /// This struct manages a linear buffer of 32-bit integers where ARM64 machine code is written.
     /// It tracks the current write position and handles boundary checking.
+    ///
+    /// # Ownership
+    ///
+    /// The struct does not own the memory backing the `buffer` pointer. The caller retains full
+    /// ownership and is responsible for:
+    ///
+    /// 1. Ensuring the memory pointed to by `buffer` outlives the `bal_assembler_t` instance.
+    /// 2. Freeing the underlying memory allocation when the JIT buffer is no longer needed.
     typedef struct
     {
         /// A pointer to the start of the code buffer.
