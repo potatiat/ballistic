@@ -11,8 +11,10 @@ bal_error_to_string(const bal_error_t error)
             return "function argument is NULL or invalid";
         case BAL_ERROR_ALLOCATION_FAILED:
             return "failed to allocate memory";
+        case BAL_ERROR_STRUCT_CORRUPTED:
+            return "struct integrity check failed";
 
-            // --- Memory & Translation ---
+        // --- Memory & Translation ---
         case BAL_ERROR_MEMORY_ALIGNMENT:
             return "buffer is not aligned to the required memory alignment";
         case BAL_ERROR_MEMORY_FAULT:
@@ -39,7 +41,7 @@ bal_error_to_string(const bal_error_t error)
             return "decoded register type mismatch";
         case BAL_ERROR_BRANCH_OFFSET_OVERFLOW:
             return "relative branch offset exceeds displacement limit";
-        case BAL_ERROR_INVALID_CAPACITY:
+        case BAL_ERROR_CAPACITY_TOO_BIG:
             return "buffer capacity is too large and would cause integer overflow";
 
         default:

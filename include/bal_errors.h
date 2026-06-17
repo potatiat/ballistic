@@ -20,6 +20,7 @@ extern "C"
         BAL_SUCCESS                 = 0,
         BAL_ERROR_INVALID_ARGUMENT  = -1,
         BAL_ERROR_ALLOCATION_FAILED = -2,
+        BAL_ERROR_STRUCT_CORRUPTED  = -3,
 
         // Memory and Translation Errors
 
@@ -62,7 +63,7 @@ extern "C"
         BAL_ERROR_BRANCH_OFFSET_OVERFLOW = -202,
 
         /// The provided buffer capacity is too large and would cause an integer overflow.
-        BAL_ERROR_INVALID_CAPACITY = -203,
+        BAL_ERROR_CAPACITY_TOO_BIG = -203,
     } bal_error_t;
 
     /// Converts the enum into a readable string for error handling.
