@@ -48,19 +48,6 @@ extern "C"
 /// The bit position for the is constant flag in a bal_instruction_t.
 #define BAL_IS_CONSTANT_BIT_POSITION (1U << 16U)
 
-    /// Represents the mapping of a Guest Register to an SSA variable.
-    /// This is only used during Single Static Assignment construction
-    /// to track variable definitions across basic blocks.
-    typedef struct
-    {
-        /// The index of the most recent SSA definition for this register.
-        uint32_t current_ssa_index;
-
-        /// The index of the SSA definition that existed at the start of the
-        /// current block.
-        uint32_t original_variable_index;
-    } bal_source_variable_t;
-
     BAL_ALIGNED(64) typedef struct
     {
         /// The guest CPU state.
@@ -135,29 +122,6 @@ extern "C"
     ///
     /// This function is completely lock-free and thread-safe.
     BAL_HOT void bal_engine_clear_cache(bal_engine_t *engine);
-
-    /// Frees all `engine` heap-allocated resources using `allocator`.
-    ///
-    /// # Warning
-    ///
-    /// This function does not free the [`bal_engine_t`] struct itself, as the
-    /// caller may have allocated it on the stack.
-    // BAL_COLD void bal_engine_destroy(const bal_allocator_t *allocator, bal_engine_t *engine);
-
-    /// Returns the IR instructions array.
-    ///
-    /// # Safety
-    ///
-    /// Returns `NULl` if `engine` or `engine->arena_base` is `NULL`.
-    // const bal_instruction_t *bal_engine_get_ir_instructions(const bal_engine_t *engine);
-
-    /// Returns the constant generated from the IR layer at `index`.
-    ///
-    /// # Safety
-    ///
-    /// Returns `NULL` if `engine` or `engine->arena_base` is `NULL`.
-    // const bal_constant_t *bal_engine_get_constant(const bal_engine_t *engine, bal_constant_t
-    // index);
 
 #ifdef __cplusplus
 }

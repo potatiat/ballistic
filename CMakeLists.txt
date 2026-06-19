@@ -150,8 +150,6 @@ add_library(Ballistic STATIC
         src/bal_errors.c
         src/bal_logging.c
         src/bal_memory.c
-        #        src/bal_spsc_queue.c
-        #        src/bal_tier2_worker.c
         src/backend/x86/bal_x86_assembler.c
         src/backend/x86/bal_x86_sliding_window.c
         src/backend/x86/bal_x86_tier1_compiler.c
@@ -261,8 +259,6 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
                 include/bal_errors.h
                 include/bal_logging.h
                 include/bal_assembler.h
-                include/bal_tier2_worker.h
-                include/bal_spsc_queue.h
                 include/backend/bal_cpu.h
                 include/backend/x86/bal_x86_assembler.h
                 include/backend/x86/bal_x86_sliding_window.h
