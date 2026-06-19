@@ -89,6 +89,15 @@ extern "C"
     /// `assembler` must be valid.
     void bal_assembler_reset(bal_assembler_t *assembler);
 
+    /// Destroys the assembler context.
+    ///
+    /// # Safety
+    ///
+    /// * `assembler` must be a valid pointer.
+    /// * This function does NOT free the memory backing the `buffer` pointer.
+    /// * Calls to any function that uses this context will fail.
+    void bal_assembler_destroy(bal_assembler_t *assembler);
+
     /// Emit a `ADD` (Immediate) instruction.
     ///
     /// Adds a register value `rn` and 12 bit immediate value `imm12` with the optional left shift

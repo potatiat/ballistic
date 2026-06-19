@@ -100,6 +100,28 @@ bal_assembler_reset(bal_assembler_t *assembler)
 }
 
 void
+bal_assembler_destroy(bal_assembler_t *assembler)
+{
+    if (NULL == assembler)
+    {
+        return;
+    }
+
+    BAL_CHECK_MAGIC_VOID(assembler,
+                         BAL_ASSEMBLER_MAGIC_ALIVE,
+                         BAL_ASSEMBLER_MAGIC_DEAD,
+                         "bal_assembler_t",
+                         assembler->logger);
+
+    BAL_LOG_INFO(&assembler->logger, "Destroying assembler context. Buffer memory is NOT freed.");
+    assembler->magic    = BAL_ASSEMBLER_MAGIC_DEAD;
+    assembler->buffer   = NULL;
+    assembler->capacity = 0;
+    assembler->offset   = 0;
+    assembler->status   = BAL_ERROR_STRUCT_CORRUPTED;
+}
+
+void
 bal_emit_add_immediate(bal_assembler_t           *assembler,
                        const bal_register_index_t rd,
                        const uint8_t              rn,
