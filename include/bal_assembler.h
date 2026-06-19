@@ -124,7 +124,7 @@ extern "C"
     /// * [`BAL_ERROR_STRUCT_CORRUPTED`] if the assembler's magic number fails integrity checks.
     void bal_emit_add_immediate(bal_assembler_t     *assembler,
                                 bal_register_index_t rd,
-                                uint8_t              rn,
+                                bal_register_index_t rn,
                                 uint16_t             imm12,
                                 uint8_t              shift);
 

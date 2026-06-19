@@ -124,7 +124,7 @@ bal_assembler_destroy(bal_assembler_t *assembler)
 void
 bal_emit_add_immediate(bal_assembler_t           *assembler,
                        const bal_register_index_t rd,
-                       const uint8_t              rn,
+                       const bal_register_index_t rn,
                        const uint16_t             imm12,
                        const uint8_t              shift)
 {
@@ -145,14 +145,14 @@ bal_emit_add_immediate(bal_assembler_t           *assembler,
         return;
     }
 
-    if (BAL_UNLIKELY(rd > 31))
+    if (BAL_UNLIKELY((uint32_t)rd > 31U))
     {
         BAL_LOG_ERROR(&assembler->logger, "Rd X%u out of range (0-31).", rd);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
 
-    if (BAL_UNLIKELY(rn > 31))
+    if (BAL_UNLIKELY((uint32_t)rn > 31U))
     {
         BAL_LOG_ERROR(&assembler->logger, "Rn X%u out of range (0-31).", rd);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
