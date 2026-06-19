@@ -84,9 +84,14 @@ extern "C"
 
     /// Resets the assembler back to its initial state.
     ///
+    /// # Errors
+    ///
+    /// `assembler->status` is set to [`BAL_ERROR_INVALID_ARGUMENT`] if this function fails.
+    ///
     /// # Safety
     ///
-    /// `assembler` must be valid.
+    /// * `assembler` must be a valid pointer.
+    /// * `assembler` struct integrity must be valid.
     void bal_assembler_reset(bal_assembler_t *assembler);
 
     /// Destroys the assembler context.
