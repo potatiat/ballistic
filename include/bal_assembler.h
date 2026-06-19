@@ -181,7 +181,9 @@ extern "C"
     /// Modifies `assembler->status` to the following if an error occurs:
     ///
     /// * [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if `assembler->offset >= assembler->capacity.
-    /// * [`BAL_ERROR_INVALID_ARGUMENT`] if function arguments are invalid.
+    /// * [`BAL_ERROR_INVALID_ARGUMENT`] if `assembler` or `assembler->buffer` is NULL or `rn` is
+    ///   not between 0-31 inclusive.
+    /// * [`BAL_ERROR_STRUCT_CORRUPTED`] if the assembler's magic number fails integrity checks.
     void bal_emit_br(bal_assembler_t *assembler, bal_register_index_t rn);
 
     /// Emit a `SUB` (Immediate) instruction.

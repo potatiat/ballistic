@@ -378,9 +378,28 @@ bal_emit_br(bal_assembler_t *BAL_RESTRICT assembler, const bal_register_index_t 
         return;
     }
 
+    BAL_CHECK_MAGIC_VOID(assembler,
+                         BAL_ASSEMBLER_MAGIC_ALIVE,
+                         BAL_ASSEMBLER_MAGIC_DEAD,
+                         "bal_assembler_t",
+                         assembler->logger);
+
     if (BAL_UNLIKELY(NULL == assembler->buffer))
     {
         BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->buffer is NULL");
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->status != BAL_SUCCESS");
+        return;
+    }
+
+    if (BAL_UNLIKELY((uint32_t)rn > 31U))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "X%u out of range (0-31)", rn);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -392,32 +411,15 @@ bal_emit_br(bal_assembler_t *BAL_RESTRICT assembler, const bal_register_index_t 
         return;
     }
 
-    if (BAL_UNLIKELY(rn > 31))
-    {
-        BAL_LOG_ERROR(&assembler->logger, "X%u out of range (0-31)", rn);
-        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
-        return;
-    }
+    const uint32_t hard_coded_bits = 0xD61F0000U;
+    const uint32_t rn_shift        = 5U;
+    const uint32_t instruction     = hard_coded_bits | rn << rn_shift;
 
-    if (assembler->status != BAL_SUCCESS)
-    {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->status != BAL_SUCCESS");
-        return;
-    }
-
-    const uint32_t           hard_coded_bits = 0xD61F0000;
-    const uint32_t           rn_shift        = 5;
-    const uint32_t           instruction     = hard_coded_bits | rn << rn_shift;
-    const char *BAL_RESTRICT mnemonic        = "BR";
     BAL_LOG_TRACE(&assembler->logger,
-                  "[+0x%04zx] %08x %s X%u",
+                  "[+0x%04zx] %08x BR X%u",
                   assembler->offset * sizeof(uint32_t),
                   instruction,
-                  mnemonic,
                   rn);
-
-    // WARNING: Prevents unsued local variable compiler warning.
-    (void)mnemonic;
 
     assembler->buffer[assembler->offset++] = instruction;
 }
