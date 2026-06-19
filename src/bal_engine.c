@@ -3,10 +3,45 @@
 #include "bal_decoder.h"
 #include "bal_engine_flags.h"
 #include "bal_logging.h"
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <string.h>
+
+#ifdef __cplusplus
+#include <atomic>
+typedef std::atomic<bool>   atomic_bool;
+typedef std::atomic<size_t> atomic_size_t;
+
+using std::atomic_init;
+using std::atomic_load_explicit;
+using std::atomic_store_explicit;
+using std::atomic_compare_exchange_strong_explicit;
+
+// C++20 made std::memory_order an enum class, which breaks C11 naming conventions.
+// We map the C11 names to the C++20 enum values to maintain compatibility.
+#if __cplusplus >= 202002L
+
+#define memory_order_relaxed std::memory_order::relaxed
+#define memory_order_consume std::memory_order::consume
+#define memory_order_acquire std::memory_order::acquire
+#define memory_order_release std::memory_order::release
+#define memory_order_acq_rel std::memory_order::acq_rel
+#define memory_order_seq_cst std::memory_order::seq_cst
+
+#else
+
+using std::memory_order_relaxed;
+using std::memory_order_consume;
+using std::memory_order_acquire;
+using std::memory_order_release;
+using std::memory_order_acq_rel;
+using std::memory_order_seq_cst;
+
+#endif
+
+#else
+#include <stdatomic.h>
+#endif
 
 #define MAX_INSTRUCTIONS 65535
 
@@ -36,27 +71,30 @@
 
 #define TIER1_BUFFER_SIZE_BYTES (1024 * 1024 * 16) // 16 MiB
 
-#define BLOCK_CACHE_SIZE 65536
-#define BLOCK_CACHE_MASK (BLOCK_CACHE_SIZE - 1)]
+#define BLOCK_CACHE_SETS 4096 // 256 KB total footprint.
+#define BLOCK_CACHE_WAYS 4
+#define BLOCK_CACHE_MASK (BLOCK_CACHE_SETS - 1)
 
-/// Restrict block lookups to 4 entries. Since each `block_cache_entry_t` is 16 bytes, 4 entries
-/// fit exactly inside an L1 cache line.
-#define BLOCK_CACHE_PROBE_LIMIT 4
-
-// So here's the logic behind what should happen if there's a hash collision between two blocks at
-// block_cache[index].
-//
-// 1. If Block A and Block B collide, Block A takes the primary slot at block_cache[index].
-// 2. Block B is allowed to sit anywhere between block_cache[index...BLOCK_CACHE_PROBE_LIMIT].
-//
-// This is the logic behind block_cache_lookup() and block_cache_insert() implementations.
+/// Represents a single entry (way) in the block cache.
 typedef struct
 {
+    /// The GVA of the compiled block.
     bal_guest_address_t guest_address;
-    void               *host_code;
+
+    /// Pointer to the JIT compiled host machine code. A NULL value indicates an empty/invalid
+    /// cache slot.
+    void *host_code;
 } block_cache_entry_t;
 
 static_assert(16 == sizeof(block_cache_entry_t), "Block cache entry size mismatch");
+
+/// Represents a single set in the 4-way associative block cache.
+typedef struct
+{
+    block_cache_entry_t ways[BLOCK_CACHE_WAYS];
+} block_cache_set_t;
+
+static_assert(64 == sizeof(block_cache_set_t), "Block cache set size mismatch");
 
 typedef struct
 {
@@ -76,7 +114,7 @@ typedef struct
         char        pad1[61];
     } thread_state;
 
-    BAL_ALIGNED(64) block_cache_entry_t block_cache[BLOCK_CACHE_SIZE];
+    BAL_ALIGNED(64) block_cache_set_t block_cache[BLOCK_CACHE_SETS];
 } internal_engine_state_t;
 
 typedef struct
@@ -94,11 +132,15 @@ typedef struct
 
 static_assert(sizeof(bal_tier2_translation_context_t) <= 64, "Context must fit in  1 cache line");
 
-static void *block_cache_lookup(const internal_engine_state_t *engine_state,
-                                const bal_guest_address_t      pc);
-static void  block_cache_insert(internal_engine_state_t  *engine_state,
-                                const bal_guest_address_t pc,
-                                void                     *host_code);
+/// Looks up a JIT compiled host block by its GVA. Returns a pointer to the host JIT code if found,
+/// NULL on a cache miss.
+static void *block_cache_lookup(const block_cache_set_t *BAL_RESTRICT cache,
+                                const bal_guest_address_t             pc);
+
+/// Inserts a newly compiled JIT block into cache.
+static void block_cache_insert(block_cache_set_t *BAL_RESTRICT cache,
+                               const bal_guest_address_t       pc,
+                               void                           *host_code);
 
 // static uint32_t extract_operand_value(uint32_t, const bal_decoder_operand_t *);
 // static uint32_t intern_constant(bal_translation_context_t *, bal_constant_t);
@@ -204,8 +246,9 @@ bal_engine_init(bal_engine_t *BAL_RESTRICT                 engine,
         return engine->status;
     }
 
-    internal_engine_state_t *BAL_RESTRICT internal_engine_state = allocator->allocate(
-        allocator->context, MEMORY_ALIGNMENT, sizeof(internal_engine_state_t));
+    internal_engine_state_t *BAL_RESTRICT internal_engine_state
+        = (internal_engine_state_t *)allocator->allocate(
+            allocator->context, MEMORY_ALIGNMENT, sizeof(internal_engine_state_t));
 
     if (BAL_UNLIKELY(NULL == internal_engine_state))
     {
@@ -299,8 +342,9 @@ bal_engine_init(bal_engine_t *BAL_RESTRICT                 engine,
 bal_error_t
 bal_engine_run_thread(bal_engine_t *engine)
 {
-    internal_engine_state_t *internal_engine_state = engine->engine_state;
-    bool                     expected              = false;
+    internal_engine_state_t *internal_engine_state
+        = (internal_engine_state_t *)engine->engine_state;
+    bool expected = false;
     if (!atomic_compare_exchange_strong_explicit(&internal_engine_state->thread_state.is_executing,
                                                  &expected,
                                                  false,
@@ -349,7 +393,7 @@ bal_engine_run_thread(bal_engine_t *engine)
 
         if (BAL_LIKELY(!(engine->flags & BAL_ENGINE_FLAG_DISABLE_BLOCK_CACHE)))
         {
-            entry_point = block_cache_lookup(internal_engine_state, pc);
+            entry_point = block_cache_lookup(internal_engine_state->block_cache, pc);
         }
 
         if (NULL == entry_point)
@@ -420,10 +464,10 @@ bal_engine_run_thread(bal_engine_t *engine)
 
         if (BAL_LIKELY(!(engine->flags & BAL_ENGINE_FLAG_DISABLE_BLOCK_CACHE)))
         {
-            block_cache_insert(internal_engine_state, pc, entry_point);
+            block_cache_insert(internal_engine_state->block_cache, pc, entry_point);
         }
 
-        const bal_jit_block_t compiled_block = entry_point;
+        const bal_jit_block_t compiled_block = (bal_jit_block_t)entry_point;
 
         if (engine->flags & BAL_ENGINE_FLAG_LOG_BLOCKS)
         {
@@ -459,7 +503,8 @@ bal_engine_stop_thread(bal_engine_t *BAL_RESTRICT engine)
         return;
     }
 
-    internal_engine_state_t *BAL_RESTRICT engine_state = engine->engine_state;
+    internal_engine_state_t *BAL_RESTRICT engine_state
+        = (internal_engine_state_t *)engine->engine_state;
     atomic_store_explicit(&engine_state->thread_state.stop_requested, true, memory_order_release);
 }
 
@@ -471,8 +516,9 @@ bal_engine_reset(bal_engine_t *BAL_RESTRICT engine)
         return BAL_ERROR_INVALID_ARGUMENT;
     }
 
-    engine->status                                     = BAL_SUCCESS;
-    internal_engine_state_t *BAL_RESTRICT engine_state = engine->engine_state;
+    engine->status = BAL_SUCCESS;
+    internal_engine_state_t *BAL_RESTRICT engine_state
+        = (internal_engine_state_t *)engine->engine_state;
     (void)memset(&engine_state->tier1_buffer, 0, engine_state->tier1_buffer_size);
     bal_tier1_compiler_reset(&engine_state->tier1_compiler);
     return engine->status;
@@ -493,7 +539,8 @@ bal_engine_is_running(bal_engine_t *engine)
         return false;
     }
 
-    internal_engine_state_t *BAL_RESTRICT engine_state = engine->engine_state;
+    internal_engine_state_t *BAL_RESTRICT engine_state
+        = (internal_engine_state_t *)engine->engine_state;
     return atomic_load_explicit(&engine_state->thread_state.is_executing, memory_order_acquire);
 }
 
@@ -512,33 +559,23 @@ bal_engine_clear_cache(bal_engine_t *engine)
         return;
     }
 
-    internal_engine_state_t *BAL_RESTRICT engine_state = engine->engine_state;
+    internal_engine_state_t *BAL_RESTRICT engine_state
+        = (internal_engine_state_t *)engine->engine_state;
     atomic_store_explicit(
         &engine_state->thread_state.clear_cache_requested, true, memory_order_release);
 }
 
 BAL_HOT void *
-block_cache_lookup(const internal_engine_state_t *BAL_RESTRICT engine_state,
-                   const bal_guest_address_t                   pc)
+block_cache_lookup(const block_cache_set_t *BAL_RESTRICT cache, const bal_guest_address_t pc)
 {
-    // Lowest 2 bytes in an ARM64 PC is always 0 so shift them out.
-    uint32_t                                index  = (uint32_t)(pc >> 2) & BLOCK_CACHE_SIZE;
-    const block_cache_entry_t *BAL_RESTRICT cursor = &engine_state->block_cache[index];
+    const uint32_t                          set_index = (uint32_t)(pc >> 2) & BLOCK_CACHE_MASK;
+    const block_cache_entry_t *BAL_RESTRICT ways      = cache[set_index].ways;
 
-    for (uint32_t i = 0; i < BLOCK_CACHE_PROBE_LIMIT; ++i)
+    for (uint32_t i = 0; i < BLOCK_CACHE_WAYS; ++i)
     {
-        if (cursor->guest_address == pc && cursor->host_code != NULL)
+        if (ways[i].guest_address == pc && ways[i].host_code != NULL)
         {
-            return cursor->host_code;
-        }
-
-        ++cursor;
-        ++index;
-
-        if (BAL_UNLIKELY(index >= BLOCK_CACHE_SIZE))
-        {
-            cursor = &engine_state->block_cache[0];
-            index  = 0;
+            return ways[i].host_code;
         }
     }
 
@@ -546,37 +583,36 @@ block_cache_lookup(const internal_engine_state_t *BAL_RESTRICT engine_state,
 }
 
 BAL_HOT void
-block_cache_insert(internal_engine_state_t *BAL_RESTRICT engine_state,
-                   const bal_guest_address_t             pc,
-                   void *BAL_RESTRICT                    host_code)
+block_cache_insert(block_cache_set_t *BAL_RESTRICT cache,
+                   const bal_guest_address_t       pc,
+                   void *BAL_RESTRICT              host_code)
 {
-    // Lowest 2 bytes in an ARM64 PC is always 0 so shift them out.
-    uint32_t                          index  = (uint32_t)(pc >> 2) & BLOCK_CACHE_SIZE;
-    block_cache_entry_t *BAL_RESTRICT cursor = &engine_state->block_cache[index];
+    const uint32_t                    set_index = (uint32_t)(pc >> 2) & BLOCK_CACHE_MASK;
+    block_cache_entry_t *BAL_RESTRICT ways      = cache[set_index].ways;
 
-    for (uint32_t i = 0; i < BLOCK_CACHE_PROBE_LIMIT; ++i)
+    for (uint32_t i = 0; i < BLOCK_CACHE_WAYS; ++i)
     {
-        if (cursor->guest_address == pc || NULL == cursor->host_code)
+        if (ways[i].guest_address == pc)
         {
-            cursor->guest_address = pc;
-            cursor->host_code     = host_code;
+            ways[i].host_code = host_code;
             return;
-        }
-
-        ++cursor;
-        ++index;
-
-        if (BAL_UNLIKELY(index >= BLOCK_CACHE_SIZE))
-        {
-            cursor = &engine_state->block_cache[0];
-            index  = 0;
         }
     }
 
-    // Evict the first probed entry if full.
-    index                                          = (uint32_t)(pc >> 2) & BLOCK_CACHE_SIZE;
-    engine_state->block_cache[index].guest_address = pc;
-    engine_state->block_cache[index].host_code     = host_code;
+    for (uint32_t i = 0; i < BLOCK_CACHE_WAYS; ++i)
+    {
+        if (NULL == ways[i].host_code)
+        {
+            ways[i].guest_address = pc;
+            ways[i].host_code     = host_code;
+            return;
+        }
+    }
+
+    // All 4 ways are full. Use the lower bits of the PC as a cheap starting index.
+    const uint32_t evict_way      = (pc >> 4) & (BLOCK_CACHE_WAYS - 1);
+    ways[evict_way].guest_address = pc;
+    ways[evict_way].host_code     = host_code;
 }
 
 #if 0

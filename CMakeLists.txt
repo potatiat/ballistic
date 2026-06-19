@@ -303,6 +303,11 @@ if (BALLISTIC_BUILD_TESTS)
     include(GoogleTest)
     enable_testing()
 
+    set(ENGINE_TEST test_engine)
+    add_executable(${ENGINE_TEST} tests/test_engine.cpp)
+    target_include_directories(${ENGINE_TEST} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src extern/googletest-1.17.0/googletest/include)
+    target_link_libraries(${ENGINE_TEST} PRIVATE ${PROJECT_NAME} gtest gtest_main)
+
     set(MEMORY_TEST test_memory)
     add_executable(${MEMORY_TEST} tests/test_memory.cpp)
     target_include_directories(${MEMORY_TEST} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src extern/googletest-1.17.0/googletest/include)
@@ -321,7 +326,7 @@ if (BALLISTIC_BUILD_TESTS)
         target_compile_options(${MEMORY_TEST} PRIVATE -Wall -Wextra -Werror)
     endif ()
 
-    gtest_discover_tests(${DECODER_TEST})
+    gtest_discover_tests(${ENGINE_TEST})
     gtest_discover_tests(${MEMORY_TEST})
 
     set(BACKEND_X86_TESTS x86_assembler x86_sliding_window)
