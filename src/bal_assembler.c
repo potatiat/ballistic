@@ -215,6 +215,12 @@ bal_emit_add_shifted_register(bal_assembler_t           *assembler,
         return;
     }
 
+    BAL_CHECK_MAGIC_VOID(assembler,
+                         BAL_ASSEMBLER_MAGIC_ALIVE,
+                         BAL_ASSEMBLER_MAGIC_DEAD,
+                         "bal_assembler_t",
+                         assembler->logger);
+
     if (BAL_UNLIKELY(NULL == assembler->buffer))
     {
         BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->buffer is NULL");
@@ -228,6 +234,41 @@ bal_emit_add_shifted_register(bal_assembler_t           *assembler,
         return;
     }
 
+    if (BAL_UNLIKELY((uint32_t)rd > 31U))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "Rd X%u out of range (0-31).", rd);
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    if (BAL_UNLIKELY((uint32_t)rn > 31U))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "Rn X%u out of range (0-31).", rn);
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    if (BAL_UNLIKELY((uint32_t)rm > 31U))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "Rm X%u out of range (0-31).", rm);
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    if (BAL_UNLIKELY(shift > 63U))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "%u is not a valid shift amount (0-63).", shift);
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    if (BAL_UNLIKELY(shift_type > 2U))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "%u is not a valid shift type (0-2).", shift_type);
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
     const bool can_emit_return_value = can_emit(assembler);
 
     if (BAL_UNLIKELY(false == can_emit_return_value))
@@ -235,72 +276,27 @@ bal_emit_add_shifted_register(bal_assembler_t           *assembler,
         return;
     }
 
-    if (BAL_UNLIKELY(rd > 31))
-    {
-        BAL_LOG_ERROR(&assembler->logger, "Rd X%u out of range (0-31).", rd);
-        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
-        return;
-    }
-
-    if (BAL_UNLIKELY(rn > 31))
-    {
-        BAL_LOG_ERROR(&assembler->logger, "Rn X%u out of range (0-31).", rn);
-        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
-        return;
-    }
-
-    if (BAL_UNLIKELY(rm > 31))
-    {
-        BAL_LOG_ERROR(&assembler->logger, "Rm X%u out of range (0-31).", rm);
-        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
-        return;
-    }
-
-    if (BAL_UNLIKELY(shift > 63))
-    {
-        BAL_LOG_ERROR(&assembler->logger, "%u is not a valid shift amount (0-63).", shift);
-        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
-        return;
-    }
-
-    if (BAL_UNLIKELY(shift_type > 2))
-    {
-        BAL_LOG_ERROR(&assembler->logger, "%u is not a valid shift type (0-2).", shift_type);
-        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
-        return;
-    }
-
-    const uint32_t register_mask     = 0x1F;
-    const uint32_t shift_mask        = 0x3F;
-    const uint32_t shift_type_mask   = 0x2;
-    const uint32_t rm_uint32         = rm & register_mask;
-    const uint32_t rn_uint32         = rn & register_mask;
-    const uint32_t rd_uint32         = rd & register_mask;
-    const uint32_t shift_uint32      = shift & shift_mask;
-    const uint32_t shift_type_uint32 = shift_type & shift_type_mask;
-
     const uint32_t sf          = 1U;
     const uint32_t opcode      = 0x0BU;
-    uint32_t       instruction = 0;
-    instruction |= sf << 31;
-    instruction |= opcode << 24;
-    instruction |= shift_type_uint32 << 22;
-    instruction |= rm_uint32 << 16;
-    instruction |= shift_uint32 << 10;
-    instruction |= rn_uint32 << 5;
-    instruction |= rd_uint32;
+    uint32_t       instruction = 0U;
 
-    const char *mnemonic = "ADD (Shifted Register)";
+    instruction |= sf << 31U;
+    instruction |= opcode << 24U;
+    instruction |= (uint32_t)shift_type << 22U;
+    instruction |= (uint32_t)rm << 16U;
+    instruction |= (uint32_t)shift << 10U;
+    instruction |= (uint32_t)rn << 5U;
+    instruction |= (uint32_t)rd;
+
     BAL_LOG_TRACE(&assembler->logger,
-                  "[+0X%04zx] %08x %s X%u, X%u, X%u, shift %u",
+                  "[+0X%04zx] %08x Add (Shifted Register) X%u, X%u, X%u, shift %u",
                   assembler->offset * sizeof(uint32_t),
                   instruction,
-                  mnemonic,
                   rd,
                   rn,
                   rm,
                   shift);
-    (void)mnemonic;
+
     assembler->buffer[assembler->offset++] = instruction;
 }
 
