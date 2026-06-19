@@ -427,18 +427,52 @@ bal_emit_br(bal_assembler_t *BAL_RESTRICT assembler, const bal_register_index_t 
 void
 bal_emit_sub_immediate(bal_assembler_t           *assembler,
                        const bal_register_index_t rd,
-                       const uint8_t              rn,
+                       const bal_register_index_t rn,
                        const uint16_t             imm12,
                        const uint8_t              shift)
 {
-    if (NULL == assembler)
+    if (BAL_UNLIKELY(NULL == assembler))
     {
         return;
     }
 
+    BAL_CHECK_MAGIC_VOID(assembler,
+                         BAL_ASSEMBLER_MAGIC_ALIVE,
+                         BAL_ASSEMBLER_MAGIC_DEAD,
+                         "bal_assembler_t",
+                         assembler->logger);
+
     if (assembler->status != BAL_SUCCESS)
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->status != BAL_SUCCESS");
+        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->status != BAL_SUCCESS.");
+        return;
+    }
+
+    if (BAL_UNLIKELY((uint32_t)rd > 31U))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "Rd X%u out of range (0-31).", rd);
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    if (BAL_UNLIKELY((uint32_t)rn > 31U))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "Rn X%u out of range (0-31).", rn);
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    if (BAL_UNLIKELY(imm12 > 0xFFFU))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "Immediate 0x%X exceeds 12-bit limit (0xFFF).", imm12);
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    if (shift != 0U && shift != 1U)
+    {
+        BAL_LOG_ERROR(&assembler->logger, "%u is not a valid shift amount (0-1).", shift);
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
 
@@ -449,47 +483,25 @@ bal_emit_sub_immediate(bal_assembler_t           *assembler,
         return;
     }
 
-    if (rd > 31)
-    {
-        BAL_LOG_ERROR(&assembler->logger, "Rd X%u out of range (0-31).", rd);
-        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
-        return;
-    }
-
-    if (shift != 0 && shift != 1)
-    {
-        BAL_LOG_ERROR(&assembler->logger, "%u is not a valid shift amount (0-1).", shift);
-        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
-        return;
-    }
-
-    const uint32_t imm12_mask      = 0xFFF;
-    const uint32_t rn_mask         = 0x1F;
-    const uint32_t imm12_uint32    = imm12 & imm12_mask;
-    const uint32_t rn_uint32       = rn & rn_mask;
     const uint32_t hard_coded_bits = 0xA2U;
-    const uint32_t shift_uint32    = shift;
     const uint32_t sf              = 1U;
 
     uint32_t instruction = 0;
     instruction |= sf << 31;
     instruction |= hard_coded_bits << 23;
-    instruction |= shift_uint32 << 22;
-    instruction |= imm12_uint32 << 10;
-    instruction |= rn_uint32 << 5;
-    instruction |= rd;
+    instruction |= (uint32_t)shift << 22;
+    instruction |= (uint32_t)imm12 << 10;
+    instruction |= (uint32_t)rn << 5;
+    instruction |= (uint32_t)rd;
 
-    const char *mnemonic = "SUB (Imm)";
     BAL_LOG_TRACE(&assembler->logger,
-                  "[+0x%04zx] %08x %s X%u, #0x%04x, LSL #%u",
+                  "[+0x%04zx] %08x SUB (Imm) X%u, #0x%04x, LSL #%u",
                   assembler->offset * sizeof(uint32_t),
                   instruction,
-                  mnemonic,
                   rd,
-                  imm12_uint32,
-                  shift_uint32);
+                  imm12,
+                  shift);
 
-    (void)mnemonic;
     assembler->buffer[assembler->offset++] = instruction;
 }
 
