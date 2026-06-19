@@ -308,10 +308,38 @@ bal_emit_b(bal_assembler_t *assembler, const int32_t offset)
         return;
     }
 
+    BAL_CHECK_MAGIC_VOID(assembler,
+                         BAL_ASSEMBLER_MAGIC_ALIVE,
+                         BAL_ASSEMBLER_MAGIC_DEAD,
+                         "bal_assembler_t",
+                         assembler->logger);
+
     if (BAL_UNLIKELY(NULL == assembler->buffer))
     {
         BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->buffer is NULL");
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    if (BAL_UNLIKELY((offset & 0x3) != 0))
+    {
+        BAL_LOG_ERROR(&assembler->logger,
+                      "Aborting function: Branch offset %d is not 4-byte aligned.",
+                      offset);
+        assembler->status = BAL_ERROR_PC_ALIGNMENT;
+        return;
+    }
+
+    const int32_t imm26_signed = offset / 4;
+
+    if (BAL_UNLIKELY(imm26_signed < -33554432 || imm26_signed > 33554431))
+    {
+        BAL_LOG_ERROR(&assembler->logger,
+                      "Aborting function: Branch offset %d (imm26: %d) exceeds signed 26-bit "
+                      "displacement limits.",
+                      offset,
+                      imm26_signed);
+        assembler->status = BAL_ERROR_BRANCH_OFFSET_OVERFLOW;
         return;
     }
 
@@ -328,22 +356,16 @@ bal_emit_b(bal_assembler_t *assembler, const int32_t offset)
         return;
     }
 
-    const uint32_t hard_coded_bits = 0x14000000;
+    const uint32_t hard_coded_bits = 0x14000000U;
 
-    // WARNING: Cast to uint32_t safely applies bitwise masking to negative values.
-    const uint32_t imm26       = (uint32_t)(offset / 4) & 0x03FFFFFF;
+    const uint32_t imm26       = (uint32_t)imm26_signed & 0x03FFFFFFU;
     const uint32_t instruction = hard_coded_bits | imm26;
 
-    const char *mnemonic = "B";
     BAL_LOG_TRACE(&assembler->logger,
-                  "[+0x%04zx] %08x %s #%d",
+                  "[+0x%04zx] %08x B #%d",
                   assembler->offset * sizeof(uint32_t),
                   instruction,
-                  mnemonic,
                   offset);
-
-    // WARNING: Prevents unsued local variable compiler warning.
-    (void)mnemonic;
 
     assembler->buffer[assembler->offset++] = instruction;
 }

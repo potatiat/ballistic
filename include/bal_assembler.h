@@ -151,6 +151,7 @@ extern "C"
     ///
     /// # Safety
     ///
+    /// * `offset` must be strictly 4-byte aligned.
     /// * `offset` will be truncated if it exceeds 26 bits.
     /// *  Does not emit if `assembler->status` != [`BAL_SUCCESS`]
     ///
@@ -159,7 +160,11 @@ extern "C"
     /// Modifies `assembler->status` to the following if an error occurs:
     ///
     /// * [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if `assembler->offset >= assembler->capacity`.
-    /// * [`BAL_ERROR_INVALID_ARGUMENT`] if function arguments are invalid.
+    /// * [`BAL_ERROR_INVALID_ARGUMENT`] if `assembler` or `assembler->buffer` is NULL.
+    /// * [`BAL_ERROR_PC_ALIGNMENT`] if `offset` is not a multiple of 4.
+    /// * [`BAL_ERROR_BRANCH_OFFSET_OVERFLOW`] if `offset` exceeds the signed 26-bit displacement
+    ///   limits.
+    /// * [`BAL_ERROR_STRUCT_CORRUPTED`] if the assembler's magic number fails integrity checks.
     void bal_emit_b(bal_assembler_t *assembler, int32_t offset);
 
     /// Emits a `BR` (Branch Register) instruction.
