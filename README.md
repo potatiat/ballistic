@@ -13,6 +13,8 @@ This is a rewrite of the dynarmic recompiler, with the goal of fixing its many f
 - [X] Create Tier 1 backend compiler.
 - [ ] Create Tier 2 backend compiler.
 - [ ] Support `MOVZ`, `MOVK`, `MOVN` instructions on both compilers.
+- [ ] Support decoding ARM32 instructions.
+- [ ] Treat `PACISAP` and `AUTISAP` as `NOP` then strip the upper bits of `X30`.
 - [ ] Add more peephole optimizations.
 - [ ] Have 100% branch coverage.
 - [X] Have a config to change Ballistic behavior at runtime.
@@ -26,6 +28,9 @@ This is a rewrite of the dynarmic recompiler, with the goal of fixing its many f
 - [ ] Support Guest Write permissions and MMIO write traps for `bal_translate_write_function_t`.
 - [ ] Allow the Guest to inform the memory subsystem that a Guest page has changed state.
 - [ ] Invalidate JIT caches when Guest memory is modified using `bal_invalidate_git_cache_function_t`.
+- [ ] Trap cache maintanence instructions then invalidate the block cache at that GVA.
+- [ ] Track multiple address spaces with ASIDs.
+- [ ] Handle memory aliasing and cache attributes (CPU: Cached, GPU: Cached/Write-Combining)
 - [ ] Rewrite `tools/cdoc.c`
 - [ ] Rewrite all Python scripts in Lua.
 - [ ] Add code examples on how to use a header file like in `bal_x86_sliding_window.h`.
