@@ -17,8 +17,6 @@ using std::atomic_load_explicit;
 using std::atomic_store_explicit;
 using std::atomic_compare_exchange_strong_explicit;
 
-// C++20 made std::memory_order an enum class, which breaks C11 naming conventions.
-// We map the C11 names to the C++20 enum values to maintain compatibility.
 #if __cplusplus >= 202002L
 
 #define memory_order_relaxed std::memory_order::relaxed
@@ -40,8 +38,10 @@ using std::memory_order_seq_cst;
 #endif
 
 #else
+
 #include <stdatomic.h>
-#endif
+
+#endif // __cplusplus
 
 #define MAX_INSTRUCTIONS 65535
 

@@ -297,6 +297,7 @@ extern "C"
     ///
     /// * [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if `assembler->offset >= assembler->capacity`.
     /// * [`BAL_ERROR_INVALID_ARGUMENT`] if function arguments are invalid.
+    /// * [`BAL_ERROR_STRUCT_CORRUPTED`] if the assembler's magic number fails integrity checks.
     void bal_emit_ret(bal_assembler_t *assembler, bal_register_index_t rn);
 
 #ifdef __cplusplus

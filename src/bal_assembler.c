@@ -541,6 +541,12 @@ bal_emit_ret(bal_assembler_t *assembler, const bal_register_index_t rn)
         return;
     }
 
+    BAL_CHECK_MAGIC_VOID(assembler,
+                         BAL_ASSEMBLER_MAGIC_ALIVE,
+                         BAL_ASSEMBLER_MAGIC_DEAD,
+                         "bal_assembler_t",
+                         assembler->logger);
+
     if (NULL == assembler->buffer)
     {
         BAL_LOG_ERROR(&assembler->logger, "assembler->buffer is NULL, aborting emission");
@@ -548,14 +554,7 @@ bal_emit_ret(bal_assembler_t *assembler, const bal_register_index_t rn)
         return;
     }
 
-    const bool can_emit_return_value = can_emit(assembler);
-
-    if (false == can_emit_return_value)
-    {
-        return;
-    }
-
-    if (rn > 31)
+    if ((uint32_t)rn > 31U)
     {
         BAL_LOG_ERROR(&assembler->logger, "X%u out of range (0-31).", rn);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
@@ -568,21 +567,22 @@ bal_emit_ret(bal_assembler_t *assembler, const bal_register_index_t rn)
         return;
     }
 
-    const uint32_t hard_coded_bits = 0xD65F0000;
-    const uint32_t rn_shift        = 5;
-    const uint32_t instruction     = hard_coded_bits | rn << rn_shift;
+    const bool can_emit_return_value = can_emit(assembler);
 
-    const char *mnemonic = "RET";
+    if (false == can_emit_return_value)
+    {
+        return;
+    }
+
+    const uint32_t hard_coded_bits = 0xD65F0000U;
+    const uint32_t rn_shift        = 5U;
+    const uint32_t instruction     = hard_coded_bits | (uint32_t)rn << rn_shift;
+
     BAL_LOG_TRACE(&assembler->logger,
-                  "[+0x%04zx] %08x %s X%u",
+                  "[+0x%04zx] %08x RET X%u",
                   assembler->offset * sizeof(uint32_t),
                   instruction,
-                  mnemonic,
                   rn);
-
-    // This function argument isn't used in the log trace above on release builds because the log
-    // trace is optimized out, making the compiler mark this variable as unused.
-    (void)mnemonic;
 
     assembler->buffer[assembler->offset++] = instruction;
 }
