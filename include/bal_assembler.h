@@ -110,9 +110,9 @@ extern "C"
     ///
     /// # Safety
     ///
-    /// * `rn` will be truncated if it exceeds 5 bits.
-    /// * `imm12` will be truncated if it exceeds 12 bits.
-    /// * `sh` must have the value `0`, or `1`
+    /// * `rd` and `rn` must be valid registers (0-31).
+    /// * `imm12` must not exceed 12 bits (0-4095).
+    /// * `shift` must be the bit value `0` (LSL #0) or `1` (LSL #12).
     /// * Function does not emit instructions if `assembler->status != BALL_SUCCESS`.
     ///
     /// # Errors
@@ -121,6 +121,7 @@ extern "C"
     ///
     /// * [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if `assembler->offset >= assembler->capacity`.
     /// * [`BAL_ERROR_INVALID_ARGUMENT`] if function arguments are invalid.
+    /// * [`BAL_ERROR_STRUCT_CORRUPTED`] if the assembler's magic number fails integrity checks.
     void bal_emit_add_immediate(bal_assembler_t     *assembler,
                                 bal_register_index_t rd,
                                 uint8_t              rn,
