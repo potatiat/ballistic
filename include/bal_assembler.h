@@ -219,6 +219,7 @@ extern "C"
     ///
     /// # Safety
     ///
+    /// * `rd` must be a valid register index (0-31).
     /// * `shift` must be 0, 16, 32, or 48.
     /// * Does not emit if `assembler->status != BAL_SUCCESS`.
     ///
@@ -228,6 +229,7 @@ extern "C"
     ///
     /// * [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if `assembler->offset >= assembler->capacity`.
     /// * [`BAL_ERROR_INVALID_ARGUMENT`] if function arguments are invalid.
+    /// * [`BAL_ERROR_STRUCT_CORRUPTED`] if the assembler's magic number fails integrity checks.
     void bal_emit_movz(bal_assembler_t     *assembler,
                        bal_register_index_t rd,
                        uint16_t             imm,
@@ -240,6 +242,7 @@ extern "C"
     ///
     /// # Safety
     ///
+    /// * `rd` must be a valid register index (0-31).
     /// * `shift` must be 0, 16, 32, or 48.
     /// * Does not emit if `assembler->status != BAL_SUCCESS`.
     ///
@@ -249,6 +252,7 @@ extern "C"
     ///
     /// * [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if `assembler->offset >= assembler->capacity`.
     /// * [`BAL_ERROR_INVALID_ARGUMENT`] if function arguments are invalid.
+    /// * [`BAL_ERROR_STRUCT_CORRUPTED`] if the assembler's magic number fails integrity checks.
     void bal_emit_movk(bal_assembler_t     *assembler,
                        bal_register_index_t rd,
                        uint16_t             imm,
@@ -261,6 +265,7 @@ extern "C"
     ///
     /// # Safety
     ///
+    /// * `rd` must be a valid register index (0-31).
     /// * `shift` must be 0, 16, 32, or 48.
     /// * Does not emit if `assembler->status != BAL_SUCCESS`.
     ///
@@ -270,6 +275,7 @@ extern "C"
     ///
     /// * [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if `assembler->offset >= assembler->capacity`.
     /// * [`BAL_ERROR_INVALID_ARGUMENT`] if function arguments are invalid.
+    /// * [`BAL_ERROR_STRUCT_CORRUPTED`] if the assembler's magic number fails integrity checks.
     void bal_emit_movn(bal_assembler_t     *assembler,
                        bal_register_index_t rd,
                        uint16_t             imm,

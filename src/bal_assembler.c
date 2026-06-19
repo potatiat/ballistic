@@ -4,7 +4,8 @@
 #include <string.h>
 
 static bool can_emit(bal_assembler_t *assembler);
-static void emit_mov(bal_assembler_t *, const char *, uint32_t, uint16_t, uint8_t, uint32_t);
+static void emit_mov(
+    bal_assembler_t *, const char *, bal_register_index_t, uint16_t, uint8_t, uint32_t);
 
 bal_error_t
 bal_assembler_init(bal_assembler_t   *assembler,
@@ -604,7 +605,7 @@ can_emit(bal_assembler_t *assembler)
 static void
 emit_mov(bal_assembler_t *BAL_RESTRICT assembler,
          const char *BAL_RESTRICT      mnemonic,
-         const uint32_t                rd,
+         const bal_register_index_t    rd,
          const uint16_t                imm,
          const uint8_t                 shift,
          const uint32_t                opcode)
@@ -613,6 +614,12 @@ emit_mov(bal_assembler_t *BAL_RESTRICT assembler,
     {
         return;
     }
+
+    BAL_CHECK_MAGIC_VOID(assembler,
+                         BAL_ASSEMBLER_MAGIC_ALIVE,
+                         BAL_ASSEMBLER_MAGIC_DEAD,
+                         "bal_assembler_t",
+                         assembler->logger);
 
     if (BAL_UNLIKELY(NULL == assembler->buffer))
     {
@@ -627,6 +634,20 @@ emit_mov(bal_assembler_t *BAL_RESTRICT assembler,
         return;
     }
 
+    if (BAL_UNLIKELY((uint32_t)rd > 31U))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "Rd X%u out of range (0-31).", rd);
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    if (BAL_UNLIKELY(shift != 0U && shift != 16U && shift != 32U && shift != 48U))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "%u is not a valid shift amount (0, 16, 32, 48).", shift);
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
     const bool can_emit_return_value = can_emit(assembler);
 
     if (BAL_UNLIKELY(false == can_emit_return_value))
@@ -634,30 +655,16 @@ emit_mov(bal_assembler_t *BAL_RESTRICT assembler,
         return;
     }
 
-    if (BAL_UNLIKELY(rd > 31))
-    {
-        BAL_LOG_ERROR(&assembler->logger, "Rd X%u out of range (0-31).", rd);
-        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
-        return;
-    }
-
-    if (BAL_UNLIKELY(shift != 0 && shift != 16 && shift != 32 && shift != 48))
-    {
-        BAL_LOG_ERROR(&assembler->logger, "%u is not a valid shift amount (0, 16, 32, 48).", shift);
-        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
-        return;
-    }
-
-    const uint32_t sf          = 1;
-    const uint32_t hw          = shift / 16;
-    uint32_t       instruction = 0;
+    const uint32_t sf          = 1U;
+    const uint32_t hw          = shift / 16U;
+    uint32_t       instruction = 0U;
     const uint32_t imm16       = imm;
-    instruction |= sf << 31;
-    instruction |= opcode << 29;
-    instruction |= 0x25 << 23; // 0b100101
-    instruction |= hw << 21;
-    instruction |= imm16 << 5;
-    instruction |= rd << 0;
+    instruction |= sf << 31U;
+    instruction |= (opcode & 0x7U) << 29U;
+    instruction |= 0x25 << 23U; // 0b100101
+    instruction |= hw << 21U;
+    instruction |= imm16 << 5U;
+    instruction |= rd;
 
     BAL_LOG_TRACE(&assembler->logger,
                   "[+0x%04zx] %08x %s X%u, #0x%04x, LSL #%u",
