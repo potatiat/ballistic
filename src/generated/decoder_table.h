@@ -1,7 +1,7 @@
 /*
- * GENERATED FILE - DO NOT EDIT
- * Generated with tools/generate_a64_table.py
- */
+GENERATED FILE - DO NOT EDIT
+Generated with tools/generate_a64_table.lua
+*/
 
 #ifndef BAL_DECODER_TABLE_GENERATED
 #define BAL_DECODER_TABLE_GENERATED
@@ -13,7 +13,7 @@ extern "C"
 {
 #endif /* __cplusplus */
 
-#define BAL_DECODER_ARM64_INSTRUCTIONS_SIZE 3608
+#define BAL_DECODER_ARM64_INSTRUCTIONS_SIZE 3856
 
     typedef struct
     {

@@ -32,7 +32,7 @@ This is a rewrite of the dynarmic recompiler, with the goal of fixing its many f
 - [ ] Track multiple address spaces with ASIDs.
 - [ ] Handle memory aliasing and cache attributes (CPU: Cached, GPU: Cached/Write-Combining)
 - [ ] Rewrite `tools/cdoc.c`
-- [ ] Rewrite all Python scripts in Lua.
+- [X] Rewrite all Python scripts in Lua.
 - [ ] Add code examples on how to use a header file like in `bal_x86_sliding_window.h`.
 - [ ] Reorganize all functions in alphabetical order in `.c` and `.h` files.
 - [ ] Add benchmarks measuring compilation speed compared to other JIT compilers.

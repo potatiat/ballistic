@@ -1,5 +1,5 @@
 #include "bal_decoder.h"
-#include "bal_decoder_table_gen.h"
+#include "generated/decoder_table.h"
 #include <stddef.h>
 #include <stdio.h>
 

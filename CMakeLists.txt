@@ -101,11 +101,11 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     add_external_subdirectory(extern/cmark EXCLUDE_FROM_ALL)
 endif ()
 
-set(SCRIPT_GENERATE_DECODER_TABLE ${CMAKE_SOURCE_DIR}/tools/generate_a64_table.py)
-set(GENERATED_DECODER_TABLE_HEADER ${CMAKE_SOURCE_DIR}/src/bal_decoder_table_gen.h)
-set(GENERATED_DECODER_TABLE_SOURCE ${CMAKE_SOURCE_DIR}/src/bal_decoder_table_gen.c)
+set(SCRIPT_GENERATE_DECODER_TABLE ${CMAKE_SOURCE_DIR}/tools/generate_decoder_tables.lua)
+set(GENERATED_DECODER_TABLE_HEADER ${CMAKE_SOURCE_DIR}/src/generated/decoder_table.h)
+set(GENERATED_DECODER_TABLE_SOURCE ${CMAKE_SOURCE_DIR}/src/generated/decoder_table.c)
 set(ARM_SPECIFICATION_PATH ${CMAKE_SOURCE_DIR}/spec/arm64_xml)
-set(OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/src/)
+set(OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/src/generated)
 
 if (NOT EXISTS "${SCRIPT_GENERATE_DECODER_TABLE}")
     message(FATAL_ERROR "[Ballistic] Missing decoder generation script at: ${SCRIPT_GENERATE_DECODER_TABLE}. "
@@ -117,9 +117,14 @@ if (NOT EXISTS ${ARM_SPECIFICATION_PATH})
             "Did you clone this repo correctly?")
 endif ()
 
+set(CMAKE_BUILD_RPATH_USE_ORIGIN TRUE)
+list(APPEND CMAKE_BUILD_RPATH "$ORIGIN/../../lib/${BALLISTIC_PLATFORM}")
+add_external_subdirectory(extern/LuaJIT-2.1)
+
 add_custom_command(
         OUTPUT ${GENERATED_DECODER_TABLE_HEADER} ${GENERATED_DECODER_TABLE_SOURCE}
-        COMMAND Python3::Interpreter ${SCRIPT_GENERATE_DECODER_TABLE} --xml-directory ${ARM_SPECIFICATION_PATH} --output-directory ${OUTPUT_DIRECTORY}
+        COMMAND $<TARGET_FILE:luajit_exe> ${SCRIPT_GENERATE_DECODER_TABLE} --xml-directory ${ARM_SPECIFICATION_PATH} --output-directory
+        ${OUTPUT_DIRECTORY}
         DEPENDS ${SCRIPT_GENERATE_DECODER_TABLE}
         COMMENT "Generating ARM64 Decoder Tables..."
 )
@@ -145,11 +150,11 @@ add_library(Ballistic STATIC
         src/bal_assembler.c
         src/bal_assert.c
         src/bal_decoder.c
-        src/bal_decoder_table_gen.c
         src/bal_engine.c
         src/bal_errors.c
         src/bal_logging.c
         src/bal_memory.c
+        src/generated/decoder_table.c
         src/backend/x86/bal_x86_assembler.c
         src/backend/x86/bal_x86_sliding_window.c
         src/backend/x86/bal_x86_tier1_compiler.c
@@ -213,9 +218,7 @@ endif ()
 # Compile Tools
 # -----------------------------------------------------------------------------
 message(STATUS "[Ballistic] Configuring developer tools...")
-set(CMAKE_BUILD_RPATH_USE_ORIGIN TRUE)
-list(APPEND CMAKE_BUILD_RPATH "$ORIGIN/../../lib/${BALLISTIC_PLATFORM}")
-add_external_subdirectory(extern/LuaJIT-2.1)
+
 
 set(DECODER_CLI_NAME "decoder_cli")
 add_executable(${DECODER_CLI_NAME} tools/decoder_cli.c)
@@ -323,6 +326,7 @@ if (BALLISTIC_BUILD_TESTS)
     endif ()
 
     gtest_discover_tests(${ENGINE_TEST})
+    gtest_discover_tests(${DECODER_TEST})
     gtest_discover_tests(${MEMORY_TEST})
 
     set(BACKEND_X86_TESTS x86_assembler x86_sliding_window)
