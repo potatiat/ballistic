@@ -8,6 +8,13 @@
 
 This is a rewrite of the dynarmic recompiler, with the goal of fixing its many flaws.
 
+# CPU Cache Constraints
+
+Ballistic is being designed to have an extremely low Cache Footprint:
+
+1. L1d: 4 KB
+2. L2: 30 KB
+
 # Version 1.0 Goals
 
 - [X] Create Tier 1 backend compiler.
