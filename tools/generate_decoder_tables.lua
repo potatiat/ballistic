@@ -4,6 +4,24 @@ local ffi = require("ffi")
 local DECODER_HASH_TABLE_SIZE = 2048
 local DECODER_HASH_BITS_MASK = 0xFFE00000
 
+local function log_info(message, ...)
+    local msg = string.format(message, ...)
+    io.stdout:write(string.format("[INFO] %s\n", msg))
+    io.stdout:flush()
+end
+
+local function log_warn(message, ...)
+    local msg = string.format(message, ...)
+    io.stdout:write(string.format("[WARN] %s\n", msg))
+    io.stdout:flush()
+end
+
+local function log_error(message, ...)
+    local msg = string.format(message, ...)
+    io.stdout:write(string.format("[ERROR] %s\n", msg))
+    io.stderr:flush()
+end
+
 local function get_text(node)
     local text = ""
 
@@ -203,6 +221,8 @@ local function parse_operands(asmtemplate, field_map, explanation_map)
 
                         if not dup then
                             operands[#operands + 1] = { operand_type, bit_position, bit_width }
+                            log_info("Extracted operand: %s (pos: %d, width: %d)", operand_type, bit_position,
+                                    bit_width)
                         end
                     end
                 end
@@ -237,9 +257,9 @@ end
 local function parse_xml_fast(xml)
     local root = { tag = "root", attrs = {}, children = {} }
     local stack = { root }
-
     local position = 1
     local length = #xml
+    local node_count = 0
 
     while position <= length do
         local lt = xml:find("<", position, true)
@@ -319,6 +339,7 @@ local function parse_xml_fast(xml)
         table.insert(current.children, { tag = "__text__", text = text })
     end
 
+    log_info("Parsed %d XML noded.", node_count)
     return root
 end
 
@@ -432,18 +453,20 @@ local function parse_explanations(root)
 end
 
 local function parse_xml_file(filepath, arch)
+    log_info("Parsing XML file: %s", filepath)
     local file = io.open(filepath, "r")
 
     if not file then
+        log_error("Failed to open file: %s", filepath)
         return {}
     end
 
     local xml = file:read("*a")
     file:close()
-
     local root = parse_xml_fast(xml)
 
     if not root then
+        log_error("Failed to parse XML structure for %s", filepath)
         return {}
     end
 
@@ -457,10 +480,12 @@ local function parse_xml_file(filepath, arch)
     end
 
     if not actual_root then
+        log_warn("No valid root node found in %s", filepath)
         return {}
     end
 
     if actual_root.attrs.type == "alias" then
+        log_info("Skipping alias file: %s", filepath)
         return {}
     end
 
@@ -482,6 +507,7 @@ local function parse_xml_file(filepath, arch)
     local instructions = {}
     local explanation_map = parse_explanations(actual_root)
     local iclasses = find_all(actual_root, "iclass")
+    log_info("Found %d iclasses in %s", #iclasses, filepath)
 
     for _, iclass in ipairs(iclasses) do
         local regdiagram = find_first(iclass, "regdiagram")
@@ -553,6 +579,8 @@ local function parse_xml_file(filepath, arch)
                                     operands = operands,
                                     arch = arch
                                 }
+                                log_info("Extracted instruction: %s (Mask: 0x%08X, Value: 0x%08X)",
+                                        encoding_mnemonic, encoding_mask, encoding_value)
                             end
                         end
                     end
@@ -567,11 +595,14 @@ local function parse_xml_file(filepath, arch)
         result[#result + 1] = v
     end
 
+    log_info("Extracted %d unique instructions from %s", #result, filepath)
     return result
 end
 
 local function get_xml_files(directory)
     local files = {}
+    log_info("Scanning for XML files in %s", directory)
+
     if ffi.os == "Windows" then
         ffi.cdef [[
             typedef void* HANDLE;
@@ -602,25 +633,27 @@ local function get_xml_files(directory)
             local fd = ffi.new("WIN32_FIND_DATAA")
             local handle = ffi.C.FindFirstFileA(search_path, fd)
 
-            if handle ~= INVALID_HANDLE_VALUE then
-                repeat
-                    local name = ffi.string(fd.cFileName)
+            if handle == INVALID_HANDLE_VALUE then
+                log_error("FindFirstFileA failed for path %s", search_path)
+                return
+            end
 
-                    if name ~= "." and name ~= ".." then
-                        local full_path = path .. "\\" .. name
+            repeat
+                local name = ffi.string(fd.cFileName)
 
-                        if band(fd.dwFileAttributes, FILE_ATTRIBUTE_DIRECTORY) ~= 0 then
-                            scan_windows(full_path)
-                        else
-                            if name:match("%.xml$") then
-                                table.insert(files, full_path)
-                            end
+                if name ~= "." and name ~= ".." then
+                    local full_path = path .. "\\" .. name
+
+                    if band(fd.dwFileAttributes, FILE_ATTRIBUTE_DIRECTORY) ~= 0 then
+                        scan_windows(full_path)
+                    else
+                        if name:match("%.xml$") then
+                            table.insert(files, full_path)
                         end
                     end
-                until ffi.C.FindNextFileA(handle, fd) == 0
-
-                ffi.C.FindClose(handle)
-            end
+                end
+            until ffi.C.FindNextFileA(handle, fd) == 0
+            ffi.C.FindClose(handle)
         end
 
         scan_windows(directory)
@@ -666,6 +699,9 @@ local function get_xml_files(directory)
                 end
 
                 ffi.C.closedir(d)
+
+            else
+                log_error("opendir failed for path %s", path)
             end
         end
 
@@ -695,16 +731,17 @@ local function format_generated_files(header_file, source_file)
         local cmd = string.format('clang-format -i "%s" "%s"', header_file, source_file)
 
         if run_cmd(cmd) then
-            print("Successfully formatted generated files with clang-format.")
+            log_info("Successfully formatted generated files with clang-format.")
         else
-            io.stderr:write("Warning: clang-format failed to format the files.\n")
+            log_warn("clang-format failed to format the files.\n")
         end
     else
-        io.stderr:write("Warning: clang-format not found in PATH. Skipping formatting.\n")
+        log_warn("clang-format not found in PATH. Skipping formatting.\n")
     end
 end
 
 local function generate_hash_table(instructions)
+    log_info("Generating hash table for %d instructions...", #instructions)
     local buckets = {}
 
     for i = 0, DECODER_HASH_TABLE_SIZE - 1 do
@@ -728,6 +765,19 @@ local function generate_hash_table(instructions)
         end)
     end
 
+    local non_empty = 0
+    local max_size = 0
+
+    for i = 0, DECODER_HASH_TABLE_SIZE - 1 do
+        if #buckets[i] > 0 then
+            non_empty = non_empty + 1
+            if #buckets[i] > max_size then
+                max_size = #buckets[i]
+            end
+        end
+    end
+
+    log_info("Hash table stats: %d/%d buckets used. Max bucket size: %d", non_empty, DECODER_HASH_TABLE_SIZE, max_size)
     return buckets
 end
 
@@ -738,6 +788,12 @@ local function generate_files(instructions, arch, out_directory, header_name, so
     local LOOKUP_TABLE_NAME = "g_decoder_lookup_table"
 
     local hf = io.open(out_directory .. "/" .. header_name, "w")
+
+    if not hf then
+        log_error("Failed to open header file for writing: %s", out_directory .. "/" .. header_name)
+        os.exit(1)
+    end
+
     hf:write("/*\nGENERATED FILE - DO NOT EDIT\nGenerated with tools/generate_a64_table.lua\n*/\n\n")
     hf:write("#ifndef BAL_DECODER_TABLE_GENERATED\n")
     hf:write("#define BAL_DECODER_TABLE_GENERATED\n\n")
@@ -793,6 +849,12 @@ local function generate_files(instructions, arch, out_directory, header_name, so
     end
 
     local sf = io.open(out_directory .. "/" .. source_name, "w")
+
+    if not sf then
+        log_error("Failed to open source file for writing: %s", out_directory .. "/" .. source_name)
+        os.exit(1)
+    end
+
     sf:write("/*\nGENERATED FILE - DO NOT EDIT\nGenerated with tools/generate_a64_table.lua\n*/\n\n")
     sf:write(string.format("/* Generated %d instructions */\n", #instructions))
     sf:write(string.format('#include "%s"\n\n', header_name))
@@ -876,6 +938,13 @@ local function main(...)
         end
     end
 
+    log_info("Configuration:")
+    log_info("  XML Directory:    %s", xml_directory)
+    log_info("  Output Directory: %s", out_directory)
+    log_info("  Header Name:      %s", header_name)
+    log_info("  Source Name:      %s", source_name)
+    log_info("  Architecture:     %s", arch)
+
     if ffi.os == "Windows" then
         ffi.cdef [[ unsigned int GetFileAttributesA(const char *lpFileName); ]]
         local attributes = ffi.C.GetFileAttributesA(xml_directory)
@@ -920,10 +989,16 @@ local function main(...)
         end
     end
 
+    if #all_instructions == 0 then
+        log_error("No instructions were extracted from the XML files!")
+        os.exit(1)
+    end
+
     for i, instruction in ipairs(all_instructions) do
         instruction.array_index = i - 1
     end
 
+    log_info("Total unique instructions collected: %d", #all_instructions)
     local clean_out_dir = out_directory:gsub("[/\\]+$", "")
     local full_header_path = clean_out_dir .. "/" .. header_name
     local full_source_path = clean_out_dir .. "/" .. source_name
