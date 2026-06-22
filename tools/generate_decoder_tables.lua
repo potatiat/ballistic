@@ -595,6 +595,26 @@ local function parse_xml_file(filepath, arch)
         result[#result + 1] = v
     end
 
+    local function to_u32(n)
+        return n < 0 and n + 4294967296 or n
+    end
+
+    -- Sort alphabetically by mnemonic, then by mask, then by value
+    table.sort(result, function(a, b)
+        if a.mnemonic == b.mnemonic then
+            local a_mask = to_u32(a.mask)
+            local b_mask = to_u32(b.mask)
+
+            if a_mask == b_mask then
+                return to_u32(a.value) < to_u32(b.value)
+            end
+
+            return a_mask < b_mask
+        end
+
+        return a.mnemonic < b.mnemonic
+    end)
+
     log_info("Extracted %d unique instructions from %s", #result, filepath)
     return result
 end
@@ -761,6 +781,20 @@ local function generate_hash_table(instructions)
         end
 
         table.sort(buckets[i], function(a, b)
+            if a.priority == b.priority then
+                -- Tie-breaker: sort by value, then by mask.
+                local a_val = a.value < 0 and a.value + 4294967296 or a.value
+                local b_val = b.value < 0 and b.value + 4294967296 or b.value
+
+                if a_val == b_val then
+                    local a_mask = a.mask < 0 and a.mask + 4294967296 or a.mask
+                    local b_mask = b.mask < 0 and b.mask + 4294967296 or b.mask
+                    return a_mask < b_mask
+                end
+
+                return a_val < b_val
+            end
+
             return a.priority > b.priority
         end)
     end
@@ -875,20 +909,11 @@ local function generate_files(instructions, arch, out_directory, header_name, so
             end
         end
 
-        local mask_u32 = inst.mask
+        local mask_hex = string.upper(bit.tohex(inst.mask))
+        local value_hex = string.upper(bit.tohex(inst.value))
 
-        if mask_u32 < 0 then
-            mask_u32 = mask_u32 + 4294967296
-        end
-
-        local value_u32 = inst.value
-
-        if value_u32 < 0 then
-            value_u32 = value_u32 + 4294967296
-        end
-
-        sf:write(string.format('    { "%s", 0x%08X, 0x%08X, %s,\n{ %s },\nPADDING },\n',
-                inst.mnemonic, mask_u32, value_u32, ir_opcode, operands_str))
+        sf:write(string.format('    {  "%s", 0x%s, 0x%s, %s,\n{ %s },\nPADDING },\n',
+                inst.mnemonic, mask_hex, value_hex, ir_opcode, operands_str))
     end
 
     sf:write("};\n\n")
