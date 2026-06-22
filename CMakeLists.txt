@@ -117,10 +117,7 @@ if (NOT EXISTS ${ARM_SPECIFICATION_PATH})
             "Did you clone this repo correctly?")
 endif ()
 
-set(CMAKE_BUILD_RPATH_USE_ORIGIN TRUE)
-list(APPEND CMAKE_BUILD_RPATH "$ORIGIN/../../lib/${BALLISTIC_PLATFORM}")
 add_external_subdirectory(extern/LuaJIT-2.1)
-
 add_custom_command(
         OUTPUT ${GENERATED_DECODER_TABLE_HEADER} ${GENERATED_DECODER_TABLE_SOURCE}
         COMMAND $<TARGET_FILE:luajit_exe> ${SCRIPT_GENERATE_DECODER_TABLE} --xml-directory ${ARM_SPECIFICATION_PATH} --output-directory
