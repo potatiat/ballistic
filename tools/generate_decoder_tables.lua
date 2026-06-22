@@ -594,7 +594,7 @@ local function get_xml_files(directory)
             BOOL FindNextFileA(HANDLE hFindFile, WIN32_FIND_DATAA* lpFindFileData);
             BOOL FindClose(HANDLE hFindFile);
         ]]
-        local INVALID_HANDLE_VALUE = ffi.cast("HANDLE" - 1)
+        local INVALID_HANDLE_VALUE = ffi.cast("HANDLE", -1)
         local FILE_ATTRIBUTE_DIRECTORY = 0X10
 
         local function scan_windows(path)
@@ -617,13 +617,13 @@ local function get_xml_files(directory)
                             end
                         end
                     end
-                until ffi.C.FindNextFileA(h, fd) == 0
+                until ffi.C.FindNextFileA(handle, fd) == 0
 
-                ffi.C.FindClose(h)
+                ffi.C.FindClose(handle)
             end
         end
 
-        scan_windows(dir)
+        scan_windows(directory)
     else
         ffi.cdef [[
             typedef struct DIR DIR;
@@ -876,14 +876,26 @@ local function main(...)
         end
     end
 
-    local file_test = io.open(xml_directory .. "/.", "r")
+    if ffi.os == "Windows" then
+        ffi.cdef [[ unsigned int GetFileAttributesA(const char *lpFileName); ]]
+        local attributes = ffi.C.GetFileAttributesA(xml_directory)
+        local INVALID_FILE_ATTRIBUTES = 0xFFFFFFFF
+        local FILE_ATTRIBUTE_DIRECTORY = 0x10
 
-    if not file_test then
-        io.stderr:write("XML directory does not exist: " .. xml_directory .. "\n")
-        os.exit(1)
+        if attributes == INVALID_FILE_ATTRIBUTES or bit.band(attributes, 0x10) == 0 then
+            io.stderr:write("XML directory does not exist: " .. xml_directory .. "\n")
+            os.exit(1)
+        end
+    else
+        local file_test = io.open(xml_directory .. "/.", "r")
+
+        if not file_test then
+            io.stderr:write("XML directory does not exist: " .. xml_directory .. "\n")
+            os.exit(1)
+        end
+
+        file_test:close()
     end
-
-    file_test:close()
 
     local files = get_xml_files(xml_directory)
 
