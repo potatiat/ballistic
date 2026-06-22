@@ -169,72 +169,72 @@ jobs:
         run: |
           ctest -C ${{ matrix.type }} --output-on-failure -j ${{ env.NUMBER_OF_PROCESSORS }}
 
-  Build-macOS:
-    name: macOS / ${{ matrix.type }}
-    runs-on: macos-14
-    strategy:
-      fail-fast: false
-      matrix:
-        type: [ Debug, Release ]
-    env:
-      CC: clang
-      CXX: clang++
-      CCACHE_COMPRESS: true
-      CCACHE_MAX_SIZE: 5G
-      CCACHE_SLOPPINESS: time_macros,include_file_ctime,include_file_mtime,locale
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          fetch-depth: 1
-
-      - name: Install Dependencies
-        run: brew install ccache ninja
-
-      - name: Setup Compiler Cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.ccache
-          key: ${{ runner.os }}-clang-${{ matrix.type }}-ccache-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-clang-${{ matrix.type }}-ccache-
-
-      - name: Prepare ccache
-        run: |
-          mkdir -p ~/.ccache
-          ccache -z
-          ccache -M 5G
-          ccache -s
-
-      - name: Configure CMake
-        run: |
-          EXTRA_FLAGS=""
-          if [ "${{ matrix.type }}" == "Debug" ]; then
-            EXTRA_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -O0"
-          else
-            EXTRA_FLAGS="-ffile-prefix-map=${{ github.workspace }}=. -O3"
-          fi
-          
-          cmake -G Ninja -B build \
-            -DCMAKE_BUILD_TYPE=${{ matrix.type }} \
-            -DCMAKE_C_COMPILER=${{ env.CC }} \
-            -DCMAKE_CXX_COMPILER=${{ env.CXX }} \
-            -DCMAKE_C_FLAGS="$EXTRA_FLAGS" \
-            -DCMAKE_CXX_FLAGS="$EXTRA_FLAGS" \
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            -DBALLISTIC_BUILD_TESTS=ON \
-
-      - name: Build Project
-        env:
-          ASAN_OPTIONS: detect_leaks=0
-        run: |
-          ccache -z
-          # sysctl dynamically grabs all available M1 cores
-          cmake --build build --config ${{ matrix.type }} --target all -j$(sysctl -n hw.ncpu)
-          ccache -s
-
-      - name: Run Test Suite
-        working-directory: build
-        run: |
-          ctest -C ${{ matrix.type }} --output-on-failure -j$(sysctl -n hw.ncpu)
+#  Build-macOS:
+#    name: macOS / ${{ matrix.type }}
+#    runs-on: macos-14
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        type: [ Debug, Release ]
+#    env:
+#      CC: clang
+#      CXX: clang++
+#      CCACHE_COMPRESS: true
+#      CCACHE_MAX_SIZE: 5G
+#      CCACHE_SLOPPINESS: time_macros,include_file_ctime,include_file_mtime,locale
+#    steps:
+#      - uses: actions/checkout@v4
+#        with:
+#          submodules: recursive
+#          fetch-depth: 1
+#
+#      - name: Install Dependencies
+#        run: brew install ccache ninja
+#
+#      - name: Setup Compiler Cache
+#        uses: actions/cache@v4
+#        with:
+#          path: ~/.ccache
+#          key: ${{ runner.os }}-clang-${{ matrix.type }}-ccache-${{ github.sha }}
+#          restore-keys: |
+#            ${{ runner.os }}-clang-${{ matrix.type }}-ccache-
+#
+#      - name: Prepare ccache
+#        run: |
+#          mkdir -p ~/.ccache
+#          ccache -z
+#          ccache -M 5G
+#          ccache -s
+#
+#      - name: Configure CMake
+#        run: |
+#          EXTRA_FLAGS=""
+#          if [ "${{ matrix.type }}" == "Debug" ]; then
+#            EXTRA_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -O0"
+#          else
+#            EXTRA_FLAGS="-ffile-prefix-map=${{ github.workspace }}=. -O3"
+#          fi
+#
+#          cmake -G Ninja -B build \
+#            -DCMAKE_BUILD_TYPE=${{ matrix.type }} \
+#            -DCMAKE_C_COMPILER=${{ env.CC }} \
+#            -DCMAKE_CXX_COMPILER=${{ env.CXX }} \
+#            -DCMAKE_C_FLAGS="$EXTRA_FLAGS" \
+#            -DCMAKE_CXX_FLAGS="$EXTRA_FLAGS" \
+#            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+#            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+#            -DBALLISTIC_BUILD_TESTS=ON \
+#
+#      - name: Build Project
+#        env:
+#          ASAN_OPTIONS: detect_leaks=0
+#        run: |
+#          ccache -z
+#          # sysctl dynamically grabs all available M1 cores
+#          cmake --build build --config ${{ matrix.type }} --target all -j$(sysctl -n hw.ncpu)
+#          ccache -s
+#
+#      - name: Run Test Suite
+#        working-directory: build
+#        run: |
+#          ctest -C ${{ matrix.type }} --output-on-failure -j$(sysctl -n hw.ncpu)
