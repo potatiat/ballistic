@@ -80,6 +80,7 @@ extern "C"
         /// Emits instruction count.
         BAL_X86_MACRO_ADD_CPU_ICOUNT,
 
+        BAL_X86_MACRO_ADD_REGISTER_IMMEDIATE,
         BAL_X86_MACRO_AND_REGISTER_IMMEDIATE,
         BAL_X86_MACRO_JCC_RELATIVE,
         BAL_X86_MACRO_JMP_REGISTER,

@@ -8,6 +8,7 @@
 static const char *const BAL_X86_MACRO_NAMES[] = {
     "NOP",
     "ADD_CPU_ICOUNT",
+    "ADD_REGISTER_IMMEDIATE",
     "AND_REGISTER_IMMEDIATE",
     "JCC_RELATIVE",
     "JMP_REGISTER",
@@ -195,6 +196,9 @@ flush_single_macro(bal_x86_assembler_t *BAL_RESTRICT   assembler,
             bal_x86_emit_add_mem64_rbp_offset_imm(
                 assembler, offsetof(bal_cpu_t, instruction_count), (int32_t)immediate_or_offset);
             break;
+        case BAL_X86_MACRO_ADD_REGISTER_IMMEDIATE:
+            // WARNING: The immediate is at most 24-bits.
+            bal_x86_emit_add_r64_imm32(assembler, destination, (int32_t)immediate_or_offset);
         case BAL_X86_MACRO_AND_REGISTER_IMMEDIATE:
             bal_x86_emit_mov_r64_imm64(
                 assembler, ASSEMBLER_TEMPORARY_REGISTER, immediate_or_offset);

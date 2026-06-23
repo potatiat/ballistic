@@ -42,6 +42,11 @@ static void terminate_block(bal_tier1_compiler_t *compiler,
 
 static uint32_t extract_operand_value(uint32_t instruction, const bal_decoder_operand_t *operand);
 
+static void translate_add_sub_imm(bal_tier1_compiler_t                     *compiler,
+                                  const bal_decoder_instruction_metadata_t *metadata,
+                                  uint32_t                                  instruction,
+                                  bool                                      is_sub);
+
 static void translate_jump(bal_tier1_compiler_t                     *compiler,
                            const bal_decoder_instruction_metadata_t *metadata,
                            const uint32_t                            instruction,
@@ -286,6 +291,21 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
 
                     BAL_LOG_ERROR(logger,
                                   "Aborting function: Invalid CONST instruction detected: %s",
+                                  metadata->name);
+                    is_block_terminated = true;
+                    break;
+                case OPCODE_ADD:
+                case OPCODE_SUB:;
+                    if (BAL_LIKELY(BAL_OPERAND_TYPE_IMMEDIATE == metadata->operands[2].type))
+                    {
+                        translate_add_sub_imm(
+                            compiler, metadata, instruction, OPCODE_SUB == metadata->ir_opcode);
+                        break;
+                    }
+
+                    BAL_LOG_ERROR(logger,
+                                  "Aborting function: Tier 1 unsupported opcode variant: "
+                                  "%s",
                                   metadata->name);
                     is_block_terminated = true;
                     break;
@@ -541,6 +561,50 @@ extract_operand_value(const uint32_t instruction, const bal_decoder_operand_t *o
     const uint32_t mask = (1U << operand->bit_width) - 1;
     const uint32_t bits = instruction >> operand->bit_position & mask;
     return bits;
+}
+
+void
+translate_add_sub_imm(bal_tier1_compiler_t *BAL_RESTRICT                     compiler,
+                      const bal_decoder_instruction_metadata_t *BAL_RESTRICT metadata,
+                      const uint32_t                                         instruction,
+                      const bool                                             is_sub)
+{
+    const bal_decoder_operand_t *BAL_RESTRICT operand_cursor = metadata->operands;
+    const uint8_t  rd           = (uint8_t)extract_operand_value(instruction, &operand_cursor[0]);
+    const uint8_t  rn           = (uint8_t)extract_operand_value(instruction, &operand_cursor[1]);
+    const uint32_t imm12        = extract_operand_value(instruction, &operand_cursor[2]);
+    const uint32_t shift        = extract_operand_value(instruction, &operand_cursor[3]);
+    const uint64_t shift_amount = 1 == shift ? 12 : 0;
+    uint64_t       value        = (uint64_t)imm12 << shift_amount;
+
+    if (true == is_sub)
+    {
+        // WARNING: Negating the 24-bit value fits in an int32.
+        value = (uint64_t)(-(int64_t)value);
+    }
+
+    const bool               skip_load_rn = false;
+    const bool               skip_load_rd = true;
+    const bal_x86_register_t x86_rn       = allocate_x86_register(compiler, rn, skip_load_rn);
+    const bal_x86_register_t x86_rd       = allocate_x86_register(compiler, rd, skip_load_rd);
+
+    if (x86_rd != x86_rn)
+    {
+        const bal_x86_macro_t mov_macro = {
+            .opcode      = BAL_X86_MACRO_MOV_REGISTER_REGISTER,
+            .destination = x86_rd,
+            .source      = x86_rn,
+        };
+        bal_sliding_window_push(&compiler->window, mov_macro);
+    }
+
+    const bal_x86_macro_t add_macro = {
+        .opcode              = BAL_X86_MACRO_ADD_REGISTER_IMMEDIATE,
+        .destination         = x86_rd,
+        .immediate_or_offset = value,
+    };
+    bal_sliding_window_push(&compiler->window, add_macro);
+    compiler->is_dirty[rd] = true;
 }
 
 void
