@@ -40,12 +40,23 @@ static void terminate_block(bal_tier1_compiler_t *compiler,
                             size_t                arm_instruction_count,
                             uint32_t              engine_flags);
 
+static void terminate_block_conditional(bal_tier1_compiler_t *compiler,
+                                        bal_x86_condition_t   condition,
+                                        bal_guest_address_t   fallthrough_pc,
+                                        bal_guest_address_t   taken_pc);
+
 static uint32_t extract_operand_value(uint32_t instruction, const bal_decoder_operand_t *operand);
 
 static void translate_add_sub_imm(bal_tier1_compiler_t                     *compiler,
                                   const bal_decoder_instruction_metadata_t *metadata,
                                   uint32_t                                  instruction,
                                   bool                                      is_sub);
+
+static void translate_cbz_cbnz(bal_tier1_compiler_t                     *compiler,
+                               const bal_decoder_instruction_metadata_t *metadata,
+                               uint32_t                                  instruction,
+                               bal_guest_address_t                       guest_address,
+                               bool                                      is_cbnz);
 
 static void translate_jump(bal_tier1_compiler_t                     *compiler,
                            const bal_decoder_instruction_metadata_t *metadata,
@@ -315,6 +326,15 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                     guest_address       = target_pc;
                     is_block_terminated = true;
                     break;
+                case OPCODE_BRANCH_ZERO:
+                case OPCODE_BRANCH_NOT_ZERO:;
+                    translate_cbz_cbnz(compiler,
+                                       metadata,
+                                       instruction,
+                                       guest_address,
+                                       OPCODE_BRANCH_NOT_ZERO == metadata->ir_opcode);
+                    is_block_terminated = true;
+                    break;
                 case OPCODE_RETURN:
                     BAL_LOG_DEBUG(logger, "Block terminated by RET");
                     const uint8_t rn
@@ -550,6 +570,60 @@ terminate_block(bal_tier1_compiler_t *compiler,
     bal_x86_emit_ret(&compiler->assembler);
 }
 
+void
+terminate_block_conditional(bal_tier1_compiler_t *compiler,
+                            bal_x86_condition_t   condition,
+                            bal_guest_address_t   fallthrough_pc,
+                            bal_guest_address_t   taken_pc)
+{
+    if (BAL_UNLIKELY(NULL == compiler))
+    {
+        return;
+    }
+
+    bal_sliding_window_flush_all(&compiler->window);
+    size_t                   dirty_count  = 0;
+    const bool *BAL_RESTRICT dirty_cursor = compiler->is_dirty;
+
+    for (uint8_t arm_register = 0; arm_register < 32; ++arm_register)
+    {
+        if (true == dirty_cursor[arm_register])
+        {
+            ++dirty_count;
+        }
+    }
+
+    // STORE macro: 7 bytes (REX + Opcode + ModRM + Disp32)
+    // MOV RAX, IMM64: 5 bytes if <= 32-bit, 10 bytes if > 32-bit
+    // MOV [RBP+PC], RAX: 7 bytes (REX + Opcode + ModRM + Disp32)
+    // POP RBP: 1 byte
+    // RET: 1 byte
+    const size_t mov_fallthrough_size = (fallthrough_pc <= 0xFFFFFFFFULL) ? 5 : 10;
+    const size_t epilogue_size        = (dirty_count * 7) + mov_fallthrough_size + 7 + 1 + 1;
+
+    bal_x86_assembler_t *BAL_RESTRICT assembler   = &compiler->assembler;
+    const int32_t                     jump_offset = (int32_t)epilogue_size;
+    bal_x86_emit_jcc_rel32(assembler, condition, jump_offset);
+
+    flush_dirty_registers(compiler);
+    bal_sliding_window_flush_all(&compiler->window);
+
+    // Emit fallthrough epilogue.
+    bal_x86_emit_mov_r64_imm64(&compiler->assembler, BAL_X86_RAX, fallthrough_pc);
+    bal_x86_emit_store_r64_rbp_offset(&compiler->assembler, BAL_X86_RAX, offsetof(bal_cpu_t, pc));
+    bal_x86_emit_pop_r64(&compiler->assembler, BAL_X86_RBP);
+    bal_x86_emit_ret(&compiler->assembler);
+
+    flush_dirty_registers(compiler);
+    bal_sliding_window_flush_all(&compiler->window);
+
+    // Emit taken epilogue.
+    bal_x86_emit_mov_r64_imm64(&compiler->assembler, BAL_X86_RAX, taken_pc);
+    bal_x86_emit_store_r64_rbp_offset(&compiler->assembler, BAL_X86_RAX, offsetof(bal_cpu_t, pc));
+    bal_x86_emit_pop_r64(&compiler->assembler, BAL_X86_RBP);
+    bal_x86_emit_ret(&compiler->assembler);
+}
+
 BAL_HOT static uint32_t
 extract_operand_value(const uint32_t instruction, const bal_decoder_operand_t *operand)
 {
@@ -605,6 +679,34 @@ translate_add_sub_imm(bal_tier1_compiler_t *BAL_RESTRICT                     com
     };
     bal_sliding_window_push(&compiler->window, add_macro);
     compiler->is_dirty[rd] = true;
+}
+
+void
+translate_cbz_cbnz(bal_tier1_compiler_t *BAL_RESTRICT                     compiler,
+                   const bal_decoder_instruction_metadata_t *BAL_RESTRICT metadata,
+                   uint32_t                                               instruction,
+                   bal_guest_address_t                                    guest_address,
+                   bool                                                   is_cbnz)
+{
+    const uint8_t  rn        = (uint8_t)extract_operand_value(instruction, &metadata->operands[0]);
+    const uint32_t imm19     = extract_operand_value(instruction, &metadata->operands[1]);
+    const uint32_t bit_width = metadata->operands[1].bit_width;
+    const uint32_t shift     = 32U - bit_width;
+
+    const int32_t             signed_immediate = (int32_t)(imm19 << shift) >> shift;
+    const int64_t             offset           = (int64_t)signed_immediate * 4;
+    const bal_guest_address_t taken_pc         = guest_address + (uint64_t)offset;
+    const bal_guest_address_t fallthrough_pc   = guest_address + 4;
+    const bool                skip_load_rn     = false;
+    const bal_x86_register_t  x86_rn           = allocate_x86_register(compiler, rn, skip_load_rn);
+    const bal_x86_macro_t     test_macro       = {
+        .opcode      = BAL_X86_MACRO_TEST_REGISTER_REGISTER,
+        .destination = x86_rn,
+        .source      = x86_rn,
+    };
+    bal_sliding_window_push(&compiler->window, test_macro);
+    terminate_block_conditional(
+        compiler, true == is_cbnz ? BAL_X86_COND_NE : BAL_X86_COND_E, fallthrough_pc, taken_pc);
 }
 
 void

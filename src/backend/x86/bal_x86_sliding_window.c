@@ -20,6 +20,7 @@ static const char *const BAL_X86_MACRO_NAMES[] = {
     "RET",
     "SETCC",
     "STORE",
+    "TEST_REGISTER_REGISTER",
 };
 
 static inline const char *
