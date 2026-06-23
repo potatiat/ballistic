@@ -323,9 +323,9 @@ if (BALLISTIC_BUILD_TESTS)
         target_compile_options(${MEMORY_TEST} PRIVATE -Wall -Wextra -Werror)
     endif ()
 
-    gtest_discover_tests(${ENGINE_TEST} DISCOVERY_MODE PRE_TEST)
-    gtest_discover_tests(${DECODER_TEST} DISCOVERY_MODE PRE_TEST)
-    gtest_discover_tests(${MEMORY_TEST} DISCOVERY_MODE PRE_TEST)
+    gtest_discover_tests(${ENGINE_TEST} DISCOVERY_TIMEOUT 30)
+    gtest_discover_tests(${DECODER_TEST} DISCOVERY_TIMEOUT 30)
+    gtest_discover_tests(${MEMORY_TEST} DISCOVERY_TIMEOUT 30)
 
     set(BACKEND_X86_TESTS x86_assembler x86_sliding_window)
     foreach (test_name ${BACKEND_X86_TESTS})
@@ -337,7 +337,7 @@ if (BALLISTIC_BUILD_TESTS)
             target_compile_options(${MEMORY_TEST} PRIVATE -Wall -Wextra -Werror)
         endif ()
 
-        gtest_discover_tests(${target_name} DISCOVERY_MODE PRE_TEST)
+        gtest_discover_tests(${target_name} DISCOVERY_TIMEOUT 30)
     endforeach ()
 
 
