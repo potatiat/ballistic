@@ -13,13 +13,13 @@ static const char *const BAL_X86_MACRO_NAMES[] = {
     "JCC_RELATIVE",
     "JMP_REGISTER",
     "JMP_RELATIVE",
-    "OR_REGISTER_IMMEDIATE",
+    "LOAD",
     "MOV_REGISTER_IMMEDIATE",
     "MOV_REGISTER_REGISTER",
-    "LOAD",
-    "STORE",
+    "OR_REGISTER_IMMEDIATE",
     "RET",
     "SETCC",
+    "STORE",
 };
 
 static inline const char *
