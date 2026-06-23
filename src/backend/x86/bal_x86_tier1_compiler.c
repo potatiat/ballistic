@@ -269,7 +269,6 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
             switch (metadata->ir_opcode)
             {
                 case OPCODE_CONST:;
-                    // TODO: implement support for the rest MOV instructions.
                     const char variant = metadata->name[3];
 
                     if (BAL_LIKELY(variant == 'N') || BAL_LIKELY(variant == 'K')
