@@ -387,6 +387,21 @@ extern "C"
                                            bal_x86_register_t   source,
                                            int32_t              offset);
 
+    /// Emit a bitwise TEST instruction between two 64-bit registers.
+    ///
+    /// Assembly equivalent: `test destination, source`.
+    ///
+    /// # Safety
+    ///
+    /// This function fails if:
+    ///
+    /// - `assembler` is `NULL`.
+    /// - `assembler->status` != [`BAL_SUCCESS`]
+    /// - `assembler->buffer` is full.
+    void bal_x86_emit_test_r64_r64(bal_x86_assembler_t *assembler,
+                                   bal_x86_register_t   destination,
+                                   bal_x86_register_t   source);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
