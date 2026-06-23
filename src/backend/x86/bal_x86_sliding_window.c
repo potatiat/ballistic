@@ -199,6 +199,7 @@ flush_single_macro(bal_x86_assembler_t *BAL_RESTRICT   assembler,
         case BAL_X86_MACRO_ADD_REGISTER_IMMEDIATE:
             // WARNING: The immediate is at most 24-bits.
             bal_x86_emit_add_r64_imm32(assembler, destination, (int32_t)immediate_or_offset);
+            break;
         case BAL_X86_MACRO_AND_REGISTER_IMMEDIATE:
             bal_x86_emit_mov_r64_imm64(
                 assembler, ASSEMBLER_TEMPORARY_REGISTER, immediate_or_offset);
