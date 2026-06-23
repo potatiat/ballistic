@@ -26,25 +26,31 @@ static const bal_x86_register_t SCRATCH_REGISTERS[]
 
 #define SCRATCH_REGISTERS_SIZE (sizeof(SCRATCH_REGISTERS) / sizeof(SCRATCH_REGISTERS[0]))
 
-static void               reset_register_allocator(bal_tier1_compiler_t *compiler);
+static void reset_register_allocator(bal_tier1_compiler_t *compiler);
+
 static bal_x86_register_t allocate_x86_register(bal_tier1_compiler_t *compiler,
                                                 uint8_t               arm_register,
                                                 bool                  skip_load_instruction);
-static void               flush_dirty_registers(bal_tier1_compiler_t *compiler);
-static void               terminate_block(bal_tier1_compiler_t *compiler,
-                                          bal_guest_address_t   next_pc,
-                                          bool                  is_pc_dynamic,
-                                          size_t                arm_instruction_count,
-                                          uint32_t              engine_flags);
+
+static void flush_dirty_registers(bal_tier1_compiler_t *compiler);
+
+static void terminate_block(bal_tier1_compiler_t *compiler,
+                            bal_guest_address_t   next_pc,
+                            bool                  is_pc_dynamic,
+                            size_t                arm_instruction_count,
+                            uint32_t              engine_flags);
+
 static uint32_t extract_operand_value(uint32_t instruction, const bal_decoder_operand_t *operand);
-static void     translate_jump(bal_tier1_compiler_t                     *compiler,
-                               const bal_decoder_instruction_metadata_t *metadata,
-                               const uint32_t                            instruction,
-                               const bal_guest_address_t                 guest_address,
-                               bal_guest_address_t                      *target_pc);
-static void     translate_mov(bal_tier1_compiler_t                     *compiler,
-                              const bal_decoder_instruction_metadata_t *metadata,
-                              uint32_t                                  instruction);
+
+static void translate_jump(bal_tier1_compiler_t                     *compiler,
+                           const bal_decoder_instruction_metadata_t *metadata,
+                           const uint32_t                            instruction,
+                           const bal_guest_address_t                 guest_address,
+                           bal_guest_address_t                      *target_pc);
+
+static void translate_mov(bal_tier1_compiler_t                     *compiler,
+                          const bal_decoder_instruction_metadata_t *metadata,
+                          uint32_t                                  instruction);
 
 bal_error_t
 bal_tier1_compiler_init(bal_tier1_compiler_t         *compiler,
