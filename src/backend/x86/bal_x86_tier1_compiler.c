@@ -21,10 +21,14 @@
 // Scratch registers for the Greedy Allocator. We avoid RDI and RSI since they are often used for
 // the argument passing.
 //
+// Note that R11 was intentionally excluded from this. See [`BAL_X86_REGISTER_DISCARD_RESULT`].
 static const bal_x86_register_t SCRATCH_REGISTERS[]
     = { BAL_X86_RAX, BAL_X86_RCX, BAL_X86_RDX, BAL_X86_R8, BAL_X86_R9, BAL_X86_R10 };
 
 #define SCRATCH_REGISTERS_SIZE (sizeof(SCRATCH_REGISTERS) / sizeof(SCRATCH_REGISTERS[0]))
+
+/// Dedicated throwaway register for instructions that update flags but discards the result.
+#define BAL_X86_REGISTER_DISCARD_RESULT BAL_X86_R11
 
 static void reset_register_allocator(bal_tier1_compiler_t *compiler);
 
@@ -306,11 +310,13 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                     is_block_terminated = true;
                     break;
                 case OPCODE_ADD:
-                case OPCODE_SUB:;
+                case OPCODE_SUB:
+                case OPCODE_CMP:;
                     if (BAL_LIKELY(BAL_OPERAND_TYPE_IMMEDIATE == metadata->operands[2].type))
                     {
-                        translate_add_sub_imm(
-                            compiler, metadata, instruction, OPCODE_SUB == metadata->ir_opcode);
+                        const bool is_sub = (OPCODE_SUB == metadata->ir_opcode)
+                                            || (OPCODE_CMP == metadata->ir_opcode);
+                        translate_add_sub_imm(compiler, metadata, instruction, is_sub);
                         break;
                     }
 
@@ -651,19 +657,17 @@ translate_add_sub_imm(bal_tier1_compiler_t *BAL_RESTRICT                     com
     const uint64_t shift_amount = 1 == shift ? 12 : 0;
     uint64_t       value        = (uint64_t)imm12 << shift_amount;
 
-    if (true == is_sub)
-    {
-        // WARNING: Negating the 24-bit value fits in an int32.
-        value = (uint64_t)(-(int64_t)value);
-    }
+    // Does this instruction set flags?
+    const bool is_setting_flags = (OPCODE_CMP == metadata->ir_opcode) || ('S' == metadata->name[3])
+                                  || ('N' == metadata->name[2]);
+    const bool is_discarded_result  = is_setting_flags && (31 == rd);
+    const bool skip_load_rn         = false;
+    const bal_x86_register_t x86_rn = allocate_x86_register(compiler, rn, skip_load_rn);
+    bal_x86_register_t       x86_rd;
 
-    const bool               skip_load_rn = false;
-    const bool               skip_load_rd = true;
-    const bal_x86_register_t x86_rn       = allocate_x86_register(compiler, rn, skip_load_rn);
-    const bal_x86_register_t x86_rd       = allocate_x86_register(compiler, rd, skip_load_rd);
-
-    if (x86_rd != x86_rn)
+    if (true == is_discarded_result)
     {
+        x86_rd                          = BAL_X86_REGISTER_DISCARD_RESULT;
         const bal_x86_macro_t mov_macro = {
             .opcode      = BAL_X86_MACRO_MOV_REGISTER_REGISTER,
             .destination = x86_rd,
@@ -671,14 +675,78 @@ translate_add_sub_imm(bal_tier1_compiler_t *BAL_RESTRICT                     com
         };
         bal_sliding_window_push(&compiler->window, mov_macro);
     }
+    else
+    {
+        const bool skip_load_rd = true;
+        x86_rd                  = allocate_x86_register(compiler, rd, skip_load_rd);
 
-    const bal_x86_macro_t add_macro = {
-        .opcode              = BAL_X86_MACRO_ADD_REGISTER_IMMEDIATE,
-        .destination         = x86_rd,
-        .immediate_or_offset = value,
-    };
-    bal_sliding_window_push(&compiler->window, add_macro);
-    compiler->is_dirty[rd] = true;
+        if (x86_rd != x86_rn)
+        {
+            const bal_x86_macro_t mov_macro = {
+                .opcode      = BAL_X86_MACRO_MOV_REGISTER_REGISTER,
+                .destination = x86_rd,
+                .source      = x86_rn,
+            };
+            bal_sliding_window_push(&compiler->window, mov_macro);
+        }
+    }
+
+    if (true == is_sub)
+    {
+        const bal_x86_macro_t sub_macro = {
+            .opcode              = BAL_X86_MACRO_SUB_REGISTER_IMMEDIATE,
+            .destination         = x86_rd,
+            .immediate_or_offset = value,
+        };
+        bal_sliding_window_push(&compiler->window, sub_macro);
+    }
+    else
+    {
+        const bal_x86_macro_t add_macro = {
+            .opcode      = BAL_X86_MACRO_ADD_REGISTER_IMMEDIATE,
+            .destination = x86_rd,
+            .immediate_or_offset = value,
+        };
+        bal_sliding_window_push(&compiler->window, add_macro);
+    }
+
+    if (true == is_setting_flags)
+    {
+        const bal_x86_macro_t set_n_macro = {
+            .opcode              = BAL_X86_MACRO_SETCC,
+            .condition           = BAL_X86_COND_S,
+            .immediate_or_offset = offsetof(bal_cpu_t, flag_n),
+        };
+        bal_sliding_window_push(&compiler->window, set_n_macro);
+
+        const bal_x86_macro_t set_z_macro = {
+            .opcode              = BAL_X86_MACRO_SETCC,
+            .condition           = BAL_X86_COND_E,
+            .immediate_or_offset = offsetof(bal_cpu_t, flag_z),
+        };
+        bal_sliding_window_push(&compiler->window, set_z_macro);
+
+        const bal_x86_macro_t set_v_macro = {
+            .opcode              = BAL_X86_MACRO_SETCC,
+            .condition           = BAL_X86_COND_O,
+            .immediate_or_offset = offsetof(bal_cpu_t, flag_v),
+        };
+        bal_sliding_window_push(&compiler->window, set_v_macro);
+
+        // ARM carry flag is inverted compared to x86's carry during subtraction.
+        const bal_x86_condition_t c_condition = true == is_sub ? BAL_X86_COND_AE : BAL_X86_COND_B;
+        const bal_x86_macro_t     set_c_macro = {
+            .opcode              = BAL_X86_MACRO_SETCC,
+            .condition           = c_condition,
+            .immediate_or_offset = offsetof(bal_cpu_t, flag_c),
+        };
+        bal_sliding_window_push(&compiler->window, set_c_macro);
+    }
+
+    if (false == is_discarded_result)
+    {
+        compiler->is_dirty[rd] = true;
+    }
 }
 
 void

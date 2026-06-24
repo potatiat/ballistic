@@ -20,6 +20,7 @@ static const char *const BAL_X86_MACRO_NAMES[] = {
     "RET",
     "SETCC",
     "STORE",
+    "SUB_REGISTER_IMMEDIATE",
     "TEST_REGISTER_REGISTER",
 };
 
@@ -265,6 +266,9 @@ flush_single_macro(bal_x86_assembler_t *BAL_RESTRICT   assembler,
         case BAL_X86_MACRO_SETCC:
             bal_x86_emit_setcc_mem8_rbp_offset(
                 assembler, macro->condition, (int32_t)immediate_or_offset);
+            break;
+        case BAL_X86_MACRO_SUB_REGISTER_IMMEDIATE:
+            bal_x86_emit_sub_r64_imm32(assembler, destination, (int32_t)immediate_or_offset);
             break;
         default:
             BAL_LOG_ERROR(

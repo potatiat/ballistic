@@ -92,6 +92,7 @@ extern "C"
         BAL_X86_MACRO_RET,
         BAL_X86_MACRO_SETCC,
         BAL_X86_MACRO_STORE,
+        BAL_X86_MACRO_SUB_REGISTER_IMMEDIATE,
         BAL_X86_MACRO_TEST_REGISTER_REGISTER,
     } bal_x86_macro_opcode_t;
 
