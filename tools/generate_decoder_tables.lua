@@ -115,6 +115,10 @@ local function derive_opcode(mnemonic)
         return "OPCODE_JUMP"
     end
 
+    if m:sub(1, 2) == "B." then
+        return "OPCODE_BRANCH_CONDITIONAL"
+    end
+
     if m == "BL" then
         return "OPCODE_CALL_HOST"
     end
@@ -241,13 +245,14 @@ local function parse_operands(asmtemplate, field_map, explanation_map)
 end
 
 local function get_mnemonic(node)
-    local docvars_list = find_all(node, "docvars")
+    local heading = find_first(node, "heading")
 
-    for _, docvars in ipairs(docvars_list) do
-        for _, docvar in ipairs(docvars.children) do
-            if docvar.tag == "docvar" and docvar.attrs.key == "mnemonic" then
-                return docvar.attrs.value
-            end
+    if heading then
+        local text = get_text(heading)
+        local first_word = text:match("^%s*([%w%.]+)")
+
+        if first_word then
+            return first_word
         end
     end
 
