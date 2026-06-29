@@ -9,6 +9,7 @@ static const char *const BAL_X86_MACRO_NAMES[] = {
     "NOP",
     "ADD_CPU_ICOUNT",
     "ADD_REGISTER_IMMEDIATE",
+    "ADD_REGISTER_REGISTER",
     "AND_REGISTER_IMMEDIATE",
     "JCC_RELATIVE",
     "JMP_REGISTER",
@@ -21,6 +22,7 @@ static const char *const BAL_X86_MACRO_NAMES[] = {
     "SETCC",
     "STORE",
     "SUB_REGISTER_IMMEDIATE",
+    "SUB_REGISTER_REGISTER",
     "TEST_REGISTER_REGISTER",
 };
 
@@ -202,6 +204,9 @@ flush_single_macro(bal_x86_assembler_t *BAL_RESTRICT   assembler,
             // WARNING: The immediate is at most 24-bits.
             bal_x86_emit_add_r64_imm32(assembler, destination, (int32_t)immediate_or_offset);
             break;
+        case BAL_X86_MACRO_ADD_REGISTER_REGISTER:
+            bal_x86_emit_add_r64_r64(assembler, destination, source);
+            break;
         case BAL_X86_MACRO_AND_REGISTER_IMMEDIATE:
             bal_x86_emit_mov_r64_imm64(
                 assembler, ASSEMBLER_TEMPORARY_REGISTER, immediate_or_offset);
@@ -269,6 +274,9 @@ flush_single_macro(bal_x86_assembler_t *BAL_RESTRICT   assembler,
             break;
         case BAL_X86_MACRO_SUB_REGISTER_IMMEDIATE:
             bal_x86_emit_sub_r64_imm32(assembler, destination, (int32_t)immediate_or_offset);
+            break;
+        case BAL_X86_MACRO_SUB_REGISTER_REGISTER:
+            bal_x86_emit_sub_r64_r64(assembler, destination, source);
             break;
         default:
             BAL_LOG_ERROR(

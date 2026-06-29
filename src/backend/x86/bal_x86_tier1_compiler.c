@@ -56,6 +56,11 @@ static void translate_add_sub_imm(bal_tier1_compiler_t                     *comp
                                   uint32_t                                  instruction,
                                   bool                                      is_sub);
 
+static void translate_add_sub_reg(bal_tier1_compiler_t                     *compiler,
+                                  const bal_decoder_instruction_metadata_t *metadata,
+                                  uint32_t                                  instruction,
+                                  bool                                      is_sub);
+
 static void translate_cbz_cbnz(bal_tier1_compiler_t                     *compiler,
                                const bal_decoder_instruction_metadata_t *metadata,
                                uint32_t                                  instruction,
@@ -317,6 +322,15 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                         const bool is_sub = (OPCODE_SUB == metadata->ir_opcode)
                                             || (OPCODE_CMP == metadata->ir_opcode);
                         translate_add_sub_imm(compiler, metadata, instruction, is_sub);
+                        break;
+                    }
+
+                    if (BAL_OPERAND_TYPE_REGISTER_64 == metadata->operands[2].type
+                        || BAL_OPERAND_TYPE_REGISTER_32 == metadata->operands[2].type)
+                    {
+                        const bool is_sub = (OPCODE_SUB == metadata->ir_opcode)
+                                            || (OPCODE_CMP == metadata->ir_opcode);
+                        translate_add_sub_reg(compiler, metadata, instruction, is_sub);
                         break;
                     }
 
@@ -703,9 +717,123 @@ translate_add_sub_imm(bal_tier1_compiler_t *BAL_RESTRICT                     com
     else
     {
         const bal_x86_macro_t add_macro = {
-            .opcode      = BAL_X86_MACRO_ADD_REGISTER_IMMEDIATE,
-            .destination = x86_rd,
+            .opcode              = BAL_X86_MACRO_ADD_REGISTER_IMMEDIATE,
+            .destination         = x86_rd,
             .immediate_or_offset = value,
+        };
+        bal_sliding_window_push(&compiler->window, add_macro);
+    }
+
+    if (true == is_setting_flags)
+    {
+        const bal_x86_macro_t set_n_macro = {
+            .opcode              = BAL_X86_MACRO_SETCC,
+            .condition           = BAL_X86_COND_S,
+            .immediate_or_offset = offsetof(bal_cpu_t, flag_n),
+        };
+        bal_sliding_window_push(&compiler->window, set_n_macro);
+
+        const bal_x86_macro_t set_z_macro = {
+            .opcode              = BAL_X86_MACRO_SETCC,
+            .condition           = BAL_X86_COND_E,
+            .immediate_or_offset = offsetof(bal_cpu_t, flag_z),
+        };
+        bal_sliding_window_push(&compiler->window, set_z_macro);
+
+        const bal_x86_macro_t set_v_macro = {
+            .opcode              = BAL_X86_MACRO_SETCC,
+            .condition           = BAL_X86_COND_O,
+            .immediate_or_offset = offsetof(bal_cpu_t, flag_v),
+        };
+        bal_sliding_window_push(&compiler->window, set_v_macro);
+
+        // ARM carry flag is inverted compared to x86's carry during subtraction.
+        const bal_x86_condition_t c_condition = true == is_sub ? BAL_X86_COND_AE : BAL_X86_COND_B;
+        const bal_x86_macro_t     set_c_macro = {
+            .opcode              = BAL_X86_MACRO_SETCC,
+            .condition           = c_condition,
+            .immediate_or_offset = offsetof(bal_cpu_t, flag_c),
+        };
+        bal_sliding_window_push(&compiler->window, set_c_macro);
+    }
+
+    if (false == is_discarded_result)
+    {
+        compiler->is_dirty[rd] = true;
+    }
+}
+
+void
+translate_add_sub_reg(bal_tier1_compiler_t *BAL_RESTRICT                     compiler,
+                      const bal_decoder_instruction_metadata_t *BAL_RESTRICT metadata,
+                      const uint32_t                                         instruction,
+                      const bool                                             is_sub)
+{
+    const bal_decoder_operand_t *BAL_RESTRICT operand_cursor = metadata->operands;
+    const uint8_t  rd           = (uint8_t)extract_operand_value(instruction, &operand_cursor[0]);
+    const uint8_t  rn           = (uint8_t)extract_operand_value(instruction, &operand_cursor[1]);
+    const uint8_t  rm           = (uint8_t)extract_operand_value(instruction, &operand_cursor[2]);
+    const uint32_t shift_amount = extract_operand_value(instruction, &operand_cursor[3]);
+
+    if (BAL_UNLIKELY(shift_amount != 0))
+    {
+        BAL_LOG_ERROR(&compiler->logger,
+                      "Aborting function: Tier 1 does not support shift amounts != 0 yet: %s",
+                      metadata->name);
+        compiler->status = BAL_ERROR_UNKNOWN_INSTRUCTION;
+        return;
+    }
+
+    const bool is_setting_flags = (OPCODE_CMP == metadata->ir_opcode) || ('S' == metadata->name[3])
+                                  || ('N' == metadata->name[2]);
+    const bool is_discarded_result        = is_setting_flags && (31 == rd);
+    const bool skip_load_rn               = false;
+    const bal_x86_register_t x86_rn       = allocate_x86_register(compiler, rn, skip_load_rn);
+    const bool               skip_load_rm = false;
+    const bal_x86_register_t x86_rm       = allocate_x86_register(compiler, rm, skip_load_rm);
+    bal_x86_register_t       x86_rd;
+
+    if (true == is_discarded_result)
+    {
+        x86_rd                          = BAL_X86_REGISTER_DISCARD_RESULT;
+        const bal_x86_macro_t mov_macro = {
+            .opcode      = BAL_X86_MACRO_MOV_REGISTER_REGISTER,
+            .destination = x86_rd,
+            .source      = x86_rn,
+        };
+        bal_sliding_window_push(&compiler->window, mov_macro);
+    }
+    else
+    {
+        const bool skip_load_rd = true;
+        x86_rd                  = allocate_x86_register(compiler, rd, skip_load_rd);
+
+        if (x86_rd != x86_rn)
+        {
+            const bal_x86_macro_t mov_macro = {
+                .opcode      = BAL_X86_MACRO_MOV_REGISTER_REGISTER,
+                .destination = x86_rd,
+                .source      = x86_rn,
+            };
+            bal_sliding_window_push(&compiler->window, mov_macro);
+        }
+    }
+
+    if (true == is_sub)
+    {
+        const bal_x86_macro_t sub_macro = {
+            .opcode      = BAL_X86_MACRO_SUB_REGISTER_REGISTER,
+            .destination = x86_rd,
+            .source      = x86_rm,
+        };
+        bal_sliding_window_push(&compiler->window, sub_macro);
+    }
+    else
+    {
+        const bal_x86_macro_t add_macro = {
+            .opcode      = BAL_X86_MACRO_ADD_REGISTER_REGISTER,
+            .destination = x86_rd,
+            .source      = x86_rm,
         };
         bal_sliding_window_push(&compiler->window, add_macro);
     }
