@@ -896,7 +896,7 @@ bal_x86_emit_jcc_rel32(bal_x86_assembler_t      *assembler,
     }
 
     BAL_LOG_DEBUG(&assembler->logger,
-                  "[0x%4zx] j%s 0x%X",
+                  "[0x%04zx] j%s 0x%X",
                   assembler->offset,
                   condition_code_to_string(condition),
                   offset);
