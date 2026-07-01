@@ -244,16 +244,27 @@ local function parse_operands(asmtemplate, field_map, explanation_map)
     return operands
 end
 
-local function get_mnemonic(node)
-    local heading = find_first(node, "heading")
+local function get_mnemonic(node, root_heading)
+    local docvars_list = find_all(node, "docvars")
 
-    if heading then
-        local text = get_text(heading)
-        local first_word = text:match("^%s*([%w%.]+)")
+    for _, docvars in ipairs(docvars_list) do
+        for _, docvar in ipairs(docvars.children) do
+            if docvar.tag == "docvar" and docvar.attrs.key == "mnemonic" then
+                local mnemonic = docvar.attrs.value
 
-        if first_word then
-            return first_word
+                -- ARM XML uses "B" in docvars for conditional branches, but the actual mnemonic is "B.cond"
+                -- (which is in the root heading).
+                if mnemonic == "B" and root_heading and root_heading:sub(1, 2) == "B." then
+                    return root_heading
+                end
+
+                return mnemonic
+            end
         end
+    end
+
+    if root_heading then
+        return root_heading
     end
 
     return nil
@@ -494,7 +505,15 @@ local function parse_xml_file(filepath, arch)
         return {}
     end
 
-    local file_mnemonic = get_mnemonic(actual_root)
+    local root_heading = nil
+    local heading_node = find_first(actual_root, "heading")
+
+    if heading_node then
+        local text = get_text(heading_node)
+        root_heading = text:match("^%s*(%S+)")
+    end
+
+    local file_mnemonic = get_mnemonic(actual_root, root_heading)
 
     if not file_mnemonic then
         local heading = find_first(actual_root, "heading")
@@ -518,7 +537,7 @@ local function parse_xml_file(filepath, arch)
         local regdiagram = find_first(iclass, "regdiagram")
 
         if regdiagram and regdiagram.attrs.form == "32" then
-            local class_mnemonic = get_mnemonic(iclass) or file_mnemonic or "[UNKNOWN]"
+            local class_mnemonic = get_mnemonic(iclass, root_heading) or file_mnemonic or "[UNKNOWN]"
             local field_map = parse_register_diagram(regdiagram)
             local class_mask = 0
             local class_value = 0
@@ -544,7 +563,7 @@ local function parse_xml_file(filepath, arch)
                 for _, encoding in ipairs(encodings) do
                     local asmtemplate = find_first(encoding, "asmtemplate")
                     if asmtemplate then
-                        local encoding_mnemonic = get_mnemonic(encoding) or class_mnemonic
+                        local encoding_mnemonic = get_mnemonic(encoding, root_heading) or class_mnemonic
                         local encoding_mask = class_mask
                         local encoding_value = class_value
                         local encoding_ok = true
