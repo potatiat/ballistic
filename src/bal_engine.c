@@ -366,6 +366,8 @@ bal_engine_run_thread(bal_engine_t *engine)
                                   // WARNING: C standard guarantees unsigned long long is at least
                                   // 64 bits wide.
                                   (unsigned long long)pc);
+                    engine->status = internal_engine_state->tier1_compiler.status;
+                    break;
                 }
             }
 
@@ -374,7 +376,7 @@ bal_engine_run_thread(bal_engine_t *engine)
                 BAL_LOG_ERROR(&engine->logger,
                               "Aborting function: Failed to compile block at PC 0x%0llX",
                               (unsigned long long)pc);
-                engine->status = BAL_ERROR_UNKNOWN_INSTRUCTION;
+                engine->status = internal_engine_state->tier1_compiler.status;
                 break;
             }
         }
