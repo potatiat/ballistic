@@ -20,34 +20,6 @@ extern "C"
 /// regions. This is mainly used for detecting reads from uninitialized memory.
 #define POISON_UNINITIALIZED_MEMORY 0xFF
 
-/// IR Instruction Bitfield Layout:
-///
-/// 63               51 50        34 33        17 16        00
-/// |-----------------| |----------| |----------| |----------|
-///        opc             src1         src2         src3
-
-/// Opcode bitfield least significant bit.
-#define BAL_OPCODE_SHIFT_POSITION 51U
-
-/// Source1 bitfield least significant bit.
-#define BAL_SOURCE1_SHIFT_POSITION 34U
-
-/// Source2 bitfield least significant bit.
-#define BAL_SOURCE2_SHIFT_POSITION 17U
-
-/// The maximum value for an Opcode.
-#define BAL_OPCODE_SIZE (1U << 11U)
-
-/// The mask for any source field. This does not include the Is Constant flag at Bit 16.
-#define BAL_SOURCE_MASK ((1U << 16U) - 1U)
-
-/// The mask for any source bitfield. This includes the Is Constant flag at Bit 16.
-/// Developers should clear Bit 16 after applying this mask to get the raw source.
-#define BAL_SOURCE_MASK_WITH_FLAG ((1U << 17U) - 1U)
-
-/// The bit position for the is constant flag in a bal_instruction_t.
-#define BAL_IS_CONSTANT_BIT_POSITION (1U << 16U)
-
     BAL_ALIGNED(64) typedef struct
     {
         /// The guest CPU state.
