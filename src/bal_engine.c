@@ -308,7 +308,13 @@ bal_engine_run_thread(bal_engine_t *engine)
         }
 
         // TODO: Implement Block linking
-        bal_guest_address_t pc = engine->cpu->pc;
+        const bal_guest_address_t pc = engine->cpu->pc;
+
+        if (BAL_UNLIKELY(BAL_ENGINE_SENTINEL == pc))
+        {
+            BAL_LOG_INFO(&engine->logger, "Safe exit triggered by sentinel PC value.");
+            break;
+        }
 
         void *BAL_RESTRICT entry_point = NULL;
 

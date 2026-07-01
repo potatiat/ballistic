@@ -20,6 +20,9 @@ extern "C"
 /// regions. This is mainly used for detecting reads from uninitialized memory.
 #define BAL_POISON_UNINITIALIZED_MEMORY 0xFF
 
+/// Ballistic will safely terminate execution if the Program Counter matches this value.
+#define BAL_ENGINE_SENTINEL 0xFFFFFFFFFFFFFFFFULL
+
     BAL_ALIGNED(64) typedef struct
     {
         /// The guest CPU state.
