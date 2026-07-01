@@ -18,7 +18,7 @@ extern "C"
 
 /// A byte pattern written to memory during initialization, poisoning allocated
 /// regions. This is mainly used for detecting reads from uninitialized memory.
-#define POISON_UNINITIALIZED_MEMORY 0xFF
+#define BAL_POISON_UNINITIALIZED_MEMORY 0xFF
 
     BAL_ALIGNED(64) typedef struct
     {
