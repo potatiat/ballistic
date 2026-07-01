@@ -424,8 +424,9 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
     {
         const bal_error_t status
             = compiler->status == BAL_SUCCESS ? compiler->assembler.status : compiler->status;
-        BAL_LOG_ERROR(
-            logger, "Aborting function: block assembly was truncated due to error: %d", status);
+        BAL_LOG_ERROR(logger,
+                      "Aborting function: block assembly was truncated due to error: %s",
+                      bal_error_to_string(status));
         return NULL;
     }
 
