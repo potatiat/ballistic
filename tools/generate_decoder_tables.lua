@@ -209,24 +209,32 @@ local function parse_operands(asmtemplate, field_map, explanation_map)
                     end
                 end
 
-                if encoded_field and field_map[encoded_field] then
-                    local bit_position, bit_width = field_map[encoded_field][1], field_map[encoded_field][2]
-                    local operand_type = derive_operand_type(text, hover)
+                if encoded_field then
+                    for part in string.gmatch(encoded_field, "[^:]+") do
+                        if field_map[part] then
+                            local bit_position, bit_width = field_map[part][1], field_map[part][2]
+                            local operand_type = derive_operand_type(text, hover)
 
-                    if operand_type ~= "BAL_OPERAND_TYPE_NONE" then
-                        local dup = false
-
-                        for _, op in ipairs(operands) do
-                            if op[1] == operand_type and op[2] == bit_position and op[3] == bit_width then
-                                dup = true;
-                                break
+                            if part == "hw" or part == "shift" or part == "imms" or part == "immr" then
+                                operand_type = "BAL_OPERAND_TYPE_IMMEDIATE"
                             end
-                        end
 
-                        if not dup then
-                            operands[#operands + 1] = { operand_type, bit_position, bit_width }
-                            log_info("Extracted operand: %s (pos: %d, width: %d)", operand_type, bit_position,
-                                    bit_width)
+                            if operand_type ~= "BAL_OPERAND_TYPE_NONE" then
+                                local dup = false
+                                for _, op in ipairs(operands) do
+                                    if op[1] == operand_type and op[2] == bit_position and op[3] == bit_width then
+                                        dup = true
+                                        break
+                                    end
+                                end
+
+                                if not dup then
+                                    operands[#operands + 1] = { operand_type, bit_position, bit_width }
+                                    log_info("Extracted operand: %s (pos: %d, width: %d) from part '%s'", operand_type, bit_position, bit_width, part)
+                                end
+                            end
+                        else
+                            log_warn("Field '%s' (from '%s') not found in field_map", part, encoded_field)
                         end
                     end
                 end
