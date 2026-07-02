@@ -11,7 +11,7 @@ if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif ()
 
-project(Ballistic LANGUAGES C CXX VERSION 0.6.0)
+project(Ballistic LANGUAGES C CXX VERSION 0.7.0)
 
 # Macro to add external without compiler warnings.
 macro(add_external_subdirectory directory)
