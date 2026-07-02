@@ -453,6 +453,53 @@ bal_engine_reset(bal_engine_t *BAL_RESTRICT engine)
     return engine->status;
 }
 
+void
+bal_engine_destroy(bal_engine_t *engine)
+{
+    if (BAL_UNLIKELY(NULL == engine))
+    {
+        return;
+    }
+
+    if (NULL == engine->engine_state)
+    {
+        // Already destroyed or never fully initialized.
+        memset(engine, 0, sizeof(bal_engine_t));
+        return;
+    }
+
+    internal_engine_state_t *BAL_RESTRICT internal_engine_state
+        = (internal_engine_state_t *)engine->engine_state;
+
+    const bal_allocator_t *BAL_RESTRICT allocator = engine->allocator;
+    const bal_logger_t                  logger    = engine->logger;
+
+    if (NULL != allocator)
+    {
+        if (NULL != allocator->free_executable
+            && NULL != internal_engine_state->tier1_buffer.rw_pointer)
+        {
+            BAL_LOG_INFO(&logger, "Freeing Tier 1 executable buffer.");
+            allocator->free_executable(allocator->context,
+                                       internal_engine_state->tier1_buffer,
+                                       internal_engine_state->tier1_buffer_size);
+        }
+
+        if (NULL != allocator->free)
+        {
+            BAL_LOG_INFO(&logger, "Freeing internal engine state.");
+            allocator->free(
+                allocator->context, internal_engine_state, sizeof(internal_engine_state_t));
+        }
+    }
+    else
+    {
+        BAL_LOG_WARN(&logger, "Allocator is NULL during engine destroy. Internal memory leaked.");
+    }
+
+    memset(engine, 0, sizeof(bal_engine_t));
+}
+
 bool
 bal_engine_is_running(bal_engine_t *engine)
 {

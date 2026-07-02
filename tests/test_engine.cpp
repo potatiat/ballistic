@@ -48,6 +48,7 @@ TEST(EngineIntegration, WhileLoop)
     EXPECT_EQ(cpu.x[0], 0);
     // .loop:
 
+    bal_engine_destroy(&engine);
     bal_flat_translation_interface_destroy(&allocator, &memory_interface);
     allocator.free(allocator.context, guest_memory, guest_memory_size);
 }

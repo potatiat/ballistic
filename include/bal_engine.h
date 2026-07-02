@@ -88,6 +88,16 @@ extern "C"
     /// Returns [`BAL_ERROR_INVALID_ARGUMENT`] if `engine` is `NULl`.
     BAL_HOT bal_error_t bal_engine_reset(bal_engine_t *engine);
 
+    /// Destroys a Ballistic engine and frees all internal resources.
+    ///
+    /// This function does not free the `bal_cpu_t`, `bal_allocator_t`, or `bal_memory_interface_t`
+    /// passed to the engine.
+    ///
+    /// # Safety
+    ///
+    /// `engine` must be a valid pointer to an initialized engine (or a zeroed struct).
+    BAL_COLD void bal_engine_destroy(bal_engine_t *engine);
+
     /// Checks if the engine is currently executing guest code.
     ///
     /// This function is thread-safe and can be called from any thread.
