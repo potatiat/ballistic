@@ -246,6 +246,9 @@ local function parse_operands(asmtemplate, field_map, explanation_map)
         end
     end
 
+    table.sort(operands, function(a, b)
+        return a[2] < b[2]
+    end)
     return operands
 end
 
