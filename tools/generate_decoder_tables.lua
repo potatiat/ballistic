@@ -596,7 +596,7 @@ local function parse_xml_file(filepath, arch)
                             local tmp = encoding_mask
 
                             while tmp > 0 do
-                                priority = priority + band(tmp + 1)
+                                priority = priority + band(tmp, 1)
                                 tmp = rshift(tmp, 1)
                             end
 
