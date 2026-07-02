@@ -321,20 +321,20 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                 case OPCODE_ADD:
                 case OPCODE_SUB:
                 case OPCODE_CMP:;
+                    if (BAL_OPERAND_TYPE_REGISTER_64 == metadata->operands[3].type
+                        || BAL_OPERAND_TYPE_REGISTER_32 == metadata->operands[3].type)
+                    {
+                        const bool is_sub = (OPCODE_SUB == metadata->ir_opcode)
+                                            || (OPCODE_CMP == metadata->ir_opcode);
+                        translate_add_sub_reg(compiler, metadata, instruction, is_sub);
+                        break;
+                    }
+
                     if (BAL_LIKELY(BAL_OPERAND_TYPE_IMMEDIATE == metadata->operands[2].type))
                     {
                         const bool is_sub = (OPCODE_SUB == metadata->ir_opcode)
                                             || (OPCODE_CMP == metadata->ir_opcode);
                         translate_add_sub_imm(compiler, metadata, instruction, is_sub);
-                        break;
-                    }
-
-                    if (BAL_OPERAND_TYPE_REGISTER_64 == metadata->operands[2].type
-                        || BAL_OPERAND_TYPE_REGISTER_32 == metadata->operands[2].type)
-                    {
-                        const bool is_sub = (OPCODE_SUB == metadata->ir_opcode)
-                                            || (OPCODE_CMP == metadata->ir_opcode);
-                        translate_add_sub_reg(compiler, metadata, instruction, is_sub);
                         break;
                     }
 
