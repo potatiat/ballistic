@@ -61,6 +61,10 @@ static void translate_add_sub_reg(bal_tier1_compiler_t                     *comp
                                   uint32_t                                  instruction,
                                   bool                                      is_sub);
 
+static void translate_b_cond(bal_tier1_compiler_t *compiler,
+                             uint32_t              instruction,
+                             bal_guest_address_t   guest_address);
+
 static void translate_cbz_cbnz(bal_tier1_compiler_t                     *compiler,
                                const bal_decoder_instruction_metadata_t *metadata,
                                uint32_t                                  instruction,
@@ -353,6 +357,10 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                                        instruction,
                                        guest_address,
                                        OPCODE_BRANCH_NOT_ZERO == metadata->ir_opcode);
+                    is_block_terminated = true;
+                    break;
+                case OPCODE_BRANCH_CONDITIONAL:;
+                    translate_b_cond(compiler, instruction, guest_address);
                     is_block_terminated = true;
                     break;
                 case OPCODE_RETURN:
@@ -876,6 +884,78 @@ translate_add_sub_reg(bal_tier1_compiler_t *BAL_RESTRICT                     com
     {
         compiler->is_dirty[rd] = true;
     }
+}
+
+void
+translate_b_cond(bal_tier1_compiler_t *BAL_RESTRICT compiler,
+                 const uint32_t                     instruction,
+                 const bal_guest_address_t          guest_address)
+{
+    const uint32_t            cond           = instruction & 0xF;
+    const uint32_t            imm19          = (instruction >> 5) & 0x7FFFF;
+    const int32_t             signed_imm     = (int32_t)(imm19 ^ 0x40000) - 0x40000;
+    const int64_t             offset         = (int64_t)signed_imm * 4;
+    const bal_guest_address_t taken_pc       = guest_address + (uint64_t)offset;
+    const bal_guest_address_t fallthrough_pc = guest_address + 4;
+
+    bal_x86_assembler_t *BAL_RESTRICT assembler   = &compiler->assembler;
+    int32_t                           flag_offset = 0;
+
+    // If true, branch if flag == 0. If false, branch if flag != 0.
+    bool test_for_zero = false;
+
+    switch (cond)
+    {
+        case 0x0:
+            flag_offset   = offsetof(bal_cpu_t, flag_z);
+            test_for_zero = false;
+            break; // EQ (Z=1)
+        case 0x1:
+            flag_offset   = offsetof(bal_cpu_t, flag_z);
+            test_for_zero = true;
+            break; // NE (Z=0)
+        case 0x2:
+            flag_offset   = offsetof(bal_cpu_t, flag_c);
+            test_for_zero = false;
+            break; // CS/HS (C=1)
+        case 0x3:
+            flag_offset   = offsetof(bal_cpu_t, flag_c);
+            test_for_zero = true;
+            break; // CC/LO (C=0)
+        case 0x4:
+            flag_offset   = offsetof(bal_cpu_t, flag_n);
+            test_for_zero = false;
+            break; // MI (N=1)
+        case 0x5:
+            flag_offset   = offsetof(bal_cpu_t, flag_n);
+            test_for_zero = true;
+            break; // PL (N=0)
+        case 0x6:
+            flag_offset   = offsetof(bal_cpu_t, flag_v);
+            test_for_zero = false;
+            break; // VS (V=1)
+        case 0x7:
+            flag_offset   = offsetof(bal_cpu_t, flag_v);
+            test_for_zero = true;
+            break; // VC (V=0)
+        case 0xE:  // AL (always)
+            flush_dirty_registers(compiler);
+            bal_sliding_window_flush_all(&compiler->window);
+            bal_x86_emit_mov_r64_imm64(assembler, BAL_X86_RAX, taken_pc);
+            bal_x86_emit_store_r64_rbp_offset(assembler, BAL_X86_RAX, offsetof(bal_cpu_t, pc));
+            bal_x86_emit_pop_r64(assembler, BAL_X86_RBP);
+            bal_x86_emit_ret(assembler);
+            return;
+        default:
+            BAL_LOG_ERROR(&compiler->logger, "Unsupported B.cond condition: %u", cond);
+            compiler->status = BAL_ERROR_UNKNOWN_INSTRUCTION;
+            return;
+    }
+
+    bal_sliding_window_flush_all(&compiler->window);
+    bal_x86_emit_cmp_mem8_rbp_offset_imm(assembler, flag_offset, 0);
+    const bal_x86_condition_t x86_cond = test_for_zero ? BAL_X86_COND_E : BAL_X86_COND_NE;
+    terminate_block_conditional(compiler, x86_cond, fallthrough_pc, taken_pc);
 }
 
 void
