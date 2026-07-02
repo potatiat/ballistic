@@ -163,6 +163,7 @@ TEST_F(Backendx86Assembler, Public_NullContext_NoCrash)
     bal_x86_emit_add_r64_r64(nullptr, BAL_X86_RAX, BAL_X86_RBX);
     bal_x86_emit_sub_r64_r64(nullptr, BAL_X86_RAX, BAL_X86_RBX);
     bal_x86_emit_and_r64_r64(nullptr, BAL_X86_RAX, BAL_X86_RAX);
+    bal_x86_emit_cmp_mem8_rbp_offset_imm(nullptr, 0, 0);
     bal_x86_emit_jcc_rel32(nullptr, BAL_X86_COND_A, 0);
     bal_x86_emit_jmp_r64(nullptr, BAL_X86_RAX);
     bal_x86_emit_jmp_rel32(nullptr, 0);
@@ -194,6 +195,9 @@ TEST_F(Backendx86Assembler, Public_BadStatus_NoEmit)
     EXPECT_EQ(assembler.offset, 0);
 
     bal_x86_emit_and_r64_r64(&assembler, BAL_X86_RAX, BAL_X86_RBX);
+    EXPECT_EQ(assembler.offset, 0);
+
+    bal_x86_emit_cmp_mem8_rbp_offset_imm(&assembler, 0, 0);
     EXPECT_EQ(assembler.offset, 0);
 
     bal_x86_emit_jcc_rel32(&assembler, BAL_X86_COND_A, 0);
@@ -349,6 +353,11 @@ TEST_F(Backendx86Assembler, Public_FullBuffer_NoEmit)
 
     assembler.status = BAL_SUCCESS;
     bal_x86_emit_and_r64_r64(&assembler, BAL_X86_RAX, BAL_X86_RAX);
+    EXPECT_EQ(assembler.status, BAL_ERROR_INSTRUCTION_OVERFLOW);
+    EXPECT_EQ(assembler.offset, sizeof(buffer));
+
+    assembler.status = BAL_SUCCESS;
+    bal_x86_emit_cmp_mem8_rbp_offset_imm(&assembler, 0, 0);
     EXPECT_EQ(assembler.status, BAL_ERROR_INSTRUCTION_OVERFLOW);
     EXPECT_EQ(assembler.offset, sizeof(buffer));
 
@@ -600,6 +609,37 @@ TEST_F(Backendx86Assembler, Encode_AndRegToReg_HighLow)
     EXPECT_EQ(assembler.buffer[0], 0x4D); // REX.W | REX.R | REX.B
     EXPECT_EQ(assembler.buffer[1], 0x23); // Opcode
     EXPECT_EQ(assembler.buffer[2], 0xFE); // ModRM: 0xC0 | 7 << 3 | 6
+}
+
+TEST_F(Backendx86Assembler, Encode_CmpMem8RbpOffsetImm_PositiveOffset)
+{
+    bal_x86_emit_cmp_mem8_rbp_offset_imm(&assembler, 0x20, 0x0A);
+    EXPECT_EQ(assembler.status, BAL_SUCCESS);
+    EXPECT_EQ(assembler.offset, 8);
+    EXPECT_EQ(assembler.buffer[0], 0x40); // REX
+    EXPECT_EQ(assembler.buffer[1], 0x80); // Opcode
+    EXPECT_EQ(assembler.buffer[2],
+              0xBD); // ModRM (CMP is /7, RBP+disp32 is 101 -> 10 111 101 = 0xBD)
+    EXPECT_EQ(assembler.buffer[3], 0x20); // Disp32 LSB
+    EXPECT_EQ(assembler.buffer[4], 0x00);
+    EXPECT_EQ(assembler.buffer[5], 0x00);
+    EXPECT_EQ(assembler.buffer[6], 0x00); // Disp32 MSB
+    EXPECT_EQ(assembler.buffer[7], 0x0A); // Imm8
+}
+
+TEST_F(Backendx86Assembler, Encode_CmpMem8RbpOffsetImm_NegativeOffset)
+{
+    bal_x86_emit_cmp_mem8_rbp_offset_imm(&assembler, -32, 0x0A);
+    EXPECT_EQ(assembler.status, BAL_SUCCESS);
+    EXPECT_EQ(assembler.offset, 8);
+    EXPECT_EQ(assembler.buffer[0], 0x40); // REX
+    EXPECT_EQ(assembler.buffer[1], 0x80); // Opcode
+    EXPECT_EQ(assembler.buffer[2], 0xBD); // ModRM
+    EXPECT_EQ(assembler.buffer[3], 0xE0); // Disp32 LSB
+    EXPECT_EQ(assembler.buffer[4], 0xFF);
+    EXPECT_EQ(assembler.buffer[5], 0xFF);
+    EXPECT_EQ(assembler.buffer[6], 0xFF); // Disp32 MSB
+    EXPECT_EQ(assembler.buffer[7], 0x0A); // Imm8
 }
 
 TEST_F(Backendx86Assembler, Encode_Jcc_PositiveOffset)

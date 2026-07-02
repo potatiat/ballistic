@@ -187,6 +187,22 @@ extern "C"
                                   bal_x86_register_t   destination,
                                   bal_x86_register_t   source);
 
+    /// Emits a compare byte instruction between a memory location pointed to by RBP + offset and
+    /// an 8-bit immediate.
+    ///
+    /// Assembly equivalent: `cmp byte ptr [rbp + offset], immediate`
+    ///
+    /// # Warning
+    ///
+    /// This function fails if:
+    ///
+    /// - `assembler` is `NULL`
+    /// - `assembler->status` != [`BAL_SUCCESS`]
+    /// - `assembler->buffer` is full.
+    void bal_x86_emit_cmp_mem8_rbp_offset_imm(bal_x86_assembler_t *assembler,
+                                              int32_t              offset,
+                                              int8_t               immediate);
+
     /// Emits a subtract 32-bit immediate from a 64-bit register.
     ///
     /// Assembly equivalent: `sub destination, immediate`

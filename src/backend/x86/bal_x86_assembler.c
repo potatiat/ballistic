@@ -1241,6 +1241,54 @@ bal_x86_emit_sub_r64_imm32(bal_x86_assembler_t     *assembler,
                    instruction_size_bytes);
 }
 
+void
+bal_x86_emit_cmp_mem8_rbp_offset_imm(bal_x86_assembler_t *assembler,
+                                     const int32_t        offset,
+                                     const int8_t         immediate)
+{
+    if (BAL_UNLIKELY(NULL == assembler))
+    {
+        return;
+    }
+
+    if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->status != BAL_SUCCESS ");
+        return;
+    }
+
+    const size_t instruction_size_bytes = 8;
+    const bool   can_emit_status        = can_emit(assembler, instruction_size_bytes);
+
+    if (BAL_UNLIKELY(false == can_emit_status))
+    {
+        return;
+    }
+
+    BAL_LOG_DEBUG(&assembler->logger,
+                  "[+0x%04zx] cmp byte ptr [rbp + 0x%X], 0x%X",
+                  assembler->offset,
+                  offset,
+                  immediate);
+
+    const size_t  old_offset = assembler->offset;
+    const uint8_t w          = 0;
+    const uint8_t r          = 0;
+    const uint8_t b          = 0;
+    const uint8_t opcode     = 0x80;
+    emit_rex(assembler->buffer, &assembler->offset, w, r, b);
+    emit8(assembler->buffer, &assembler->offset, opcode);
+    emit_modrm_memory_disp32_rbp(assembler->buffer, &assembler->offset, BAL_X86_RDI);
+    emit32(assembler->buffer, &assembler->offset, (uint32_t)offset);
+    emit8(assembler->buffer, &assembler->offset, (uint8_t)immediate);
+
+    const size_t bytes_emitted = assembler->offset - old_offset;
+    BAL_ASSERT_MSG(bytes_emitted == instruction_size_bytes,
+                   "Bytes emitted %d does not match instruction size %d",
+                   bytes_emitted,
+                   instruction_size_bytes);
+}
+
 bool
 is_valid_register(const bal_x86_register_t reg)
 {
