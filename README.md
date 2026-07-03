@@ -20,7 +20,6 @@ Ballistic is being designed to have an extremely low Cache Footprint:
 - [X] Create Tier 1 backend compiler.
 - [ ] Create Tier 2 backend compiler.
 - [ ] Support `MOVZ`, `MOVK`, `MOVN` instructions on both compilers.
-- [ ] Support decoding ARM32 instructions.
 - [ ] Treat `PACISAP` and `AUTISAP` as `NOP` then strip the upper bits of `X30`.
 - [ ] Add more peephole optimizations.
 - [ ] Have 100% branch coverage.
