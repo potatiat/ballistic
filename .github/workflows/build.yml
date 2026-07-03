@@ -17,6 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       commits: ${{ steps.get-commits.outputs.commits }}
+      short_sha: ${{ steps.get-short-sha.outputs.sha }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -53,29 +55,32 @@ jobs:
           for COMMIT in $COMMITS; do
             MESSAGE=$(git log -1 --pretty=format:"%s" "$COMMIT")
             MESSAGE=$(echo "$MESSAGE" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr '\n' ' ')
+            SHORT_SHA=$(git rev-parse --short "$COMMIT") 
+          
           
             if [ "$FIRST" = true ]; then
               FIRST=false
             else
               JSON_COMMITS="$JSON_COMMITS,"
             fi
-            JSON_COMMITS="$JSON_COMMITS{\"sha\":\"$COMMIT\",\"message\":\"$MESSAGE\"}"
+            JSON_COMMITS="$JSON_COMMITS{\"sha\":\"$COMMIT\",\"short_sha\":\"$SHORT_SHA\",\"message\":\"$MESSAGE\"}"
           done
           JSON_COMMITS="$JSON_COMMITS]"
           
           # Fallback if the list is somehow empty
           if [ "$JSON_COMMITS" = "[]" ]; then
             FALLBACK_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+            FALLBACK_SHORT_SHA=$(git rev-parse --short "$FALLBACK_SHA")
             MESSAGE=$(git log -1 --pretty=format:"%s" "$FALLBACK_SHA")
             MESSAGE=$(echo "$MESSAGE" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr '\n' ' ')
-            JSON_COMMITS="[{\"sha\":\"$FALLBACK_SHA\",\"message\":\"$MESSAGE\"}]"
+            JSON_COMMITS="[{\"sha\":\"$FALLBACK_SHA\",\"short_sha\":\"$FALLBACK_SHORT_SHA\",\"message\":\"$MESSAGE\"}]"
           fi
           
           echo "commits=$JSON_COMMITS" >> $GITHUB_OUTPUT
 
   Build-Linux:
     needs: get-commits
-    name: Ubuntu / ${{ matrix.type }} / ${{ matrix.commit.message }}
+    name: Ubuntu / ${{ matrix.type }} / ${{ matrix.commit.short_sha }} ${{ matrix.commit.message }}
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -152,11 +157,19 @@ jobs:
         working-directory: build
         run: |
           ctest -C ${{ matrix.type }} --output-on-failure -j${{ env.NUMBER_OF_PROCESSORS }}
-  
 
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: Ballistic-Engine Linux ${{ matrix.type }} Build ${{ matrix.commit.short_sha }}
+          path: |
+            build/bin/**
+            build/lib/**
+  
+  
   Build-Windows:
     needs: get-commits
-    name: Windows / ${{ matrix.type }} / ${{ matrix.commit.message }}
+    name: Windows / ${{ matrix.type }} / ${{ matrix.commit.short_sha }} ${{ matrix.commit.message }}
     runs-on: windows-2022
     strategy:
       fail-fast: false
@@ -235,6 +248,14 @@ jobs:
         shell: pwsh
         run: |
           ctest -C ${{ matrix.type }} --output-on-failure -j ${{ env.NUMBER_OF_PROCESSORS }}
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: Ballistic-Engine Windows ${{ matrix.type }} Build ${{ matrix.commit.short_sha }}
+          path: |
+            build/bin/**
+            build/lib/**
 
 #  Build-macOS:
 #    name: macOS / ${{ matrix.type }}
