@@ -171,7 +171,7 @@ if (IMPL_GLFW)
         message(STATUS GLFW_PATH not defined)
         #include_directories(${GLFW_INCLUDE})
     endif (DEFINED GLFW_PATH)
-    add_library(cimgui_glfw SHARED ${IMGUI_SOURCES_glfw} $<TARGET_OBJECTS:cimgui_base>)
+    add_library(cimgui_glfw STATIC ${IMGUI_SOURCES_glfw} $<TARGET_OBJECTS:cimgui_base>)
     target_link_libraries(cimgui_glfw PUBLIC ${IMGUI_LIBRARIES} glfw)
     install(TARGETS cimgui_glfw
             RUNTIME DESTINATION ${LUAJIT_BIN}
