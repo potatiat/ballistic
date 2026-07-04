@@ -6,7 +6,7 @@
 //! ```c
 //! #include "backend/x86/bal_x86_sliding_window.h"
 //! #include "backend/x86/bal_x86_assembler.h"
-//! #include "bal_logging.h"
+//! #include "bal_log.h"
 //! #include "bal_memory.h"
 //! #include <stdint.h>
 //!

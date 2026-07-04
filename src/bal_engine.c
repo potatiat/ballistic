@@ -2,7 +2,7 @@
 #include "backend/x86/bal_x86_tier1_compiler.h"
 #include "bal_decoder.h"
 #include "bal_engine_flags.h"
-#include "bal_logging.h"
+#include "bal_log.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <string.h>

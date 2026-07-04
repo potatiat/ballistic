@@ -16,7 +16,7 @@
 //! ## Default Initialization
 //!
 //! ```c
-//! #include "bal_logging.h"
+//! #include "bal_log.h"
 //!
 //! bal_logger_t logger = {0};
 //! bal_logger_init_default(&logger);
@@ -26,7 +26,7 @@
 //! ## Custom Backend
 //!
 //! ```c
-//! #include "bal_logging.h"
+//! #include "bal_log.h"
 //! #include <stdio.h>
 //!
 //! void my_file_logger(void *user_data, bal_log_data_t *bal_data, const char *fmt, va_list args)

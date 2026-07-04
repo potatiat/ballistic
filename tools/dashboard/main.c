@@ -1,5 +1,5 @@
 #include "GLFW/glfw3.h"
-#include "bal_logging.h"
+#include "bal_log.h"
 #include "dashboard.h"
 #include "dashboard_backend.h"
 #include "dashboard_file_dialog.h"

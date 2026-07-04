@@ -2,7 +2,7 @@
 #define BALLISTIC_BAL_X86_ASSEMBLER_H
 
 #include "bal_errors.h"
-#include "bal_logging.h"
+#include "bal_log.h"
 #include "bal_memory.h"
 #include <assert.h>
 #include <stddef.h>

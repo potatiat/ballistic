@@ -1,6 +1,6 @@
 #include "backend/x86/bal_x86_assembler.h"
 #include "backend/x86/bal_x86_sliding_window.h"
-#include "bal_logging.h"
+#include "bal_log.h"
 #include "gtest/gtest.h"
 #include <cstring>
 

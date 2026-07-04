@@ -4,7 +4,7 @@
 //! # Examples
 //!
 //! ```c
-//! #include "bal_logging.h"
+//! #include "bal_log.h"
 //! #include "bal_assembler.h"
 //!
 //! uint32_t code[128];
@@ -23,7 +23,7 @@
 #define BALLISTIC_ASSEMBLER_H
 
 #include "bal_errors.h"
-#include "bal_logging.h"
+#include "bal_log.h"
 #include "bal_types.h"
 #include <stddef.h>
 #include <stdint.h>

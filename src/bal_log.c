@@ -1,4 +1,4 @@
-#include "bal_logging.h"
+#include "bal_log.h"
 
 #include <stdint.h>
 #include <stdio.h>

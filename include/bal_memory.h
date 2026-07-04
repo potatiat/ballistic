@@ -3,7 +3,7 @@
 
 #include "bal_attributes.h"
 #include "bal_errors.h"
-#include "bal_logging.h"
+#include "bal_log.h"
 #include "bal_types.h"
 #include <stddef.h>
 #include <stdint.h>

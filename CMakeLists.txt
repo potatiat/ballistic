@@ -150,7 +150,7 @@ add_library(Ballistic STATIC
         src/bal_decoder.c
         src/bal_engine.c
         src/bal_errors.c
-        src/bal_logging.c
+        src/bal_log.c
         src/bal_memory.c
         src/generated/decoder_table.c
         src/backend/x86/bal_x86_assembler.c
@@ -258,7 +258,7 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
                 include/bal_memory.h
                 include/bal_types.h
                 include/bal_errors.h
-                include/bal_logging.h
+                include/bal_log.h
                 include/bal_assembler.h
                 include/backend/bal_cpu.h
                 include/backend/x86/bal_x86_assembler.h
@@ -345,7 +345,7 @@ if (BALLISTIC_BUILD_TESTS)
             NAME doctest
             COMMAND $<TARGET_FILE:luajit_exe> ${CMAKE_SOURCE_DIR}/tools/doctest.lua
             ${CMAKE_CURRENT_SOURCE_DIR}/include/bal_assembler.h
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/bal_logging.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/bal_log.h
             ${CMAKE_CURRENT_SOURCE_DIR}/include/backend/x86/bal_x86_sliding_window.h
             WORKING_DIRECTORY ${BALLISTIC_LIBRARIES_DIRECTORY}
     )

@@ -1,6 +1,6 @@
 #include "bal_attributes.h"
 #include "bal_engine.h"
-#include "bal_logging.h"
+#include "bal_log.h"
 #include "bal_memory.h"
 #include <errno.h>
 #include <stdbool.h>

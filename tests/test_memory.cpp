@@ -1,4 +1,4 @@
-#include "bal_logging.h"
+#include "bal_log.h"
 #include "bal_memory.h"
 #include <gtest/gtest.h>
 
