@@ -82,6 +82,10 @@ extern "C"
 
 #endif
 
+/// BAL_EXPORT
+/// Marks a function or global variable for export.
+///
+/// Usage: BAL_EXPORT void bal_public_api_function(void);
 #if BAL_PLATFORM_WINDOWS
 
 #define BAL_EXPORT __declspec(dllexport)
