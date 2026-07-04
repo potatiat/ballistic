@@ -96,6 +96,18 @@ extern "C"
 
 #endif // BAL_EXPORT
 
+/// BAL_THREAD_LOCAL
+/// Declares a variable with thread-local storage duration.
+#if BAL_COMPILER_MSVC
+
+#define BAL_THREAD_LOCAL __declspec(thread)
+
+#else
+
+#define BAL_THREAD_LOCAL _Thread_local
+
+#endif // BAL_THREAD_LOCAL
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
