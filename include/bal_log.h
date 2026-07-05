@@ -162,13 +162,13 @@ extern "C"
     /// The `format` string must match the arguments provided in the variadic list, following
     /// standard `printf`.
 
-    BAL_COLD void bal_log_message(const bal_logger_t *logger,
-                                  bal_log_level_t     log_level,
-                                  const char         *filename,
-                                  const char         *function,
-                                  int                 line,
-                                  const char         *format,
-                                  ...);
+    BAL_HOT void bal_log_message(const bal_logger_t *logger,
+                                 bal_log_level_t     log_level,
+                                 const char         *filename,
+                                 const char         *function,
+                                 int                 line,
+                                 const char         *format,
+                                 ...);
 
     /// Populates `logger` with Ballistic's default logging implementation.
     ///

@@ -4,12 +4,12 @@
 #include <stdio.h>
 #include <string.h>
 
-BAL_COLD static void bal_default_logger(void           *user_data,
-                                        bal_log_data_t *bal_data,
-                                        const char     *format,
-                                        va_list         args);
+BAL_WEAK BAL_HOT void bal_default_logger(void           *user_data,
+                                         bal_log_data_t *bal_data,
+                                         const char     *format,
+                                         va_list         args);
 
-void
+BAL_WEAK void
 bal_log_message(const bal_logger_t   *logger,
                 const bal_log_level_t log_level,
                 const char           *filename,
@@ -38,14 +38,14 @@ bal_log_message(const bal_logger_t   *logger,
     }
 }
 
-void
+BAL_WEAK void
 bal_logger_init_default(bal_logger_t *logger)
 {
     logger->log       = bal_default_logger;
     logger->min_level = BAL_LOG_LEVEL_TRACE;
 }
 
-BAL_COLD static void
+void
 bal_default_logger(void *user_data, bal_log_data_t *bal_data, const char *format, va_list args)
 {
     (void)user_data;
