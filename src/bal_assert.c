@@ -7,7 +7,7 @@
 
 #define ASSERT_MESSAGE_BUFFER_SIZE 1024
 
-void
+BAL_WEAK void
 bal_internal_assert_fail(const char *file,
                          const int   line,
                          const char *func,

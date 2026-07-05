@@ -1,6 +1,7 @@
 #ifndef BALLISTIC_COMMON_ASSERT_H
 #define BALLISTIC_COMMON_ASSERT_H
 
+#include "bal_attributes.h"
 #include <stddef.h>
 
 #ifdef __cplusplus
