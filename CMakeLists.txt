@@ -43,6 +43,15 @@ macro(add_external_subdirectory directory)
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${_EXTERNAL_OLD_CXX_FLAGS_RELWITHDEBINFO}")
 endmacro()
 
+# Macro to add strict compiler flags
+function(add_strict_compiler_flags target_name)
+    if (DEFINED BALLISTIC_STRICT_FLAGS AND NOT BALLISTIC_STRICT_FLAGS STREQUAL "")
+        separate_arguments(STRICT_FLAGS_LIST NATIVE_COMMAND "${BALLISTIC_STRICT_FLAGS}")
+        target_compile_options(${target_name} PRIVATE ${STRICT_FLAGS_LIST})
+        target_link_options(${target_name} PRIVATE ${STRICT_FLAGS_LIST})
+    endif ()
+endfunction()
+
 # -----------------------------------------------------------------------------
 # Setup Build Directory
 # -----------------------------------------------------------------------------
@@ -131,17 +140,6 @@ message(STATUS "[Ballistic] Configuring Ballistic Static Library...")
 
 if (MSVC)
     add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
-else ()
-    set(BALLISTIC_COMPILER_OPTIONS_UNIX
-            -Wall -Wextra -Werror
-            -Wconversion -Wsign-conversion -Wshadow
-            -Wstrict-prototypes -Wmissing-prototypes
-            -Wno-gnu-zero-variadic-macro-arguments # Make formatting assert messages easier
-            -fno-strict-aliasing # Prevent common C aliasing UB
-            -fstack-protector-strong
-            -Wpadded
-            -Wvla
-    )
 endif ()
 
 add_library(Ballistic STATIC
@@ -179,11 +177,6 @@ if (MSVC)
     )
 endif ()
 
-if (MSVC)
-    add_compile_options(/MP)
-endif ()
-
-
 if (BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION)
     include(CheckIPOSupported)
     check_ipo_supported(RESULT ipo_supported OUTPUT ipo_error)
@@ -191,10 +184,6 @@ if (BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION)
     if (ipo_supported)
         message(STATUS "[Ballistic] Link Time Optimization is ENABLED and supported.")
         set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
-
-        if (MSVC)
-            set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /LTCG:incremental")
-        endif ()
     else ()
         message(WARNING "[Ballistic] Link Time Optimization was requested but is NOT supported by your compiler, disabling LTO. "
                 "Reason: ${ipo_error}")
@@ -203,14 +192,6 @@ if (BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION)
 else ()
     message(STATUS "[Ballistic] Link Time Optimization is DISABLED via CMake options.")
 endif ()
-
-if (WIN32)
-    # Disable some Windows SDK deprecation warnings
-    target_compile_options(Ballistic PRIVATE -DNOMINMAX -DWIN32_LEAN_AND_MEAN)
-else ()
-    target_compile_options(Ballistic PRIVATE ${BALLISTIC_COMPILER_OPTIONS_UNIX})
-endif ()
-
 
 # -----------------------------------------------------------------------------
 # Compile Tools
@@ -221,59 +202,52 @@ message(STATUS "[Ballistic] Configuring developer tools...")
 set(DECODER_CLI_NAME "decoder_cli")
 add_executable(${DECODER_CLI_NAME} tools/decoder_cli.c)
 target_link_libraries(${DECODER_CLI_NAME} PRIVATE ${PROJECT_NAME})
-
-set(COVERAGE_CLI_NAME "coverage_cli")
-add_executable(${COVERAGE_CLI_NAME} tools/coverage_cli.c)
-target_link_libraries(${COVERAGE_CLI_NAME} PRIVATE ${PROJECT_NAME})
-
-#set(BALLISTIC_CLI_NAME "ballistic_cli")
-#add_executable(${BALLISTIC_CLI_NAME} tools/ballistic_cli.c)
-#target_link_libraries(${BALLISTIC_CLI_NAME} PRIVATE ${PROJECT_NAME})
+add_strict_compiler_flags(${DECODER_CLI_NAME})
 
 # Our documentation generator completely relies on Clang running on UNIX
 # compatable machines for parsing C code. I do not have a Windows machine to
 # to test this so only Linux and macOS are supported.
-if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-    message(STATUS "[Ballistic] Unix environment detected. Configuring 'cdoc' documentation generator.")
-    set(CDOC_NAME "cdoc")
-    find_library(CLANG_LIBRARY NAMES clang libclang)
-    find_path(CLANG_INCLUDE_DIR NAMES clang-c/Index.h)
-
-    if (NOT CLANG_LIBRARY OR NOT CLANG_INCLUDE_DIR)
-        message(WARNING "[Ballistic] 'libclang' is required to build the 'cdoc' tool on Unix. "
-                "Please install libclang-dev (Linux) or llvm (macOS).")
-    else ()
-
-        message(STATUS "[Ballistic] Found libclang at: ${CLANG_LIBRARY}.")
-
-        add_executable(${CDOC_NAME} tools/cdoc.c)
-        target_include_directories(${CDOC_NAME} PRIVATE ${CLANG_INCLUDE_DIR}
-                ${CMAKE_CURRENT_SOURCE_DIR}/extern/cmark/src
-                ${CMAKE_CURRENT_BINARY_DIR}/extern/cmark/src/)
-        target_link_libraries(${CDOC_NAME} PRIVATE ${CLANG_LIBRARY} cmark)
-        set(PROJECT_HEADERS
-                include/bal_engine.h
-                include/bal_engine_flags.h
-                include/bal_decoder.h
-                include/bal_memory.h
-                include/bal_types.h
-                include/bal_errors.h
-                include/bal_log.h
-                include/bal_assembler.h
-                include/backend/bal_cpu.h
-                include/backend/x86/bal_x86_assembler.h
-                include/backend/x86/bal_x86_sliding_window.h
-                include/backend/x86/bal_x86_tier1_compiler.h
-        )
-
-        add_custom_target(doc ALL
-                COMMAND $<TARGET_FILE:cdoc> docs/cdoc ${PROJECT_HEADERS}
-                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-                COMMENT "Generating Documentation..."
-                DEPENDS cdoc
-        )
-    endif ()
-endif ()
+#if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+#    message(STATUS "[Ballistic] Unix environment detected. Configuring 'cdoc' documentation generator.")
+#    set(CDOC_NAME "cdoc")
+#    find_library(CLANG_LIBRARY NAMES clang libclang)
+#    find_path(CLANG_INCLUDE_DIR NAMES clang-c/Index.h)
+#
+#    if (NOT CLANG_LIBRARY OR NOT CLANG_INCLUDE_DIR)
+#        message(WARNING "[Ballistic] 'libclang' is required to build the 'cdoc' tool on Unix. "
+#                "Please install libclang-dev (Linux) or llvm (macOS).")
+#    else ()
+#
+#        message(STATUS "[Ballistic] Found libclang at: ${CLANG_LIBRARY}.")
+#
+#        add_executable(${CDOC_NAME} tools/cdoc.c)
+#        target_include_directories(${CDOC_NAME} PRIVATE ${CLANG_INCLUDE_DIR}
+#                ${CMAKE_CURRENT_SOURCE_DIR}/extern/cmark/src
+#                ${CMAKE_CURRENT_BINARY_DIR}/extern/cmark/src/)
+#        target_link_libraries(${CDOC_NAME} PRIVATE ${CLANG_LIBRARY} cmark)
+#        set(PROJECT_HEADERS
+#                include/bal_engine.h
+#                include/bal_engine_flags.h
+#                include/bal_decoder.h
+#                include/bal_memory.h
+#                include/bal_types.h
+#                include/bal_errors.h
+#                include/bal_log.h
+#                include/bal_assembler.h
+#                include/backend/bal_cpu.h
+#                include/backend/x86/bal_x86_assembler.h
+#                include/backend/x86/bal_x86_sliding_window.h
+#                include/backend/x86/bal_x86_tier1_compiler.h
+#        )
+#
+#        add_custom_target(doc ALL
+#                COMMAND $<TARGET_FILE:cdoc> docs/cdoc ${PROJECT_HEADERS}
+#                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+#                COMMENT "Generating Documentation..."
+#                DEPENDS cdoc
+#        )
+#    endif ()
+#endif ()
 
 message(STATUS "[Ballistic] Setting up environment for GUI Dashboard...")
 message(STATUS "[Ballistic] Configuring GLFW...")
@@ -297,6 +271,8 @@ if (BALLISTIC_BUILD_TESTS)
     message(STATUS "[Ballistic] Test suite ENABLED, configuring GoogleTest and LuaJIT...")
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
     add_external_subdirectory(extern/googletest-1.17.0)
+    add_strict_compiler_flags(gtest)
+    add_strict_compiler_flags(gtest_main)
     include(GoogleTest)
     enable_testing()
 
@@ -304,42 +280,37 @@ if (BALLISTIC_BUILD_TESTS)
     add_executable(${ENGINE_TEST} tests/test_engine.cpp)
     target_include_directories(${ENGINE_TEST} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src extern/googletest-1.17.0/googletest/include)
     target_link_libraries(${ENGINE_TEST} PRIVATE ${PROJECT_NAME} gtest gtest_main)
+    add_strict_compiler_flags(${ENGINE_TEST})
+
+    if (NOT MSVC)
+        target_compile_options(${ENGINE_TEST} PRIVATE -Wno-padded)
+    endif ()
 
     set(MEMORY_TEST test_memory)
     add_executable(${MEMORY_TEST} tests/test_memory.cpp)
     target_include_directories(${MEMORY_TEST} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src extern/googletest-1.17.0/googletest/include)
     target_link_libraries(${MEMORY_TEST} PRIVATE ${PROJECT_NAME} gtest gtest_main)
-
-    if (NOT MSVC)
-        target_compile_options(${MEMORY_TEST} PRIVATE -Wall -Wextra -Werror)
-    endif ()
+    add_strict_compiler_flags(${MEMORY_TEST})
 
     set(DECODER_TEST test_decoder)
     add_executable(${DECODER_TEST} tests/test_decoder.cpp)
     target_include_directories(${DECODER_TEST} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src extern/googletest-1.17.0/googletest/include)
     target_link_libraries(${DECODER_TEST} PRIVATE ${PROJECT_NAME} gtest gtest_main)
-
-    if (NOT MSVC)
-        target_compile_options(${MEMORY_TEST} PRIVATE -Wall -Wextra -Werror)
-    endif ()
+    add_strict_compiler_flags(${DECODER_TEST})
 
     gtest_discover_tests(${ENGINE_TEST} DISCOVERY_TIMEOUT 30)
     gtest_discover_tests(${DECODER_TEST} DISCOVERY_TIMEOUT 30)
     gtest_discover_tests(${MEMORY_TEST} DISCOVERY_TIMEOUT 30)
 
     set(BACKEND_X86_TESTS x86_assembler x86_sliding_window)
+
     foreach (test_name ${BACKEND_X86_TESTS})
         set(target_name "test_${test_name}")
         add_executable(${target_name} "tests/backend/x86/${target_name}.cpp")
         target_link_libraries(${target_name} PRIVATE Ballistic gtest gtest_main)
-
-        if (NOT MSVC)
-            target_compile_options(${MEMORY_TEST} PRIVATE -Wall -Wextra -Werror)
-        endif ()
-
+        add_strict_compiler_flags(${target_name})
         gtest_discover_tests(${target_name} DISCOVERY_TIMEOUT 30)
     endforeach ()
-
 
     add_test(
             NAME doctest
@@ -370,7 +341,7 @@ if (BALLISTIC_BUILD_TESTS)
     message(STATUS "[Ballistic] Propagating active compiler and compiler flags to doctest...")
     set(DOCTEST_CC "${CMAKE_C_COMPILER}")
     string(TOUPPER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_UPPER)
-    set(DOCTEST_CFLAGS ${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_${CMAKE_BUILD_TYPE_UPPER}})
+    set(DOCTEST_CFLAGS ${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_${CMAKE_BUILD_TYPE_UPPER}} ${BALLISTIC_STRICT_FLAGS})
     set(DOCTEST_LTO "$<BOOL:${BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION}>")
 
     set_tests_properties(doctest PROPERTIES

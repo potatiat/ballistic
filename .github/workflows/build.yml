@@ -27,58 +27,14 @@ jobs:
 
       - name: Get Commits
         id: get-commits
-        run: |
-          if [ "${{ github.event_name }}" == "push" ]; then
-            BEFORE="${{ github.event.before }}"
-            AFTER="${{ github.event.after }}"
-          
-            # Handle new branches or force push.
-            if [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
-              COMMITS=$(git rev-list --reverse "$AFTER")
-            elif git merge-base --is-ancestor "$BEFORE" "$AFTER" 2>/dev/null; then
-              COMMITS=$(git rev-list --reverse "$BEFORE".."$AFTER")
-            else
-              COMMITS="$AFTER"
-            fi
-          elif [ "${{ github.event_name }}" == "pull_request" ]; then
-            BASE="${{ github.event.pull_request.base.sha }}"
-            HEAD="${{ github.event.pull_request.head.sha }}"
-            # Get all commits introduced in the PR
-            COMMITS=$(git rev-list --reverse "$BASE".."$HEAD")
-          else
-            COMMITS="${{ github.sha }}"
-          fi
-          
-          # Create JSON array with commit info (SHA and message)
-          JSON_COMMITS="["
-          FIRST=true
-          INDEX=1
-          for COMMIT in $COMMITS; do
-            MESSAGE=$(git log -1 --pretty=format:"%s" "$COMMIT")
-            MESSAGE=$(echo "$MESSAGE" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr '\n' ' ')
-            SHORT_SHA=$(git rev-parse --short "$COMMIT") 
-          
-          
-            if [ "$FIRST" = true ]; then
-              FIRST=false
-            else
-              JSON_COMMITS="$JSON_COMMITS,"
-            fi
-            JSON_COMMITS="$JSON_COMMITS{\"sha\":\"$COMMIT\",\"short_sha\":\"$SHORT_SHA\",\"message\":\"$MESSAGE\",\"index\":$INDEX}"
-            INDEX=$((INDEX+1)) # <--- Increment counter
-          done
-          JSON_COMMITS="$JSON_COMMITS]"
-          
-          # Fallback if the list is somehow empty
-          if [ "$JSON_COMMITS" = "[]" ]; then
-            FALLBACK_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
-            FALLBACK_SHORT_SHA=$(git rev-parse --short "$FALLBACK_SHA")
-            MESSAGE=$(git log -1 --pretty=format:"%s" "$FALLBACK_SHA")
-            MESSAGE=$(echo "$MESSAGE" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr '\n' ' ')
-            JSON_COMMITS="[{\"sha\":\"$FALLBACK_SHA\",\"short_sha\":\"$FALLBACK_SHORT_SHA\",\"message\":\"$MESSAGE\",\"index\":1}]"
-          fi
-          
-          echo "commits=$JSON_COMMITS" >> $GITHUB_OUTPUT
+        run: >-
+          bash tools/ci/get_commits.sh
+          "${{ github.event_name }}"
+          "${{ github.event.before }}"
+          "${{ github.event.after }}"
+          "${{ github.event.pull_request.base.sha }}"
+          "${{ github.event.pull_request.head.sha }}"
+          "${{ github.sha }}"
 
   Build-Linux:
     needs: get-commits
@@ -103,9 +59,7 @@ jobs:
           fetch-depth: 1
 
       - name: Install System Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libclang-18-dev ccache ninja-build libwayland-dev libxkbcommon-dev xorg-dev 
+        run: bash tools/ci/setup_dependencies.sh apt
 
       - name: Setup Compiler Cache
         uses: actions/cache@v4
@@ -123,42 +77,13 @@ jobs:
           ccache -s     
 
       - name: Configure CMake
-        run: |
-          EXTRA_FLAGS=""
-                   if [ "${{ matrix.type }}" == "Debug" ]; then
-                     EXTRA_FLAGS="-fsanitize=address,undefined -fno-sanitize=function -fno-omit-frame-pointer"
-                  else
-                    # Strip absolute paths from LTO to avoid ccache cache misses.
-                    EXTRA_FLAGS="-ffile-prefix-map=${{ github.workspace }}=."
-                   fi
-
-                   # Use lld (bundled with clang-18) instead of mold to save setup action time.
-                   # lld is exceptionally fast and fully supports LTO for Release builds.
-                   cmake -G Ninja -B build \
-                     -DCMAKE_BUILD_TYPE=${{ matrix.type }} \
-                     -DCMAKE_C_COMPILER=${{ env.CC }} \
-                     -DCMAKE_CXX_COMPILER=${{ env.CXX }} \
-                     -DCMAKE_C_FLAGS="$EXTRA_FLAGS" \
-                     -DCMAKE_CXX_FLAGS="$EXTRA_FLAGS" \
-                     -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-                     -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-                     -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld" \
-                     -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld" \
-                     -DBALLISTIC_BUILD_TESTS=ON \
-                     -DBALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION=${{ matrix.type == 'Release' && 'ON' || 'OFF' }}
+        run: make ballistic-configure BUILD_TYPE=${{ matrix.type }}
 
       - name: Build Project
-        env:
-          ASAN_OPTIONS: detect_leaks=0
-        run: |
-          ccache -z
-          cmake --build build --config ${{ matrix.type }} --target all -j$(nproc)
-          ccache -s
+        run: make ballistic-build BUILD_TYPE=${{ matrix.type }}
 
       - name: Run Test Suite
-        working-directory: build
-        run: |
-          ctest -C ${{ matrix.type }} --output-on-failure -j${{ env.NUMBER_OF_PROCESSORS }}
+        run: make ballistic-test BUILD_TYPE=${{ matrix.type }}
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v7
@@ -179,15 +104,9 @@ jobs:
         type: [ Debug, Release ]
         commit: ${{ fromJson(needs.get-commits.outputs.commits) }}
     env:
-      CC: cl
-      CXX: cl
       SCCACHE_DIR: ${{ github.workspace }}\.sccache
       SCCACHE_CACHE_SIZE: 2G
-      CMAKE_C_FLAGS: "/MP /Zf"
-      CMAKE_CXX_FLAGS: "/MP /Zf"
-      CMAKE_C_FLAGS_RELEASE: "/GL /O2"
-      CMAKE_CXX_FLAGS_RELEASE: "/GL /O2"
-      CMAKE_EXE_LINKER_FLAGS_RELEASE: "/LTCG:incremental /OPT:REF /OPT:ICF"
+
     steps:
       - uses: actions/checkout@v4
         with:
@@ -201,12 +120,7 @@ jobs:
           arch: x64
 
       - name: Install Dependencies
-        shell: pwsh
-        run: |
-          if (!(Test-Path "$env:USERPROFILE\.choco-cache")) {
-            New-Item -ItemType Directory -Path "$env:USERPROFILE\.choco-cache" -Force | Out-Null
-          }
-          choco install sccache -y --limit-output --cache-location="$env:USERPROFILE\.choco-cache"
+        run: pwsh tools/ci/setup_dependencies.ps1
 
       - name: Setup sccache
         uses: actions/cache@v4
@@ -225,31 +139,13 @@ jobs:
           Write-Host "✓ Build directory excluded from Windows Defender"
 
       - name: Configure CMake
-        shell: pwsh
-        run: |
-          cmake -G Ninja -B build `
-            -DCMAKE_BUILD_TYPE=${{ matrix.type }} `
-            -DCMAKE_C_COMPILER=${{ env.CC }} `
-            -DCMAKE_CXX_COMPILER=${{ env.CXX }} `
-            -DCMAKE_C_COMPILER_LAUNCHER=sccache `
-            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache `
-            -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld-link" `
-            -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld-link" `
-            -DBALLISTIC_BUILD_TESTS=ON `
-            -DBALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION=${{ matrix.type == 'Release' && 'ON' || 'OFF' }} `
+        run: make ballistic-configure BUILD_TYPE=${{ matrix.type }}
 
       - name: Build Project
-        shell: pwsh
-        run: |
-          sccache --zero-stats
-          cmake --build build --config ${{ matrix.type }} --target all -j${{ env.NUMBER_OF_PROCESSORS }}
-          sccache --show-stats
+        run: make ballistic-build BUILD_TYPE=${{ matrix.type }}
 
       - name: Run Test Suite
-        working-directory: build
-        shell: pwsh
-        run: |
-          ctest -C ${{ matrix.type }} --output-on-failure -j ${{ env.NUMBER_OF_PROCESSORS }}
+        run: make ballistic-test BUILD_TYPE=${{ matrix.type }}
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v7

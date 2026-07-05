@@ -92,7 +92,7 @@ TEST_F(BackendSlidingWindow, Push_ExactCapacity_Success)
 
     for (size_t i = 0; i < BAL_SLIDING_WINDOW_CAPACITY; ++i)
     {
-        bal_sliding_window_push(&window, GenerateDummyMacro(i));
+        bal_sliding_window_push(&window, GenerateDummyMacro(static_cast<uint8_t>(i)));
     }
 
     EXPECT_EQ(window.count, BAL_SLIDING_WINDOW_CAPACITY);
@@ -104,7 +104,7 @@ TEST_F(BackendSlidingWindow, Push_ExceedsCapacity_AutoFlushes)
 
     for (size_t i = 0; i < BAL_SLIDING_WINDOW_CAPACITY; ++i)
     {
-        bal_sliding_window_push(&window, GenerateDummyMacro(i));
+        bal_sliding_window_push(&window, GenerateDummyMacro(static_cast<uint8_t>(i)));
     }
 
     EXPECT_EQ(window.count, BAL_SLIDING_WINDOW_CAPACITY);

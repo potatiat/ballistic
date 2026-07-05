@@ -27,6 +27,7 @@ typedef struct
     uint32_t                                  mask;
     uint32_t                                  expected;
     int                                       priority;
+    uint32_t                                  pad;
     const bal_decoder_instruction_metadata_t *metadata;
 } hot_candidate_t;
 
@@ -45,7 +46,7 @@ TEST(Arm64Decoder, DecodeFailsImmediately)
     {
         if (0 == g_decoder_lookup_table[i].count)
         {
-            empty_bucket_index = i;
+            empty_bucket_index = (uint32_t)i;
             break;
         }
     }

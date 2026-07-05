@@ -63,24 +63,20 @@ sudo apt install build-essential cmake python3
 ### Fedora
 
 ```bash
-sudo dnf install cmake python3 gcc-c++
+sudo dnf install cmake python3 clang
 ```
 
 ## Configure CMake
 
 ```bash
-mkdir build
-cd build
-cmake ..
+make ballistic-configure
 ```
 
 ## Build Binaries
 
 ```bash
-cmake --build .
+make ballistic-build
 ```
 
-The compiled executables will be created in the `build/bin` and `build/lib` directories.
-
-See [tools/](tools/) for more information on these executables.
+The compiled executables will be created in the `build/debug/bin` and `build/debug/lib` directories.
 
