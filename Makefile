@@ -123,7 +123,7 @@ ballistic-build:
 	$(CMAKE) --build $(BUILD_DIRECTORY) --config $(BUILD_TYPE) --target all --parallel
 
 ballistic-test:
-	$(CMAKE) -E chdir $(BUILD_DIRECTORY) ctest -C $(BUILD_TYPE) --output-on-failure --parallel
+	$(CMAKE) -E chdir $(BUILD_DIRECTORY) ctest -C $(BUILD_TYPE) --output-on-failure --parallel --verbose
 
 ballistic_clean:
 		$(CMAKE) -E remove_directory $(BUILD_DIRECTORY)
