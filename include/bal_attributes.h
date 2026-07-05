@@ -96,6 +96,21 @@ extern "C"
 
 #endif // BAL_EXPORT
 
+/// BAL_WEAK
+/// Marks a function or variable as weak, allowing the host application to override it at link-time
+/// by providing a strong symbol with the same name.
+///
+/// Usage: BAL_WEAK void bal_default_logger(...);
+#if BAL_COMPILER_GCC
+
+#define BAL_WEAK __attribute__((weak))
+
+#else
+
+#define BAL_WEAK
+
+#endif // BAL_WEAK
+
 /// BAL_THREAD_LOCAL
 /// Declares a variable with thread-local storage duration.
 #if BAL_COMPILER_MSVC
