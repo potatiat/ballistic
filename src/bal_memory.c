@@ -4,24 +4,24 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static void                   *default_allocate(bal_allocator_handle_t, size_t, size_t);
-static void                    default_free(bal_allocator_handle_t, void *, size_t);
-static bal_executable_buffer_t default_allocate_executable(bal_allocator_handle_t handle,
-                                                           size_t                 alignment,
-                                                           size_t                 size);
-static void                    default_free_executable(bal_allocator_handle_t  handle,
-                                                       bal_executable_buffer_t buffer,
-                                                       size_t                  size);
-static void                    default_protect_rw(bal_allocator_handle_t  handle,
-                                                  bal_executable_buffer_t buffer,
-                                                  size_t                  size);
-static void                    default_protect_rx(bal_allocator_handle_t  handle,
-                                                  bal_executable_buffer_t buffer,
-                                                  size_t                  size);
+BAL_WEAK void                   *bal_default_allocate(bal_allocator_handle_t, size_t, size_t);
+BAL_WEAK void                    bal_default_free(bal_allocator_handle_t, void *, size_t);
+BAL_WEAK bal_executable_buffer_t bal_default_allocate_executable(bal_allocator_handle_t handle,
+                                                                 size_t                 alignment,
+                                                                 size_t                 size);
+BAL_WEAK void                    bal_default_free_executable(bal_allocator_handle_t  handle,
+                                                             bal_executable_buffer_t buffer,
+                                                             size_t                  size);
+BAL_WEAK void                    bal_default_protect_rw(bal_allocator_handle_t  handle,
+                                                        bal_executable_buffer_t buffer,
+                                                        size_t                  size);
+BAL_WEAK void                    bal_default_protect_rx(bal_allocator_handle_t  handle,
+                                                        bal_executable_buffer_t buffer,
+                                                        size_t                  size);
 
-BAL_HOT static const uint8_t *bal_flat_translation_interface_translate(void *,
-                                                                       bal_guest_address_t,
-                                                                       size_t *);
+BAL_WEAK BAL_HOT const uint8_t *bal_flat_translation_interface_translate(void *,
+                                                                         bal_guest_address_t,
+                                                                         size_t *);
 
 typedef struct
 {
@@ -33,16 +33,16 @@ typedef struct
 
 static_assert(0 == sizeof(flat_translation_interface_t) % 16, "Struct must be aligned to 16 bytes");
 
-void
+BAL_WEAK void
 bal_allocator_default_init(bal_allocator_t *out_allocator)
 {
     out_allocator->context             = NULL;
-    out_allocator->allocate            = default_allocate;
-    out_allocator->free                = default_free;
-    out_allocator->allocate_executable = default_allocate_executable;
-    out_allocator->protect_rw          = default_protect_rw;
-    out_allocator->protect_rx          = default_protect_rx;
-    out_allocator->free_executable     = default_free_executable;
+    out_allocator->allocate            = bal_default_allocate;
+    out_allocator->free                = bal_default_free;
+    out_allocator->allocate_executable = bal_default_allocate_executable;
+    out_allocator->protect_rw          = bal_default_protect_rw;
+    out_allocator->protect_rx          = bal_default_protect_rx;
+    out_allocator->free_executable     = bal_default_free_executable;
 }
 
 BAL_COLD bal_error_t
@@ -125,8 +125,8 @@ bal_flat_translation_interface_destroy(bal_allocator_t        *allocator,
 
 #include <sys/mman.h>
 
-static void *
-default_allocate(bal_allocator_handle_t handle, size_t alignment, size_t size)
+void *
+bal_default_allocate(bal_allocator_handle_t handle, size_t alignment, size_t size)
 {
     (void)handle;
 
@@ -139,8 +139,8 @@ default_allocate(bal_allocator_handle_t handle, size_t alignment, size_t size)
     return memory;
 }
 
-static void
-default_free(bal_allocator_handle_t handle, void *pointer, size_t size)
+void
+bal_default_free(bal_allocator_handle_t handle, void *pointer, size_t size)
 {
     (void)handle;
     (void)size;
@@ -158,8 +158,8 @@ default_free(bal_allocator_handle_t handle, void *pointer, size_t size)
 #include <libkern/OSCacheControl.h>
 #include <pthread.h>
 
-static bal_executable_buffer_t
-default_allocate_executable(bal_allocator_handle_t handle, size_t alignment, size_t size)
+bal_executable_buffer_t
+bal_default_allocate_executable(bal_allocator_handle_t handle, size_t alignment, size_t size)
 {
     (void)handle;
     (void)alignment;
@@ -184,8 +184,10 @@ default_allocate_executable(bal_allocator_handle_t handle, size_t alignment, siz
     return (bal_executable_buffer_t) { memory, memory };
 }
 
-static void
-default_free_executable(bal_allocator_handle_t handle, bal_executable_buffer_t buffer, size_t size)
+void
+bal_default_free_executable(bal_allocator_handle_t  handle,
+                            bal_executable_buffer_t buffer,
+                            size_t                  size)
 {
     (void)handle;
 
@@ -197,8 +199,8 @@ default_free_executable(bal_allocator_handle_t handle, bal_executable_buffer_t b
     munmap(buffer.rw_pointer, size);
 }
 
-static void
-default_protect_rw(bal_allocator_handle_t handle, bal_executable_buffer_t buffer, size_t size)
+void
+bal_default_protect_rw(bal_allocator_handle_t handle, bal_executable_buffer_t buffer, size_t size)
 {
     (void)handle;
     (void)buffer;
@@ -207,8 +209,8 @@ default_protect_rw(bal_allocator_handle_t handle, bal_executable_buffer_t buffer
     return;
 }
 
-static void
-default_protect_rx(bal_allocator_handle_t handle, bal_executable_buffer_t buffer, size_t size)
+void
+bal_default_protect_rx(bal_allocator_handle_t handle, bal_executable_buffer_t buffer, size_t size)
 {
     (void)handle;
 
@@ -230,7 +232,7 @@ default_protect_rx(bal_allocator_handle_t handle, bal_executable_buffer_t buffer
 #include <unistd.h>
 
 bal_executable_buffer_t
-default_allocate_executable(bal_allocator_handle_t handle, size_t alignment, size_t size)
+bal_default_allocate_executable(bal_allocator_handle_t handle, size_t alignment, size_t size)
 {
     (void)handle;
     (void)alignment;
@@ -280,7 +282,9 @@ default_allocate_executable(bal_allocator_handle_t handle, size_t alignment, siz
 }
 
 void
-default_free_executable(bal_allocator_handle_t handle, bal_executable_buffer_t buffer, size_t size)
+bal_default_free_executable(bal_allocator_handle_t  handle,
+                            bal_executable_buffer_t buffer,
+                            size_t                  size)
 {
     (void)handle;
 
@@ -295,7 +299,7 @@ default_free_executable(bal_allocator_handle_t handle, bal_executable_buffer_t b
 }
 
 void
-default_protect_rw(bal_allocator_handle_t handle, bal_executable_buffer_t buffer, size_t size)
+bal_default_protect_rw(bal_allocator_handle_t handle, bal_executable_buffer_t buffer, size_t size)
 {
     // Dual mapping means rw_pointer is always writable.
     //
@@ -305,7 +309,7 @@ default_protect_rw(bal_allocator_handle_t handle, bal_executable_buffer_t buffer
 }
 
 void
-default_protect_rx(bal_allocator_handle_t handle, bal_executable_buffer_t buffer, size_t size)
+bal_default_protect_rx(bal_allocator_handle_t handle, bal_executable_buffer_t buffer, size_t size)
 {
     (void)handle;
 
@@ -327,8 +331,8 @@ default_protect_rx(bal_allocator_handle_t handle, bal_executable_buffer_t buffer
 #include <malloc.h>
 #include <windows.h>
 
-static void *
-default_allocate(bal_allocator_handle_t handle, size_t alignment, size_t size)
+void *
+bal_default_allocate(bal_allocator_handle_t handle, size_t alignment, size_t size)
 {
     (void)handle;
 
@@ -341,8 +345,8 @@ default_allocate(bal_allocator_handle_t handle, size_t alignment, size_t size)
     return memory;
 }
 
-static void
-default_free(bal_allocator_handle_t handle, void *pointer, size_t size)
+void
+bal_default_free(bal_allocator_handle_t handle, void *pointer, size_t size)
 {
     (void)handle;
     (void)size;
@@ -350,7 +354,7 @@ default_free(bal_allocator_handle_t handle, void *pointer, size_t size)
 }
 
 bal_executable_buffer_t
-default_allocate_executable(bal_allocator_handle_t handle, size_t alignment, size_t size)
+bal_default_allocate_executable(bal_allocator_handle_t handle, size_t alignment, size_t size)
 {
     (void)handle;
     (void)alignment;
@@ -390,7 +394,7 @@ default_allocate_executable(bal_allocator_handle_t handle, size_t alignment, siz
 }
 
 void
-default_protect_rw(bal_allocator_handle_t handle, bal_executable_buffer_t buffer, size_t size)
+bal_default_protect_rw(bal_allocator_handle_t handle, bal_executable_buffer_t buffer, size_t size)
 {
     // Dual mapping means rw_pointer is always writable.
     //
@@ -400,14 +404,16 @@ default_protect_rw(bal_allocator_handle_t handle, bal_executable_buffer_t buffer
 }
 
 void
-default_protect_rx(bal_allocator_handle_t handle, bal_executable_buffer_t buffer, size_t size)
+bal_default_protect_rx(bal_allocator_handle_t handle, bal_executable_buffer_t buffer, size_t size)
 {
     (void)handle;
     FlushInstructionCache(GetCurrentProcess(), buffer.rx_pointer, size);
 }
 
 void
-default_free_executable(bal_allocator_handle_t handle, bal_executable_buffer_t buffer, size_t size)
+bal_default_free_executable(bal_allocator_handle_t  handle,
+                            bal_executable_buffer_t buffer,
+                            size_t                  size)
 {
     (void)handle;
     (void)size;
@@ -425,7 +431,7 @@ default_free_executable(bal_allocator_handle_t handle, bal_executable_buffer_t b
 
 #endif /* BAL_PLATFORM_WINDOWS */
 
-static const uint8_t *
+const uint8_t *
 bal_flat_translation_interface_translate(void *BAL_RESTRICT   interface,
                                          bal_guest_address_t  guest_address,
                                          size_t *BAL_RESTRICT max_readable_size)
