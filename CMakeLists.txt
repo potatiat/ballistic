@@ -298,6 +298,15 @@ if (BALLISTIC_BUILD_TESTS)
     target_link_libraries(${DECODER_TEST} PRIVATE ${PROJECT_NAME} gtest gtest_main)
     add_strict_compiler_flags(${DECODER_TEST})
 
+    # MSVC does not support the weak attribute.
+    if (NOT MSVC)
+        set(WEAK_TEST test_weak)
+        add_executable(${WEAK_TEST} tests/test_weak.cpp)
+        target_include_directories(${WEAK_TEST} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src extern/googletest-1.17.0/googletest/include)
+        target_link_libraries(${WEAK_TEST} PRIVATE ${PROJECT_NAME} gtest gtest_main)
+        gtest_discover_tests(${WEAK_TEST} DISCOVERY_TIMEOUT 30)
+    endif ()
+
     gtest_discover_tests(${ENGINE_TEST} DISCOVERY_TIMEOUT 30)
     gtest_discover_tests(${DECODER_TEST} DISCOVERY_TIMEOUT 30)
     gtest_discover_tests(${MEMORY_TEST} DISCOVERY_TIMEOUT 30)
