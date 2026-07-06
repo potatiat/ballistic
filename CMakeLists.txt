@@ -159,6 +159,7 @@ add_library(Ballistic STATIC
 target_include_directories(Ballistic PUBLIC include)
 target_include_directories(Ballistic PRIVATE src)
 target_compile_definitions(Ballistic PUBLIC BAL_MAX_LOG_LEVEL=4)
+add_strict_compiler_flags(Ballistic)
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     target_compile_options(Ballistic PUBLIC
