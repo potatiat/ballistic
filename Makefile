@@ -59,6 +59,24 @@ endif
 BALLISTIC_BUILD_TYPES := debug release
 .PHONY: ballistic-configure ballistic-build ballistic-test ballistic-clean help
 
+help:
+	@echo "Ballistic Build System"
+	@echo "Usage: make [target] [VARIABLE=value]"
+	@echo ""
+	@echo "Targets:"
+	@echo "  ballistic-configure       Configure CMake project"
+	@echo "  ballistic-configure-all   Configure CMake project for all builds"
+	@echo "  ballistic-build           Build the project"
+	@echo "  ballistic-build-all       Build the project for all builds"
+	@echo "  ballistic-test            Run the test suite via CTest"
+	@echo "  ballistic-clean           Remove build directory"
+	@echo ""
+	@echo "Variables:"
+	@echo "  BUILD_TYPE            Debug | Release (default: Debug)"
+	@echo "  GENERATOR             Build Generator (default: Ninja)"
+	@echo "  LINKER                Linker override (default: lld)"
+	@echo "  CC / CXX              Compiler overrides"
+
 define CONFIGURE_ALL_TEMPLATE
 .PHONY: configure-all-$(1)
 configure-all-$(1):
@@ -81,24 +99,6 @@ clean-all-$(1):
 	@$(CMAKE) -E remove_directory build-$(1)
 endef
 $(foreach type,$(BALLISTIC_BUILD_TYPES),$(eval $(call CLEAN_ALL_TEMPLATE,$(type))))
-
-help:
-	@echo "Ballistic Build System"
-	@echo "Usage: make [target] [VARIABLE=value]"
-	@echo ""
-	@echo "Targets:"
-	@echo "  ballistic-configure       Configure CMake project"
-	@echo "  ballistic-configure-all   Configure CMake project for all builds"
-	@echo "  ballistic-build           Build the project"
-	@echo "  ballistic-build-all       Build the project for all builds"
-	@echo "  ballistic-test            Run the test suite via CTest"
-	@echo "  ballistic-clean           Remove build directory"
-	@echo ""
-	@echo "Variables:"
-	@echo "  BUILD_TYPE            Debug | Release (default: Debug)"
-	@echo "  GENERATOR             Build Generator (default: Ninja)"
-	@echo "  LINKER                Linker override (default: lld)"
-	@echo "  CC / CXX              Compiler overrides"
 
 ballistic-configure:
 	$(CMAKE) -G "$(GENERATOR)" -B "$(BUILD_DIRECTORY)" \
