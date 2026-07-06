@@ -2,6 +2,7 @@ BUILD_TYPE 		?= Debug
 BUILD_DIRECTORY ?= $(if $(filter Release,$(BUILD_TYPE)),build/release,build/debug)
 GENERATOR 		?= Ninja
 LINKER 			?= lld
+SANITIZER       ?= None
 CMAKE  			?= cmake
 LTO_FLAG		:= $(if $(filter Release,$(BUILD_TYPE)),ON,OFF)
 
@@ -44,13 +45,18 @@ ifeq ($(PLATFORM),Windows)
 		LINKER_FLAGS 			:= -LTCG:incremental -OPT:REF -OPT:ICF
 	endif
 else
-	LINKER_FLAGS 			:= -fuse-ld=$(LINKER)
-	COMPILER_FLAGS_GLOBAL 	:=
-	COMPILRE_FLAGS_STRICT   :=
+	LINKER_FLAGS 			    := -fuse-ld=$(LINKER)
+	COMPILER_FLAGS_GLOBAL 	    :=
+	COMPILER_FLAGS_STRICT       :=
+	COMPILER_FLAGS_SANITIZERS   :=
 
 	ifeq ($(BUILD_TYPE),Debug)
 		COMPILER_FLAGS_STRICT := -Wall -Wextra -Werror -Wconversion -Wsign-conversion -Wshadow \
 						         -fstack-protector-strong -Wpadded -Wvla
+
+		ifeq ($(SANITIZER),General)
+            COMPILER_FLAGS_SANITIZERS 	:= -fsanitize=address,undefined
+        endif
 	else
 		COMPILER_FLAGS_GLOBAL := -ffile-prefix-map=$(CURDIR)=. -O3
 	endif
@@ -75,6 +81,7 @@ help:
 	@echo "  BUILD_TYPE            Debug | Release (default: Debug)"
 	@echo "  GENERATOR             Build Generator (default: Ninja)"
 	@echo "  LINKER                Linker override (default: lld)"
+	@echo "  SANITIZER             General | None  (default: None)"
 	@echo "  CC / CXX              Compiler overrides"
 
 define CONFIGURE_ALL_TEMPLATE
@@ -114,6 +121,7 @@ ballistic-configure:
 		-DCMAKE_SHARED_LINKER_FLAGS="$(LINKER_FLAGS)" \
 		-DBALLISTIC_BUILD_TESTS=ON \
 		-DBALLISTIC_STRICT_FLAGS="$(COMPILER_FLAGS_STRICT)" \
+		-DBALLISTIC_SANITIZERS="$(COMPILER_FLAGS_SANITIZERS)" \
 		-DBALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION=$(LTO_FLAG)
 
     # Makes it easier for fetch compile_commands.json for CLion.

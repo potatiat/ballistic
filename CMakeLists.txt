@@ -52,6 +52,14 @@ function(add_strict_compiler_flags target_name)
     endif ()
 endfunction()
 
+# Macro to add sanitizers.
+function(add_sanitizers target_name)
+    if (DEFINED BALLISTIC_SANITIZERS AND NOT BALLISTIC_SANITIZERS STREQUAL "")
+        target_compile_options(${target_name} PRIVATE ${BALLISTIC_SANITIZERS})
+        target_link_options(${target_name} PRIVATE ${BALLISTIC_SANITIZERS})
+    endif ()
+endfunction()
+
 # -----------------------------------------------------------------------------
 # Setup Build Directory
 # -----------------------------------------------------------------------------
@@ -160,6 +168,7 @@ target_include_directories(Ballistic PUBLIC include)
 target_include_directories(Ballistic PRIVATE src)
 target_compile_definitions(Ballistic PUBLIC BAL_MAX_LOG_LEVEL=4)
 add_strict_compiler_flags(Ballistic)
+add_sanitizers(Ballistic)
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     target_compile_options(Ballistic PUBLIC
@@ -204,6 +213,7 @@ set(DECODER_CLI_NAME "decoder_cli")
 add_executable(${DECODER_CLI_NAME} tools/decoder_cli.c)
 target_link_libraries(${DECODER_CLI_NAME} PRIVATE ${PROJECT_NAME})
 add_strict_compiler_flags(${DECODER_CLI_NAME})
+add_sanitizers(${DECODER_CLI_NAME})
 
 # Our documentation generator completely relies on Clang running on UNIX
 # compatable machines for parsing C code. I do not have a Windows machine to
@@ -282,6 +292,7 @@ if (BALLISTIC_BUILD_TESTS)
     target_include_directories(${ENGINE_TEST} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src extern/googletest-1.17.0/googletest/include)
     target_link_libraries(${ENGINE_TEST} PRIVATE ${PROJECT_NAME} gtest gtest_main)
     add_strict_compiler_flags(${ENGINE_TEST})
+    add_sanitizers(${ENGINE_TEST})
 
     if (NOT MSVC)
         target_compile_options(${ENGINE_TEST} PRIVATE -Wno-padded)
@@ -292,12 +303,14 @@ if (BALLISTIC_BUILD_TESTS)
     target_include_directories(${MEMORY_TEST} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src extern/googletest-1.17.0/googletest/include)
     target_link_libraries(${MEMORY_TEST} PRIVATE ${PROJECT_NAME} gtest gtest_main)
     add_strict_compiler_flags(${MEMORY_TEST})
+    add_sanitizers(${MEMORY_TEST})
 
     set(DECODER_TEST test_decoder)
     add_executable(${DECODER_TEST} tests/test_decoder.cpp)
     target_include_directories(${DECODER_TEST} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src extern/googletest-1.17.0/googletest/include)
     target_link_libraries(${DECODER_TEST} PRIVATE ${PROJECT_NAME} gtest gtest_main)
     add_strict_compiler_flags(${DECODER_TEST})
+    add_sanitizers(${DECODER_TEST})
 
     # MSVC does not support the weak attribute.
     if (NOT MSVC)
@@ -305,6 +318,7 @@ if (BALLISTIC_BUILD_TESTS)
         add_executable(${WEAK_TEST} tests/test_weak.cpp)
         target_include_directories(${WEAK_TEST} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src extern/googletest-1.17.0/googletest/include)
         target_link_libraries(${WEAK_TEST} PRIVATE ${PROJECT_NAME} gtest gtest_main)
+        add_sanitizers(${WEAK_TEST})
         gtest_discover_tests(${WEAK_TEST} DISCOVERY_TIMEOUT 30)
     endif ()
 
@@ -319,6 +333,7 @@ if (BALLISTIC_BUILD_TESTS)
         add_executable(${target_name} "tests/backend/x86/${target_name}.cpp")
         target_link_libraries(${target_name} PRIVATE Ballistic gtest gtest_main)
         add_strict_compiler_flags(${target_name})
+        add_sanitizers(${target_name})
         gtest_discover_tests(${target_name} DISCOVERY_TIMEOUT 30)
     endforeach ()
 
@@ -351,7 +366,9 @@ if (BALLISTIC_BUILD_TESTS)
     message(STATUS "[Ballistic] Propagating active compiler and compiler flags to doctest...")
     set(DOCTEST_CC "${CMAKE_C_COMPILER}")
     string(TOUPPER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_UPPER)
-    set(DOCTEST_CFLAGS ${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_${CMAKE_BUILD_TYPE_UPPER}} ${BALLISTIC_STRICT_FLAGS})
+    set(DOCTEST_CFLAGS ${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_${CMAKE_BUILD_TYPE_UPPER}} ${BALLISTIC_STRICT_FLAGS} ${BALLISTIC_SANITIZERS})
+    string(REPLACE ";" " " DOCTEST_CFLAGS "${DOCTEST_CFLAGS}")
+    string(STRIP "${DOCTEST_CFLAGS}" DOCTEST_CFLAGS)
     set(DOCTEST_LTO "$<BOOL:${BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION}>")
 
     set_tests_properties(doctest PROPERTIES

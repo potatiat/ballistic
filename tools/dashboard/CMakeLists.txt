@@ -49,6 +49,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 add_dependencies(${PROJECT_NAME} dashboard_ffi_bindings)
 target_link_libraries(${PROJECT_NAME} PRIVATE Ballistic glfw cimgui_glfw LuaJIT)
 set_target_properties(${PROJECT_NAME} PROPERTIES ENABLE_EXPORTS TRUE)
+add_sanitizers(${PROJECT_NAME})
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     target_link_libraries(${PROJECT_NAME} PRIVATE kernel32)
