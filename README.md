@@ -52,20 +52,20 @@ Ballistic actively supports `clang` and `MSVC` only.
 ### macOS
 
 ```bash
-brew install cmake python3 llvm
+brew install cmake luajit
 ```
 
 ### Debian/Ubuntu
 
 ```bash
 sudo apt update
-sudo apt install build-essential cmake python3
+sudo apt install build-essential cmake luajit
 ```
 
 ### Fedora
 
 ```bash
-sudo dnf install cmake python3 clang
+sudo dnf install cmake clang luajit 
 ```
 
 ## Configure CMake
