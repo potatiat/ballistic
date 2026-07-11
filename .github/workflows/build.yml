@@ -80,10 +80,10 @@ jobs:
         run: make ballistic-configure BUILD_TYPE=${{ matrix.type }}
 
       - name: Build Project
-        run: make ballistic-build BUILD_TYPE=${{ matrix.type }}
+        run: make ballistic-build
 
       - name: Run Test Suite
-        run: make ballistic-test BUILD_TYPE=${{ matrix.type }}
+        run: make ballistic-test
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v7
@@ -142,10 +142,10 @@ jobs:
         run: make ballistic-configure BUILD_TYPE=${{ matrix.type }}
 
       - name: Build Project
-        run: make ballistic-build BUILD_TYPE=${{ matrix.type }}
+        run: make ballistic-build
 
       - name: Run Test Suite
-        run: make ballistic-test BUILD_TYPE=${{ matrix.type }}
+        run: make ballistic-test
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v7

@@ -1,5 +1,7 @@
-BUILD_TYPE 		?= Debug
+BUILD_TYPE 		?= Release
 BUILD_DIRECTORY ?= $(if $(filter Release,$(BUILD_TYPE)),build/release,build/debug)
+BUILD_DASHBOARD ?= $(if $(filter Release,$(BUILD_TYPE)),OFF,ON)
+BUILD_TESTS		?= $(if $(filter Release,$(BUILD_TYPE)),OFF,ON)
 GENERATOR 		?= Ninja
 LINKER 			?= lld
 SANITIZER       ?= None
@@ -78,11 +80,13 @@ help:
 	@echo "  ballistic-clean           Remove build directory"
 	@echo ""
 	@echo "Variables:"
-	@echo "  BUILD_TYPE            Debug | Release (default: Debug)"
-	@echo "  GENERATOR             Build Generator (default: Ninja)"
-	@echo "  LINKER                Linker override (default: lld)"
-	@echo "  SANITIZER             General | None  (default: None)"
-	@echo "  CC / CXX              Compiler overrides"
+	@echo "  BUILD_TYPE            	Debug | Release (default: Release)"
+	@echo "  BUILD_DASHBOARD		ON | OFF (default: OFF)"
+	@echo "  BUILD_TESTS		   	ON | OFF (default: OFF)"
+	@echo "  GENERATOR             	Build Generator (default: Ninja)"
+	@echo "  LINKER                	Linker override (default: lld)"
+	@echo "  SANITIZER             	General | None  (default: None)"
+	@echo "  CC / CXX              	Compiler overrides"
 
 define CONFIGURE_ALL_TEMPLATE
 .PHONY: configure-all-$(1)
@@ -119,7 +123,8 @@ ballistic-configure:
 		-DCMAKE_CXX_COMPILER_LAUNCHER=$(CACHE_LAUNCHER) \
 		-DCMAKE_EXE_LINKER_FLAGS="$(LINKER_FLAGS)" \
 		-DCMAKE_SHARED_LINKER_FLAGS="$(LINKER_FLAGS)" \
-		-DBALLISTIC_BUILD_TESTS=ON \
+		-DBALLISTIC_BUILD_DASHBOARD="$(BUILD_DASHBOARD)" \
+		-DBALLISTIC_BUILD_TESTS="$(BUILD_TESTS)" \
 		-DBALLISTIC_STRICT_FLAGS="$(COMPILER_FLAGS_STRICT)" \
 		-DBALLISTIC_SANITIZERS="$(COMPILER_FLAGS_SANITIZERS)" \
 		-DBALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION=$(LTO_FLAG)
