@@ -156,6 +156,7 @@ add_library(Ballistic STATIC
         src/bal_decoder.c
         src/bal_engine.c
         src/bal_errors.c
+        src/bal_jit_debug.c
         src/bal_log.c
         src/bal_memory.c
         src/generated/decoder_table.c
