@@ -53,9 +53,17 @@ extern "C"
     BAL_ALIGNED(64) typedef struct
     {
         bal_jit_block_entry_t *entries;
-        uint8_t               *metadata_arena;
-        bal_logger_t           logger;
-        size_t                 entry_count;
+
+        /// Memory Layout of the arena:
+        ///
+        /// Offset 0x0000:          bal_jit_block_metadata_t (Block 0).
+        /// Offset 0x0020:          Array of bal_jit_instruction_map_t (N * 8 bytes).
+        /// Offset 0x0020 + (N*8):  bal_jit_block_metadata_t (Block 1).
+        /// Offset ....:            Array of bal_jit_instruction_map_t (M * 8 bytes).
+        /// etc...
+        uint8_t     *metadata_arena;
+        bal_logger_t logger;
+        size_t       entry_count;
 
         // The entry list capacity. This is NOT in bytes.
         size_t entry_capacity;
@@ -76,6 +84,13 @@ extern "C"
 
     BAL_COLD void bal_jit_debug_destroy(const bal_allocator_t   *allocator,
                                         bal_jit_debug_context_t *context);
+
+    BAL_HOT bal_error_t bal_jit_debug_add_block(bal_jit_debug_context_t         *context,
+                                                void                            *rx_start,
+                                                uint32_t                         rx_size,
+                                                uint64_t                         base_guest_pc,
+                                                const bal_jit_instruction_map_t *mapping,
+                                                uint32_t                         instruction_count);
 
 #ifdef __cplusplus
 }
