@@ -26,7 +26,6 @@ bal_jit_debug_init(const bal_allocator_t *BAL_RESTRICT   allocator,
     const size_t memory_alignment   = 64;
     c.entries                       = (bal_jit_block_entry_t *)allocator->allocate(
         allocator->context, memory_alignment, total_entries_size);
-
     if (BAL_UNLIKELY(NULL == c.entries))
     {
         BAL_LOG_ERROR(&logger, "Aborting function: failed to allocate JIT debug block entries");
@@ -47,7 +46,7 @@ bal_jit_debug_init(const bal_allocator_t *BAL_RESTRICT   allocator,
     memset(context, 0, sizeof(bal_jit_debug_context_t));
     context->entries        = c.entries;
     context->metadata_arena = c.metadata_arena;
-    context->logger         = c.logger;
+    context->logger         = logger;
     context->entry_capacity = c.entry_capacity;
     context->arena_capacity = c.arena_capacity;
 
@@ -87,7 +86,7 @@ bal_jit_debug_destroy(const bal_allocator_t *BAL_RESTRICT   allocator,
         context->metadata_arena = NULL;
     }
 
-    memset(context, 0, sizeof(bal_jit_block_entry_t));
+    memset(context, 0, sizeof(bal_jit_debug_context_t));
 }
 
 bal_error_t

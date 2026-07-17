@@ -16,6 +16,14 @@ extern "C"
 
 #endif // __cplusplus
 
+    /// Callback when a crash occurs inside a JIT block.
+    typedef void (*bal_jit_crash_callback_t)(void       *user_data,
+                                             uint64_t    guest_pc,
+                                             uint64_t    host_rip,
+                                             uint32_t    jit_offset,
+                                             const void *jit_block_start,
+                                             uint32_t    jit_block_size);
+
     typedef struct
     {
         /// Byte offset from the start of the JIT block.
@@ -72,8 +80,12 @@ extern "C"
         // Cold data.
 
         // The metadata arena capacity in bytes.
-        size_t  arena_capacity;
-        uint8_t pad[56];
+        size_t                   arena_capacity;
+        void                    *jit_buffer_start;
+        void                    *jit_buffer_end;
+        bal_jit_crash_callback_t crash_callback;
+        void                    *crash_callback_user_data;
+        uint8_t                  pad[24];
     } bal_jit_debug_context_t;
 
     static_assert(128 == sizeof(bal_jit_debug_context_t), "Struct size mismatch");
@@ -91,6 +103,12 @@ extern "C"
                                                 uint64_t                         base_guest_pc,
                                                 const bal_jit_instruction_map_t *mapping,
                                                 uint32_t                         instruction_count);
+
+    BAL_COLD bal_error_t bal_jit_debug_register_signal_handler(bal_jit_debug_context_t *context,
+                                                               void  *jit_buffer_start,
+                                                               size_t jit_buffer_size);
+
+    BAL_COLD void bal_jit_debug_unregister_signal_handler(bal_jit_debug_context_t *context);
 
 #ifdef __cplusplus
 }

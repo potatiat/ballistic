@@ -89,7 +89,8 @@ typedef struct
     bal_tier1_compiler_t    tier1_compiler;
     bal_executable_buffer_t tier1_buffer;
     size_t                  tier1_buffer_size;
-    char                    pad0[40];
+    char                    pad[40];
+    bal_jit_debug_context_t debug_context;
 
     BAL_ALIGNED(64) struct
     {
@@ -230,10 +231,31 @@ bal_engine_init(bal_engine_t *BAL_RESTRICT                 engine,
         return engine->status;
     }
 
+#if BAL_PLATFORM_LINUX
+
+    const bal_error_t debug_status
+        = bal_jit_debug_init(allocator, &internal_engine_state->debug_context, logger);
+
+    if (BAL_SUCCESS == debug_status)
+    {
+        bal_jit_debug_register_signal_handler(&internal_engine_state->debug_context,
+                                              internal_engine_state->tier1_buffer.rx_pointer,
+                                              internal_engine_state->tier1_buffer_size);
+        cpu->debug_context = &internal_engine_state->debug_context;
+    }
+    else
+    {
+        BAL_LOG_WARN(&logger, "Failed to initialize JIT debug context, debugging disabled.");
+        memset(&internal_engine_state->debug_context, 0, sizeof(bal_jit_debug_context_t));
+    }
+
+#endif // BAL_PLATFORM_LINUX
+
     const bal_error_t status = bal_tier1_compiler_init(&internal_engine_state->tier1_compiler,
                                                        internal_engine_state->tier1_buffer,
                                                        internal_engine_state->tier1_buffer_size,
-                                                       logger);
+                                                       logger,
+                                                       &internal_engine_state->debug_context);
 
     if (status != BAL_SUCCESS)
     {
@@ -275,8 +297,6 @@ bal_engine_run_thread(bal_engine_t *engine)
         BAL_LOG_ERROR(&engine->logger, "Aborting function: Engine is already running");
         return BAL_ERROR_ENGINE_ALREADY_RUNNING;
     }
-
-    engine->flags |= BAL_ENGINE_FLAG_RUNNING;
 
     while (true)
     {
@@ -411,7 +431,6 @@ bal_engine_run_thread(bal_engine_t *engine)
         }
     }
 
-    engine->flags &= ~BAL_ENGINE_FLAG_RUNNING;
     atomic_store_explicit(
         &internal_engine_state->thread_state.is_executing, false, memory_order_release);
     return engine->status;
@@ -488,6 +507,14 @@ bal_engine_destroy(bal_engine_t *engine)
         if (NULL != allocator->free)
         {
             BAL_LOG_INFO(&logger, "Freeing internal engine state.");
+
+#if BAL_PLATFORM_LINUX
+
+            bal_jit_debug_unregister_signal_handler(&internal_engine_state->debug_context);
+
+#endif // BAL_PLATFORM_LINUX
+
+            bal_jit_debug_destroy(allocator, &internal_engine_state->debug_context);
             allocator->free(
                 allocator->context, internal_engine_state, sizeof(internal_engine_state_t));
         }

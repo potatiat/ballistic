@@ -1,9 +1,8 @@
 #ifndef BALLISTIC_BAL_ENGINE_FLAGS_H
 #define BALLISTIC_BAL_ENGINE_FLAGS_H
 
-/// The engine is currently executing guest code.
-/// TODO: This flag does nothing. Find a suitable flag to replace this.
-#define BAL_ENGINE_FLAG_RUNNING (1U << 0)
+// Enable debugging JIT compiled code.
+#define BAL_ENGINE_FLAG_JIT_DEBUG (1 << 0)
 
 /// Forces the engine to return to the host after executing a single instruction.
 #define BAL_ENGINE_FLAG_SINGLE_STEP (1U << 1U)

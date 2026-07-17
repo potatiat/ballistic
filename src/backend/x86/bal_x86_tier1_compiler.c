@@ -85,7 +85,8 @@ bal_error_t
 bal_tier1_compiler_init(bal_tier1_compiler_t         *compiler,
                         const bal_executable_buffer_t executable_buffer,
                         const size_t                  buffer_size,
-                        const bal_logger_t            logger)
+                        const bal_logger_t            logger,
+                        bal_jit_debug_context_t      *debug_context)
 {
     if (BAL_UNLIKELY(NULL == compiler))
     {
@@ -108,7 +109,8 @@ bal_tier1_compiler_init(bal_tier1_compiler_t         *compiler,
         return compiler->status;
     }
 
-    compiler->logger = logger;
+    compiler->debug_context = debug_context;
+    compiler->logger        = logger;
     bal_error_t error
         = bal_x86_assembler_init(&compiler->assembler, executable_buffer, buffer_size, logger);
 
@@ -183,6 +185,16 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                  max_instructions);
     reset_register_allocator(compiler);
     void *host_address = compiler->assembler.rx_buffer + compiler->assembler.offset;
+
+    // Debug tracking.
+    const bal_guest_address_t guest_address_base           = guest_address;
+    const size_t              start_x86_block_offset       = compiler->assembler.offset;
+    size_t                    start_x86_instruction_offset = 0;
+    bal_jit_instruction_map_t mappings[2048];
+    uint32_t                  mapping_count = 0;
+    const bool                debug_enabled = engine_flags & BAL_ENGINE_FLAG_JIT_DEBUG
+                               && compiler->debug_context != NULL
+                               && compiler->debug_context->entries != NULL;
 
     // Setup block.
     //
@@ -301,6 +313,8 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                 }
             }
 
+            start_x86_instruction_offset = compiler->assembler.offset;
+
             switch (metadata->ir_opcode)
             {
                 case OPCODE_CONST:;
@@ -384,12 +398,14 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                     BAL_LOG_INFO(logger,
                                  "Block terminated by TRAP/Unknown instruction: %s: ",
                                  metadata->name);
+                    compiler->status    = BAL_ERROR_UNKNOWN_INSTRUCTION;
                     is_block_terminated = true;
                     break;
                 default:
                     BAL_LOG_ERROR(logger,
                                   " Aborting function: Tier 1 Unsupported Opcode: %s",
                                   metadata->name);
+                    compiler->status    = BAL_ERROR_UNKNOWN_INSTRUCTION;
                     is_block_terminated = true;
                     break;
             }
@@ -405,6 +421,15 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                 BAL_LOG_ERROR(logger, "Status failure during translation: %d", compiler->status);
                 is_block_terminated = true;
                 break;
+            }
+
+            if (true == debug_enabled && mapping_count < 2048)
+            {
+                mappings[mapping_count].x86_offset
+                    = (uint32_t)(start_x86_instruction_offset - start_x86_block_offset);
+                mappings[mapping_count].guest_pc_offset
+                    = (uint32_t)(guest_address - guest_address_base);
+                ++mapping_count;
             }
 
             ++arm_instruction_count;
@@ -438,6 +463,18 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
         return NULL;
     }
 
+    if (true == debug_enabled && mapping_count > 0)
+    {
+        void *BAL_RESTRICT rx_start = compiler->assembler.rx_buffer + start_x86_block_offset;
+        const uint32_t rx_size = (uint32_t)(compiler->assembler.offset - start_x86_block_offset);
+        bal_jit_debug_add_block(compiler->debug_context,
+                                rx_start,
+                                rx_size,
+                                guest_address_base,
+                                mappings,
+                                mapping_count);
+    }
+
     BAL_LOG_INFO(
         logger, "Tier 1 compiled block ends at GVA 0x%016llX", (unsigned long long)guest_address);
     return host_address;
@@ -452,9 +489,9 @@ reset_register_allocator(bal_tier1_compiler_t *compiler)
     }
 
     BAL_LOG_TRACE(&compiler->logger, "Resetting Register Allocator");
+    compiler->is_dirty = 0;
     memset(compiler->arm_to_x86, -1, sizeof(compiler->arm_to_x86));
     memset(compiler->x86_to_arm, -1, sizeof(compiler->x86_to_arm));
-    memset(compiler->is_dirty, false, sizeof(compiler->is_dirty));
 }
 
 bal_x86_register_t
@@ -534,26 +571,25 @@ flush_dirty_registers(bal_tier1_compiler_t *compiler)
     }
 
     const bal_logger_t *BAL_RESTRICT logger            = &compiler->logger;
-    const bool *BAL_RESTRICT         dirty_cursor      = compiler->is_dirty;
+    const uint32_t                   dirty_mask        = compiler->is_dirty;
     const int8_t *BAL_RESTRICT       arm_to_x86_cursor = compiler->arm_to_x86;
 
     for (uint8_t arm_register = 0; arm_register < 32; ++arm_register)
     {
-        if (true == *dirty_cursor)
+        if (dirty_mask & (1U << arm_register))
         {
             const bal_x86_register_t x86_register = (bal_x86_register_t)*arm_to_x86_cursor;
             const uint64_t           offset       = offsetof(bal_cpu_t, x[arm_register]);
             const bal_x86_macro_t    store_macro  = {
-                .opcode              = BAL_X86_MACRO_STORE,
-                .source              = x86_register,
-                .immediate_or_offset = offset,
+                    .opcode              = BAL_X86_MACRO_STORE,
+                    .source              = x86_register,
+                    .immediate_or_offset = offset,
             };
             BAL_LOG_DEBUG(logger, "Flush: dirty ARM X%u to x86 r%d", arm_register, x86_register);
             (void)logger;
             bal_sliding_window_push(&compiler->window, store_macro);
         }
 
-        ++dirty_cursor;
         ++arm_to_x86_cursor;
     }
 }
@@ -611,12 +647,12 @@ terminate_block_conditional(bal_tier1_compiler_t *compiler,
     }
 
     bal_sliding_window_flush_all(&compiler->window);
-    size_t                   dirty_count  = 0;
-    const bool *BAL_RESTRICT dirty_cursor = compiler->is_dirty;
+    size_t         dirty_count = 0;
+    const uint32_t dirty_mask  = compiler->is_dirty;
 
     for (uint8_t arm_register = 0; arm_register < 32; ++arm_register)
     {
-        if (true == dirty_cursor[arm_register])
+        if (dirty_mask & (1U << arm_register))
         {
             ++dirty_count;
         }
@@ -683,8 +719,8 @@ translate_add_sub_imm(bal_tier1_compiler_t *BAL_RESTRICT                     com
     // Does this instruction set flags?
     const bool is_setting_flags = (OPCODE_CMP == metadata->ir_opcode) || ('S' == metadata->name[3])
                                   || ('N' == metadata->name[2]);
-    const bool is_discarded_result  = is_setting_flags && (31 == rd);
-    const bool skip_load_rn         = false;
+    const bool               is_discarded_result = is_setting_flags && (31 == rd);
+    const bool               skip_load_rn        = false;
     const bal_x86_register_t x86_rn = allocate_x86_register(compiler, rn, skip_load_rn);
     bal_x86_register_t       x86_rd;
 
@@ -759,16 +795,16 @@ translate_add_sub_imm(bal_tier1_compiler_t *BAL_RESTRICT                     com
         // ARM carry flag is inverted compared to x86's carry during subtraction.
         const bal_x86_condition_t c_condition = true == is_sub ? BAL_X86_COND_AE : BAL_X86_COND_B;
         const bal_x86_macro_t     set_c_macro = {
-            .opcode              = BAL_X86_MACRO_SETCC,
-            .condition           = c_condition,
-            .immediate_or_offset = offsetof(bal_cpu_t, flag_c),
+                .opcode              = BAL_X86_MACRO_SETCC,
+                .condition           = c_condition,
+                .immediate_or_offset = offsetof(bal_cpu_t, flag_c),
         };
         bal_sliding_window_push(&compiler->window, set_c_macro);
     }
 
     if (false == is_discarded_result)
     {
-        compiler->is_dirty[rd] = true;
+        compiler->is_dirty |= 1U << rd;
     }
 }
 
@@ -795,8 +831,8 @@ translate_add_sub_reg(bal_tier1_compiler_t *BAL_RESTRICT                     com
 
     const bool is_setting_flags = (OPCODE_CMP == metadata->ir_opcode) || ('S' == metadata->name[3])
                                   || ('N' == metadata->name[2]);
-    const bool is_discarded_result        = is_setting_flags && (31 == rd);
-    const bool skip_load_rn               = false;
+    const bool               is_discarded_result = is_setting_flags && (31 == rd);
+    const bool               skip_load_rn        = false;
     const bal_x86_register_t x86_rn       = allocate_x86_register(compiler, rn, skip_load_rn);
     const bool               skip_load_rm = false;
     const bal_x86_register_t x86_rm       = allocate_x86_register(compiler, rm, skip_load_rm);
@@ -873,16 +909,16 @@ translate_add_sub_reg(bal_tier1_compiler_t *BAL_RESTRICT                     com
         // ARM carry flag is inverted compared to x86's carry during subtraction.
         const bal_x86_condition_t c_condition = true == is_sub ? BAL_X86_COND_AE : BAL_X86_COND_B;
         const bal_x86_macro_t     set_c_macro = {
-            .opcode              = BAL_X86_MACRO_SETCC,
-            .condition           = c_condition,
-            .immediate_or_offset = offsetof(bal_cpu_t, flag_c),
+                .opcode              = BAL_X86_MACRO_SETCC,
+                .condition           = c_condition,
+                .immediate_or_offset = offsetof(bal_cpu_t, flag_c),
         };
         bal_sliding_window_push(&compiler->window, set_c_macro);
     }
 
     if (false == is_discarded_result)
     {
-        compiler->is_dirty[rd] = true;
+        compiler->is_dirty |= 1U << rd;
     }
 }
 
@@ -977,9 +1013,9 @@ translate_cbz_cbnz(bal_tier1_compiler_t *BAL_RESTRICT                     compil
     const bool                skip_load_rn     = false;
     const bal_x86_register_t  x86_rn           = allocate_x86_register(compiler, rn, skip_load_rn);
     const bal_x86_macro_t     test_macro       = {
-        .opcode      = BAL_X86_MACRO_TEST_REGISTER_REGISTER,
-        .destination = x86_rn,
-        .source      = x86_rn,
+                  .opcode      = BAL_X86_MACRO_TEST_REGISTER_REGISTER,
+                  .destination = x86_rn,
+                  .source      = x86_rn,
     };
     bal_sliding_window_push(&compiler->window, test_macro);
     terminate_block_conditional(
@@ -1041,7 +1077,7 @@ translate_mov(bal_tier1_compiler_t                     *compiler,
             .immediate_or_offset = value,
         };
         bal_sliding_window_push(&compiler->window, mov_macro);
-        compiler->is_dirty[rd] = true;
+        compiler->is_dirty |= 1U << rd;
     }
     else if ('N' == variant)
     {
@@ -1055,7 +1091,7 @@ translate_mov(bal_tier1_compiler_t                     *compiler,
             .immediate_or_offset = value,
         };
         bal_sliding_window_push(&compiler->window, mov_macro);
-        compiler->is_dirty[rd] = true;
+        compiler->is_dirty |= 1U << rd;
     }
     else
     {
@@ -1067,9 +1103,9 @@ translate_mov(bal_tier1_compiler_t                     *compiler,
         const uint64_t        clear_mask   = ~(0xFFFFULL << shift) & mask;
         const uint64_t        insert_value = imm16 << shift & mask;
         const bal_x86_macro_t and_macro    = {
-            .opcode              = BAL_X86_MACRO_AND_REGISTER_IMMEDIATE,
-            .destination         = x86_rd,
-            .immediate_or_offset = clear_mask,
+               .opcode              = BAL_X86_MACRO_AND_REGISTER_IMMEDIATE,
+               .destination         = x86_rd,
+               .immediate_or_offset = clear_mask,
         };
         const bal_x86_macro_t or_macro = {
             .opcode              = BAL_X86_MACRO_OR_REGISTER_IMMEDIATE,
@@ -1079,5 +1115,6 @@ translate_mov(bal_tier1_compiler_t                     *compiler,
         bal_sliding_window_push(&compiler->window, and_macro);
         bal_sliding_window_push(&compiler->window, or_macro);
     }
-    compiler->is_dirty[rd] = true;
+
+    compiler->is_dirty |= 1U << rd;
 }
