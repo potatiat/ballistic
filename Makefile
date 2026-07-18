@@ -39,7 +39,7 @@ ifeq ($(PLATFORM),Windows)
 	LINKER_FLAGS 			:=
 
 	ifeq ($(BUILD_TYPE),Debug)
-		COMPILER_FLAGS_STRICT += -fsanitize=address
+		COMPILER_FLAGS_STRICT += -fsanitize=address # MSVC sets sanitizers via compiler flags.
 	endif
 
 	ifeq ($(BUILD_TYPE),Release)
