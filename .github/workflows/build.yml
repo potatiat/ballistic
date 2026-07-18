@@ -28,7 +28,7 @@ jobs:
       - name: Get Commits
         id: get-commits
         run: >-
-          bash tools/ci/get_commits.sh
+          bash tools/scripts/get_commits.sh
           "${{ github.event_name }}"
           "${{ github.event.before }}"
           "${{ github.event.after }}"
@@ -59,7 +59,7 @@ jobs:
           fetch-depth: 1
 
       - name: Install System Dependencies
-        run: bash tools/ci/setup_dependencies.sh apt
+        run: bash tools/scripts/setup_dependencies.sh apt
 
       - name: Setup Compiler Cache
         uses: actions/cache@v4
@@ -120,7 +120,7 @@ jobs:
           arch: x64
 
       - name: Install Dependencies
-        run: pwsh tools/ci/setup_dependencies.ps1
+        run: pwsh tools/scripts/setup_dependencies.ps1
 
       - name: Setup sccache
         uses: actions/cache@v4
