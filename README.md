@@ -102,3 +102,7 @@ make sure you are running your developer terminal in 64-bit mode.
 
 The compiled executables will be created in the `build/debug/bin` and `build/debug/lib` directories.
 
+# CLion
+
+You can generate Makefile Run targets with `tools/scripts/setup_clion_workspace.sh` and CLion will automatically detect
+them.
