@@ -5,21 +5,21 @@ local DECODER_HASH_TABLE_SIZE = 2048
 local DECODER_HASH_BITS_MASK = 0xFFE00000
 
 local function log_info(message, ...)
-    local msg = string.format(message, ...)
-    io.stdout:write(string.format("[INFO] %s\n", msg))
-    io.stdout:flush()
+    --local msg = string.format(message, ...)
+    --io.stdout:write(string.format("[INFO] %s\n", msg))
+    --io.stdout:flush()
 end
 
 local function log_warn(message, ...)
-    local msg = string.format(message, ...)
-    io.stdout:write(string.format("[WARN] %s\n", msg))
-    io.stdout:flush()
+    --local msg = string.format(message, ...)
+    --io.stdout:write(string.format("[WARN] %s\n", msg))
+    --io.stdout:flush()
 end
 
 local function log_error(message, ...)
-    local msg = string.format(message, ...)
-    io.stdout:write(string.format("[ERROR] %s\n", msg))
-    io.stderr:flush()
+    --local msg = string.format(message, ...)
+    --io.stdout:write(string.format("[ERROR] %s\n", msg))
+    --io.stderr:flush()
 end
 
 local function get_text(node)
