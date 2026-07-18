@@ -21,7 +21,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -52,7 +52,7 @@ jobs:
       CCACHE_MAX_SIZE: 5G
       CCACHE_SLOPPINESS: time_macros,include_file_ctime,include_file_mtime
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ matrix.commit.sha }}
           submodules: recursive
@@ -62,7 +62,7 @@ jobs:
         run: bash tools/scripts/setup_dependencies.sh apt
 
       - name: Setup Compiler Cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.ccache
           key: ${{ runner.os }}-clang-18-${{ matrix.type }}-ccache-${{ github.sha }}
@@ -108,7 +108,7 @@ jobs:
       SCCACHE_CACHE_SIZE: 2G
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ matrix.commit.sha }}
           submodules: recursive
@@ -123,7 +123,7 @@ jobs:
         run: pwsh tools/scripts/setup_dependencies.ps1
 
       - name: Setup sccache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ${{ github.workspace }}\.sccache
           key: ${{ runner.os }}-msvc-${{ matrix.type }}-sccache-${{ github.sha }}
