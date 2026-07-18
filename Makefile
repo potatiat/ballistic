@@ -4,7 +4,7 @@ BUILD_DASHBOARD ?= $(if $(filter Release,$(BUILD_TYPE)),OFF,ON)
 BUILD_TESTS		?= $(if $(filter Release,$(BUILD_TYPE)),OFF,ON)
 GENERATOR 		?= Ninja
 LINKER 			?= lld
-SANITIZER       ?= None
+SANITIZER       ?= $(if $(filter Release,$(BUILD_TYPE)),None,General)
 CMAKE  			?= cmake
 LTO_FLAG		:= $(if $(filter Release,$(BUILD_TYPE)),ON,OFF)
 
@@ -64,7 +64,6 @@ else
 	endif
 endif
 
-BALLISTIC_BUILD_TYPES := debug release
 .PHONY: configure build test clean help
 
 help:
@@ -88,11 +87,13 @@ help:
 	@echo "  SANITIZER             	General | None  (default: None)"
 	@echo "  CC / CXX              	Compiler overrides"
 
+BALLISTIC_BUILD_TYPES := Debug Release
+
 define CONFIGURE_ALL_TEMPLATE
 .PHONY: configure-all-$(1)
 configure-all-$(1):
 	@echo "==> Configuring $(1)..."
-	@$(MAKE) configure BUILD_TYPE=$(1) BUILD_DIRECTORY=build/$(1) --no-print-directory
+	@$(MAKE) configure BUILD_TYPE=$(1) --no-print-directory
 endef
 $(foreach type,$(BALLISTIC_BUILD_TYPES),$(eval $(call CONFIGURE_ALL_TEMPLATE,$(type))))
 
