@@ -77,13 +77,13 @@ jobs:
           ccache -s     
 
       - name: Configure CMake
-        run: make ballistic-configure BUILD_TYPE=${{ matrix.type }}
+        run: make configure BUILD_TYPE=${{ matrix.type }}
 
       - name: Build Project
-        run: make ballistic-build
+        run: make build
 
       - name: Run Test Suite
-        run: make ballistic-test
+        run: make test
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v7
@@ -139,13 +139,13 @@ jobs:
           Write-Host "✓ Build directory excluded from Windows Defender"
 
       - name: Configure CMake
-        run: make ballistic-configure BUILD_TYPE=${{ matrix.type }}
+        run: make configure BUILD_TYPE=${{ matrix.type }}
 
       - name: Build Project
-        run: make ballistic-build
+        run: make build
 
       - name: Run Test Suite
-        run: make ballistic-test
+        run: make test
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v7

@@ -65,19 +65,19 @@ else
 endif
 
 BALLISTIC_BUILD_TYPES := debug release
-.PHONY: ballistic-configure ballistic-build ballistic-test ballistic-clean help
+.PHONY: configure build test clean help
 
 help:
 	@echo "Ballistic Build System"
 	@echo "Usage: make [target] [VARIABLE=value]"
 	@echo ""
 	@echo "Targets:"
-	@echo "  ballistic-configure       Configure CMake project"
-	@echo "  ballistic-configure-all   Configure CMake project for all builds"
-	@echo "  ballistic-build           Build the project"
-	@echo "  ballistic-build-all       Build the project for all builds"
-	@echo "  ballistic-test            Run the test suite via CTest"
-	@echo "  ballistic-clean           Remove build directory"
+	@echo "  configure       Configure CMake project"
+	@echo "  configure-all   Configure CMake project for all builds"
+	@echo "  build           Build the project"
+	@echo "  build-all       Build the project for all builds"
+	@echo "  test            Run the test suite via CTest"
+	@echo "  clean           Remove build directory"
 	@echo ""
 	@echo "Variables:"
 	@echo "  BUILD_TYPE            	Debug | Release (default: Release)"
@@ -92,7 +92,7 @@ define CONFIGURE_ALL_TEMPLATE
 .PHONY: configure-all-$(1)
 configure-all-$(1):
 	@echo "==> Configuring $(1)..."
-	@$(MAKE) ballistic-configure BUILD_TYPE=$(1) BUILD_DIRECTORY=build/$(1) --no-print-directory
+	@$(MAKE) configure BUILD_TYPE=$(1) BUILD_DIRECTORY=build/$(1) --no-print-directory
 endef
 $(foreach type,$(BALLISTIC_BUILD_TYPES),$(eval $(call CONFIGURE_ALL_TEMPLATE,$(type))))
 
@@ -100,7 +100,7 @@ define BUILD_ALL_TEMPLATE
 .PHONY: build-all-$(1)
 build-all-$(1):
 	@echo "==> Building $(1)..."
-	@$(MAKE) ballistic-build BUILD_TYPE=$(1) BUILD_DIRECTORY=build/$(1) --no-print-directory
+	@$(MAKE) build BUILD_TYPE=$(1) BUILD_DIRECTORY=build/$(1) --no-print-directory
 endef
 $(foreach type,$(BALLISTIC_BUILD_TYPES),$(eval $(call BUILD_ALL_TEMPLATE,$(type))))
 
@@ -111,7 +111,7 @@ clean-all-$(1):
 endef
 $(foreach type,$(BALLISTIC_BUILD_TYPES),$(eval $(call CLEAN_ALL_TEMPLATE,$(type))))
 
-ballistic-configure:
+configure:
 	$(CMAKE) -G "$(GENERATOR)" -B "$(BUILD_DIRECTORY)" \
 		-DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
 		-DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
@@ -132,20 +132,20 @@ ballistic-configure:
     # Makes it easier for fetch compile_commands.json for CLion.
 	-cmake -E create_symlink $(BUILD_DIRECTORY)/compile_commands.json compile_commands.json
 
-ballistic-build:
+build:
 	$(CMAKE) --build $(BUILD_DIRECTORY) --config $(BUILD_TYPE) --target all --parallel
 
-ballistic-test:
+test:
 	$(CMAKE) -E chdir $(BUILD_DIRECTORY) ctest -C $(BUILD_TYPE) --output-on-failure --parallel --verbose
 
-ballistic_clean:
+clean:
 		$(CMAKE) -E remove_directory $(BUILD_DIRECTORY)
 
-ballistic-configure-all: $(addprefix configure-all-,$(BALLISTIC_BUILD_TYPES))
+configure-all: $(addprefix configure-all-,$(BALLISTIC_BUILD_TYPES))
 
-ballistic-build-all: $(addprefix build-all-,$(BALLISTIC_BUILD_TYPES))
+build-all: $(addprefix build-all-,$(BALLISTIC_BUILD_TYPES))
 
-ballistic-clean-all: $(addprefix clean-all-,$(BALLISTIC_BUILD_TYPES))
+clean-all: $(addprefix clean-all-,$(BALLISTIC_BUILD_TYPES))
 	@$(CMAKE) -E remove_directory $(BUILD_DIRECTORY)
 
 

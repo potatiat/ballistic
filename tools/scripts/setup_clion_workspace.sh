@@ -90,17 +90,17 @@ generate_configs() {
         fi
     }
 
-    run_config "Ballistic All Build" "ballistic-build-all" ""
-    run_config "Ballistic All Clean" "ballistic-clean-all" ""
-    run_config "Ballistic All Configure" "ballistic-configure-all" ""
-    run_config "Ballistic Debug Build" "ballistic-build" "BUILD_TYPE=Debug"
-    run_config "Ballistic Debug Clean" "ballistic_clean" "BUILD_TYPE=Debug"
-    run_config "Ballistic Debug Configure" "ballistic-configure" "BUILD_TYPE=Debug SANITIZER=General"
-    run_config "Ballistic Debug Test" "ballistic-test" "BUILD_TYPE=Debug"
-    run_config "Ballistic Release Build" "ballistic-build" "BUILD_TYPE=Release"
-    run_config "Ballistic Release Clean" "ballistic_clean" "BUILD_TYPE=Release"
-    run_config "Ballistic Release Configure" "ballistic-configure" "BUILD_TYPE=Release"
-    run_config "Ballistic Release Test" "ballistic-test" "BUILD_TYPE=Release"
+    run_config "Ballistic All Build" "build-all" ""
+    run_config "Ballistic All Clean" "clean-all" ""
+    run_config "Ballistic All Configure" "configure-all" ""
+    run_config "Ballistic Debug Build" "build" "BUILD_TYPE=Debug"
+    run_config "Ballistic Debug Clean" "clean" "BUILD_TYPE=Debug"
+    run_config "Ballistic Debug Configure" "configure" "BUILD_TYPE=Debug SANITIZER=General"
+    run_config "Ballistic Debug Test" "test" "BUILD_TYPE=Debug"
+    run_config "Ballistic Release Build" "build" "BUILD_TYPE=Release"
+    run_config "Ballistic Release Clean" "clean" "BUILD_TYPE=Release"
+    run_config "Ballistic Release Configure" "configure" "BUILD_TYPE=Release"
+    run_config "Ballistic Release Test" "test" "BUILD_TYPE=Release"
     echo ""
 
     if [ "$failed" -gt 0 ]; then
