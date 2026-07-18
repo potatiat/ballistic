@@ -103,14 +103,6 @@ option(BALLISTIC_BUILD_TESTS "Enables Ballistic tests" ON)
 # -----------------------------------------------------------------------------
 
 message(STATUS "[Ballistic] Verifying dependencies before generating ARM64 Decoder Lookup Table.")
-find_package(Python3)
-
-if (NOT Python3_FOUND)
-    message(FATAL_ERROR "[Ballistic] Python3 is REQUIRED to generate ARM64 decoder tables. "
-            "Please install Python3 and ensure it is in your PATH.")
-endif ()
-
-message(STATUS "[Ballistic] Found Python3: ${Python3_EXECUTABLE}")
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     set(BUILD_SHARED_LIBS ON CACHE BOOL "Build the CMark library as shared" FORCE)
