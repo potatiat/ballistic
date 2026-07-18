@@ -68,6 +68,18 @@ sudo apt install build-essential cmake luajit
 sudo dnf install cmake clang luajit 
 ```
 
+### Windows
+
+1. Install [Choco](https://chocolatey.org/install).
+2. Run the following commands in PowerShell administrator mode:
+
+```
+# Allow running local PowerShell scripts 
+Set-ExecutionPolicy RemoteSigned
+
+./tools/ci/setup_dependencies.ps1
+```
+
 ## Configure CMake
 
 ```bash
@@ -79,6 +91,14 @@ make ballistic-configure
 ```bash
 make ballistic-build
 ```
+
+If you are using Visual Studio and get the error:
+
+```c++
+#error "Ballistic requires a 64-bit ARM or x86 environment."
+```
+
+make sure you are running your developer terminal in 64-bit mode.
 
 The compiled executables will be created in the `build/debug/bin` and `build/debug/lib` directories.
 
