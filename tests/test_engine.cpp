@@ -39,7 +39,8 @@ TEST(EngineIntegration, WhileLoop)
 
     cpu.pc    = 0;
     cpu.x[30] = BAL_ENGINE_SENTINEL;
-    error     = bal_engine_run_thread(&engine);
+    engine.flags |= BAL_ENGINE_FLAG_JIT_DEBUG;
+    error = bal_engine_run_thread(&engine);
     EXPECT_EQ(error, BAL_SUCCESS);
 
     // Sum = N * (N - 1) / 2 where N = 10,000,000
