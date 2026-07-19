@@ -9,20 +9,27 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if BAL_PLATFORM_POSIX
+#if BAL_PLATFORM_LINUX
 
 #define __USE_POSIX199309
 #define __USE_POSIX
 #include <signal.h>
 #include <ucontext.h>
 
-#endif // BAL_PLATFORM_POSIX
+#elif BAL_PLATFORM_WINDOWS
 
-#if BAL_PLATFORM_LINUX
+#include <windows.h>
+
+#else
+
+#error "Ballistic does not support SIGSEGV handling for this platform"
+
+#endif // BAL_PLATFORM_POSIX
 
 static bool
 extract_fault_context(void *os_context, uint64_t *out_rip, uint64_t *out_rbp)
 {
+#if BAL_PLATFORM_LINUX
     const ucontext_t *BAL_RESTRICT uc = (ucontext_t *)os_context;
 
     if (NULL == uc)
@@ -34,6 +41,29 @@ extract_fault_context(void *os_context, uint64_t *out_rip, uint64_t *out_rbp)
     *out_rbp = (uint64_t)uc->uc_mcontext.__gregs[10];
 
     return true;
+
+#elif BAL_PLATFORM_WINDOWS
+
+    EXCEPTION_POINTERS *BAL_RESTRICT ep = (EXCEPTION_POINTERS *)os_context;
+
+    if (ep->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION
+        || ep->ExceptionRecord->ExceptionCode == EXCEPTION_ILLEGAL_INSTRUCTION)
+    {
+        *out_rip = (uint64_t)ep->ContextRecord->Rip;
+        *out_rbp = (uint64_t)ep->ContextRecord->Rbp;
+        return true;
+    }
+
+    return false;
+
+#else
+
+    (void)os_context;
+    (void)out_rip;
+    (void)out_rbp;
+    return false;
+
+#endif // BAL_PLATFORM_LINUX
 }
 
 static bool
@@ -119,6 +149,8 @@ handle_jit_fault(const uint64_t rip, const uint64_t rbp)
     return false;
 }
 
+#if BAL_PLATFORM_LINUX
+
 static void
 bal_jit_segv_handler(const int sig, siginfo_t *info, void *ucontext)
 {
@@ -143,6 +175,32 @@ bal_jit_segv_handler(const int sig, siginfo_t *info, void *ucontext)
     sigaction(SIGSEGV, &sa, NULL);
     sigaction(SIGILL, &sa, NULL);
 }
+
+#elif BAL_PLATFORM_WINDOWS
+
+static LONG WINAPI
+bal_jit_segv_handler(EXCEPTION_POINTERS *info)
+{
+
+    uint64_t rip = 0;
+    uint64_t rbp = 0;
+
+    const bool extract_status = extract_fault_context(info, &rip, &rbp);
+    const bool handler_status = handle_jit_fault(rip, rbp);
+
+    if (true == extract_status && true == handler_status)
+    {
+        return EXCEPTION_EXECUTE_HANDLER;
+    }
+
+    return EXCEPTION_CONTINUE_SEARCH;
+}
+
+#else
+
+#error "Ballistic does not support SIGSEGV handling for this platform"
+
+#endif // BAL_PLATFORM_LINUX
 
 bal_error_t
 bal_jit_debug_register_signal_handler(bal_jit_debug_context_t *BAL_RESTRICT context,
@@ -171,6 +229,8 @@ bal_jit_debug_register_signal_handler(bal_jit_debug_context_t *BAL_RESTRICT cont
     context->jit_buffer_start = jit_buffer_start;
     context->jit_buffer_end   = (void *)((uintptr_t)jit_buffer_start + jit_buffer_size);
 
+#if BAL_PLATFORM_LINUX
+
     struct sigaction sa;
     sa.sa_sigaction = bal_jit_segv_handler;
     sa.sa_flags     = SA_SIGINFO;
@@ -190,6 +250,20 @@ bal_jit_debug_register_signal_handler(bal_jit_debug_context_t *BAL_RESTRICT cont
         return BAL_ERROR_ALLOCATION_FAILED;
     }
 
+#elif BAL_PLATFORM_WINDOWS
+
+    if (NULL == AddVectoredExceptionHandler(1, bal_jit_segv_handler))
+    {
+        BAL_LOG_ERROR(&context->logger, "Aborting function: AddVectoredExceptionHandler() failed.");
+        return BAL_ERROR_ALLOCATION_FAILED;
+    }
+
+#else
+
+#error "Ballistic does not support SIGSEGV handling for this platform"
+
+#endif
+
     return BAL_SUCCESS;
 }
 
@@ -201,14 +275,19 @@ bal_jit_debug_unregister_signal_handler(bal_jit_debug_context_t *BAL_RESTRICT co
         return;
     }
 
+#if BAL_PLATFORM_LINUX
+
     struct sigaction sa = { 0 };
     sa.sa_handler       = SIG_DFL;
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = 0;
     sigaction(SIGSEGV, &sa, NULL);
     sigaction(SIGILL, &sa, NULL);
-}
 
 #endif // BAL_PLATFORM_LINUX
+
+    context->jit_buffer_start = NULL;
+    context->jit_buffer_end   = NULL;
+}
 
 /*** end of file ***/

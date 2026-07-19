@@ -231,7 +231,7 @@ bal_engine_init(bal_engine_t *BAL_RESTRICT                 engine,
         return engine->status;
     }
 
-#if BAL_PLATFORM_LINUX
+#if BAL_PLATFORM_LINUX || BAL_PLATFORM_WINDOWS
 
     const bal_error_t debug_status
         = bal_jit_debug_init(allocator, &internal_engine_state->debug_context, logger);
@@ -249,7 +249,7 @@ bal_engine_init(bal_engine_t *BAL_RESTRICT                 engine,
         memset(&internal_engine_state->debug_context, 0, sizeof(bal_jit_debug_context_t));
     }
 
-#endif // BAL_PLATFORM_LINUX
+#endif // BAL_PLATFORM_LINUX || BAL_PLATFORM_WINDOWS
 
     const bal_error_t status = bal_tier1_compiler_init(&internal_engine_state->tier1_compiler,
                                                        internal_engine_state->tier1_buffer,
@@ -508,11 +508,11 @@ bal_engine_destroy(bal_engine_t *engine)
         {
             BAL_LOG_INFO(&logger, "Freeing internal engine state.");
 
-#if BAL_PLATFORM_LINUX
+#if BAL_PLATFORM_LINUX || BAL_PLATFORM_WINDOWS
 
             bal_jit_debug_unregister_signal_handler(&internal_engine_state->debug_context);
 
-#endif // BAL_PLATFORM_LINUX
+#endif // BAL_PLATFORM_LINUX || BAL_PLATFORM_WINDOWS
 
             bal_jit_debug_destroy(allocator, &internal_engine_state->debug_context);
             allocator->free(
