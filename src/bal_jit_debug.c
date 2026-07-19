@@ -4,8 +4,6 @@
 
 #include <string.h>
 
-#define BLOCK_CAPACITY 8192
-
 bal_error_t
 bal_jit_debug_init(const bal_allocator_t *BAL_RESTRICT   allocator,
                    bal_jit_debug_context_t *BAL_RESTRICT context,
@@ -24,7 +22,7 @@ bal_jit_debug_init(const bal_allocator_t *BAL_RESTRICT   allocator,
     }
 
     bal_jit_debug_context_t c       = { 0 };
-    c.entry_capacity                = BLOCK_CAPACITY;
+    c.entry_capacity                = BAL_JIT_DEBUG_ENTRY_CAPACITY;
     const size_t total_entries_size = c.entry_capacity * sizeof(bal_jit_block_entry_t);
     const size_t memory_alignment   = 64;
     c.entries                       = (bal_jit_block_entry_t *)allocator->allocate(
@@ -35,7 +33,7 @@ bal_jit_debug_init(const bal_allocator_t *BAL_RESTRICT   allocator,
         return BAL_ERROR_ALLOCATION_FAILED;
     }
 
-    c.arena_capacity = 4 * 1024 * 1024; // 4 MB
+    c.arena_capacity = 4 * 1024 * 1024; // 4 MiB
     c.metadata_arena
         = (uint8_t *)allocator->allocate(allocator->context, memory_alignment, c.arena_capacity);
 
