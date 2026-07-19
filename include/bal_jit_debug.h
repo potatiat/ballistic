@@ -10,7 +10,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define BAL_JIT_DEBUG_ENTRY_CAPACITY 8192
+#define BAL_JIT_DEBUG_ENTRY_CAPACITY       8192
+#define BAL_JIT_DEBUG_ARENA_CAPACITY_BYTES (4 * 1024 * 1024) // 4 MiB
 
 #ifdef __cplusplus
 extern "C"

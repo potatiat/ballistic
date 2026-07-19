@@ -1,7 +1,5 @@
 #include "bal_jit_debug.h"
-
 #include "bal_safety.h"
-
 #include <string.h>
 
 bal_error_t
@@ -33,7 +31,7 @@ bal_jit_debug_init(const bal_allocator_t *BAL_RESTRICT   allocator,
         return BAL_ERROR_ALLOCATION_FAILED;
     }
 
-    c.arena_capacity = 4 * 1024 * 1024; // 4 MiB
+    c.arena_capacity = BAL_JIT_DEBUG_ARENA_CAPACITY_BYTES;
     c.metadata_arena
         = (uint8_t *)allocator->allocate(allocator->context, memory_alignment, c.arena_capacity);
 
