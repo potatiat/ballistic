@@ -295,7 +295,7 @@ if (BALLISTIC_BUILD_TESTS)
         add_strict_compiler_flags(${test_name})
         add_sanitizers(${test_name})
 
-        gtest_discover_tests(${test_name} DISCOVERY_TIMEOUT 30)
+        gtest_discover_tests(${test_name} DISCOVERY_MODE PRE_TEST)
     endmacro()
 
     add_ballistic_test(test_engine tests/test_engine.cpp)
