@@ -1,7 +1,8 @@
 #ifndef BALLISTIC_BAL_ENGINE_FLAGS_H
 #define BALLISTIC_BAL_ENGINE_FLAGS_H
 
-// Enable debugging JIT compiled code.
+// If this is disabled and Ballistic segfaults running compiled code, you will not be able to track
+// where in the JIT buffer caused Ballistic to crash. See bal_jit_debug.h.
 #define BAL_ENGINE_FLAG_JIT_DEBUG (1 << 0)
 
 /// Forces the engine to return to the host after executing a single instruction.
