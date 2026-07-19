@@ -125,6 +125,24 @@ extern "C"
 
 #endif // BAL_THREAD_LOCAL
 
+/// BAL_NOINLINE
+/// Prevent function inlining.
+///
+/// Usage: BAL_NOINLINE void my_function();
+#if BAL_COMPILER_GCC
+
+#define BAL_NOINLINE __attribute__((noinline))
+
+#elif BAL_COMPILER_MSVC
+
+#define BAL_NOINLINE __declspec(noinline)
+
+#else
+
+#define BAL_NOINLINE
+
+#endif // BAL_NOINLINE
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
