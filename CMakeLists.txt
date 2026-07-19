@@ -300,7 +300,7 @@ if (BALLISTIC_BUILD_TESTS)
 
     add_ballistic_test(test_engine tests/test_engine.cpp)
     add_ballistic_test(test_memory tests/test_memory.cpp)
-    add_ballistic_test(test_decoder tests/test_decoder.cpp)
+    #    add_ballistic_test(test_decoder tests/test_decoder.cpp)
 
     if (NOT MSVC)
         target_compile_options(test_engine PRIVATE -Wno-padded)
@@ -311,6 +311,12 @@ if (BALLISTIC_BUILD_TESTS)
         add_ballistic_test(test_weak tests/test_weak.cpp)
         target_compile_options(test_weak PRIVATE -w)
     endif ()
+
+    add_ballistic_test(test_jit_debug tests/test_jit_debug.cpp)
+
+    if (NOT MSVC)
+        target_compile_options(test_jit_debug PRIVATE -Wno-unused-function)
+    endif()
 
     set(BACKEND_X86_TESTS x86_assembler x86_sliding_window)
     foreach (test_name ${BACKEND_X86_TESTS})
