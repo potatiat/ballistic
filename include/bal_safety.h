@@ -10,6 +10,8 @@ extern "C"
 
 #define BAL_ASSEMBLER_MAGIC_ALIVE 0xBA11A550U // BALLISTO
 #define BAL_ASSEMBLER_MAGIC_DEAD  0xDEADBA11U // DEADBALL
+#define BAL_JIT_DEBUG_MAGIC_ALIVE 0x717DE801U // JITDEBUG
+#define BAL_JIT_DEBUG_MAGIC_DEAD  0xDEAD717DU // DEADJIT
 
     static const char *bal_decode_magic(uint32_t magic)
     {
@@ -21,6 +23,10 @@ extern "C"
                 return "BALLISTO";
             case BAL_ASSEMBLER_MAGIC_DEAD:
                 return "DEADBALL";
+            case BAL_JIT_DEBUG_MAGIC_ALIVE:
+                return "JITDEBUG";
+            case BAL_JIT_DEBUG_MAGIC_DEAD:
+                return "DEADJIT";
             default:
                 return "Unknown (Likely Buffer Overflow)";
         }

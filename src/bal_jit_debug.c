@@ -1,4 +1,7 @@
 #include "bal_jit_debug.h"
+
+#include "bal_safety.h"
+
 #include <string.h>
 
 #define BLOCK_CAPACITY 8192
@@ -46,9 +49,10 @@ bal_jit_debug_init(const bal_allocator_t *BAL_RESTRICT   allocator,
     memset(context, 0, sizeof(bal_jit_debug_context_t));
     context->entries        = c.entries;
     context->metadata_arena = c.metadata_arena;
-    context->logger         = logger;
     context->entry_capacity = c.entry_capacity;
     context->arena_capacity = c.arena_capacity;
+    context->logger         = logger;
+    context->magic          = BAL_JIT_DEBUG_MAGIC_ALIVE;
 
     BAL_LOG_INFO(&logger,
                  "JIT Debug Context initialized. Entries Capacity: %zu, Arena: %zu bytes.",
@@ -87,6 +91,7 @@ bal_jit_debug_destroy(const bal_allocator_t *BAL_RESTRICT   allocator,
     }
 
     memset(context, 0, sizeof(bal_jit_debug_context_t));
+    context->magic = BAL_JIT_DEBUG_MAGIC_DEAD;
 }
 
 bal_error_t
@@ -128,6 +133,12 @@ bal_jit_debug_add_block(bal_jit_debug_context_t *BAL_RESTRICT         context,
                      "Aborting function: JIT debug entries full, block tracking skipped.");
         return BAL_ERROR_CAPACITY_TOO_BIG;
     }
+
+    BAL_CHECK_MAGIC(context,
+                    BAL_JIT_DEBUG_MAGIC_ALIVE,
+                    BAL_JIT_DEBUG_MAGIC_DEAD,
+                    "bal_jit_debug_context_t",
+                    context->logger);
 
     const size_t total_mapping_size    = instruction_count * sizeof(bal_jit_instruction_map_t);
     const size_t total_memory_required = total_mapping_size + sizeof(bal_jit_block_metadata_t);

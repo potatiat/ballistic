@@ -81,11 +81,17 @@ extern "C"
 
         // The metadata arena capacity in bytes.
         size_t                   arena_capacity;
+
         void                    *jit_buffer_start;
         void                    *jit_buffer_end;
         bal_jit_crash_callback_t crash_callback;
         void                    *crash_callback_user_data;
-        uint8_t                  pad[24];
+        bal_error_t status;
+
+        /// Integrity check.
+        uint32_t magic;
+
+        uint8_t                  pad[16];
     } bal_jit_debug_context_t;
 
     static_assert(128 == sizeof(bal_jit_debug_context_t), "Struct size mismatch");
