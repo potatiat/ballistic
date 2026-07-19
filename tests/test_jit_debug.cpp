@@ -19,7 +19,7 @@ protected:
     }
 };
 
-TEST_F(JitDebug, InitSuccess)
+TEST_F(JitDebug, Init_Success)
 {
     EXPECT_EQ(bal_jit_debug_init(&allocator, &context, logger), BAL_SUCCESS);
     EXPECT_NE(context.entries, nullptr);
@@ -28,4 +28,13 @@ TEST_F(JitDebug, InitSuccess)
     EXPECT_EQ(context.arena_capacity, BAL_JIT_DEBUG_ARENA_CAPACITY_BYTES);
     EXPECT_EQ(context.magic, BAL_JIT_DEBUG_MAGIC_ALIVE);
     bal_jit_debug_destroy(&allocator, &context);
+}
+
+TEST_F(JitDebug, Destroy_Success)
+{
+    bal_jit_debug_init(&allocator, &context, logger);
+    bal_jit_debug_destroy(&allocator, &context);
+    EXPECT_EQ(context.entries, nullptr);
+    EXPECT_EQ(context.metadata_arena, nullptr);
+    EXPECT_EQ(context.magic, BAL_JIT_DEBUG_MAGIC_DEAD);
 }
