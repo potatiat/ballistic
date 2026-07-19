@@ -66,3 +66,14 @@ TEST_F(JitDebug, SignalRegistration_Success)
     bal_jit_debug_unregister_signal_handler(&context);
     bal_jit_debug_destroy(&allocator, &context);
 }
+
+TEST_F(JitDebug, SignalUnregistration_Success)
+{
+    bal_jit_debug_init(&allocator, &context, logger);
+    const auto dummy_buffer = reinterpret_cast<void *>(0x3000);
+    bal_jit_debug_register_signal_handler(&context, dummy_buffer, 4096);
+    bal_jit_debug_unregister_signal_handler(&context);
+    EXPECT_EQ(context.jit_buffer_start, nullptr);
+    EXPECT_EQ(context.jit_buffer_end, nullptr);
+    bal_jit_debug_destroy(&allocator, &context);
+}
