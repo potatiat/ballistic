@@ -285,54 +285,36 @@ if (BALLISTIC_BUILD_TESTS)
     include(GoogleTest)
     enable_testing()
 
-    set(ENGINE_TEST test_engine)
-    add_executable(${ENGINE_TEST} tests/test_engine.cpp)
-    target_include_directories(${ENGINE_TEST} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src extern/googletest-1.17.0/googletest/include)
-    target_link_libraries(${ENGINE_TEST} PRIVATE ${PROJECT_NAME} gtest gtest_main)
-    add_strict_compiler_flags(${ENGINE_TEST})
-    add_sanitizers(${ENGINE_TEST})
+    macro(add_ballistic_test test_name test_source)
+        add_executable(${test_name} ${test_source})
+        target_include_directories(${test_name} PRIVATE
+                ${CMAKE_CURRENT_SOURCE_DIR}/src
+                extern/googletest-1.17.0/googletest/include
+        )
+        target_link_libraries(${test_name} PRIVATE ${PROJECT_NAME} gtest gtest_main)
+        add_strict_compiler_flags(${test_name})
+        add_sanitizers(${test_name})
+
+        gtest_discover_tests(${test_name} DISCOVERY_TIMEOUT 30)
+    endmacro()
+
+    add_ballistic_test(test_engine tests/test_engine.cpp)
+    add_ballistic_test(test_memory tests/test_memory.cpp)
+    add_ballistic_test(test_decoder tests/test_decoder.cpp)
 
     if (NOT MSVC)
-        target_compile_options(${ENGINE_TEST} PRIVATE -Wno-padded)
+        target_compile_options(test_engine PRIVATE -Wno-padded)
     endif ()
-
-    set(MEMORY_TEST test_memory)
-    add_executable(${MEMORY_TEST} tests/test_memory.cpp)
-    target_include_directories(${MEMORY_TEST} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src extern/googletest-1.17.0/googletest/include)
-    target_link_libraries(${MEMORY_TEST} PRIVATE ${PROJECT_NAME} gtest gtest_main)
-    add_strict_compiler_flags(${MEMORY_TEST})
-    add_sanitizers(${MEMORY_TEST})
-
-    set(DECODER_TEST test_decoder)
-    add_executable(${DECODER_TEST} tests/test_decoder.cpp)
-    target_include_directories(${DECODER_TEST} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src extern/googletest-1.17.0/googletest/include)
-    target_link_libraries(${DECODER_TEST} PRIVATE ${PROJECT_NAME} gtest gtest_main)
-    add_strict_compiler_flags(${DECODER_TEST})
-    add_sanitizers(${DECODER_TEST})
 
     # MSVC does not support the weak attribute.
     if (NOT MSVC)
-        set(WEAK_TEST test_weak)
-        add_executable(${WEAK_TEST} tests/test_weak.cpp)
-        target_include_directories(${WEAK_TEST} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src extern/googletest-1.17.0/googletest/include)
-        target_link_libraries(${WEAK_TEST} PRIVATE ${PROJECT_NAME} gtest gtest_main)
-        add_sanitizers(${WEAK_TEST})
-        gtest_discover_tests(${WEAK_TEST} DISCOVERY_TIMEOUT 30)
+        add_ballistic_test(test_weak tests/test_weak.cpp)
+        target_compile_options(test_weak PRIVATE -w)
     endif ()
 
-    gtest_discover_tests(${ENGINE_TEST} DISCOVERY_TIMEOUT 30)
-    gtest_discover_tests(${DECODER_TEST} DISCOVERY_TIMEOUT 30)
-    gtest_discover_tests(${MEMORY_TEST} DISCOVERY_TIMEOUT 30)
-
     set(BACKEND_X86_TESTS x86_assembler x86_sliding_window)
-
     foreach (test_name ${BACKEND_X86_TESTS})
-        set(target_name "test_${test_name}")
-        add_executable(${target_name} "tests/backend/x86/${target_name}.cpp")
-        target_link_libraries(${target_name} PRIVATE Ballistic gtest gtest_main)
-        add_strict_compiler_flags(${target_name})
-        add_sanitizers(${target_name})
-        gtest_discover_tests(${target_name} DISCOVERY_TIMEOUT 30)
+        add_ballistic_test("test_${test_name}" "tests/backend/x86/test_${test_name}.cpp")
     endforeach ()
 
     add_test(
