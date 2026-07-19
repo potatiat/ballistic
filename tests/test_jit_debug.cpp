@@ -53,3 +53,16 @@ TEST_F(JitDebug, AddBlock_Success)
     EXPECT_EQ(context.entries[0].metadata->instruction_count, 1);
     bal_jit_debug_destroy(&allocator, &context);
 }
+
+TEST_F(JitDebug, SignalRegistration_Success)
+{
+    bal_jit_debug_init(&allocator, &context, logger);
+    auto dummy_buffer = reinterpret_cast<void *>(0x3000);
+
+    EXPECT_EQ(bal_jit_debug_register_signal_handler(&context, dummy_buffer, 4096), BAL_SUCCESS);
+    EXPECT_EQ(context.jit_buffer_start, dummy_buffer);
+    EXPECT_EQ(context.jit_buffer_end,
+              reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(dummy_buffer) + 4096));
+    bal_jit_debug_unregister_signal_handler(&context);
+    bal_jit_debug_destroy(&allocator, &context);
+}
