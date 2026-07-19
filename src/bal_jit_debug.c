@@ -97,10 +97,10 @@ bal_jit_debug_destroy(const bal_allocator_t *BAL_RESTRICT   allocator,
 bal_error_t
 bal_jit_debug_add_block(bal_jit_debug_context_t *BAL_RESTRICT         context,
                         void *BAL_RESTRICT                            rx_start,
-                        uint32_t                                      rx_size,
-                        uint64_t                                      base_guest_pc,
+                        const uint32_t                                rx_size,
+                        const uint64_t                                base_guest_pc,
                         const bal_jit_instruction_map_t *BAL_RESTRICT mapping,
-                        uint32_t                                      instruction_count)
+                        const uint32_t                                instruction_count)
 {
     const bal_error_t invalid_argument = BAL_ERROR_INVALID_ARGUMENT;
 
