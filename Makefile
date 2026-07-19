@@ -1,12 +1,13 @@
-BUILD_TYPE 		?= Release
-BUILD_DIRECTORY ?= $(if $(filter Release,$(BUILD_TYPE)),build/release,build/debug)
-BUILD_DASHBOARD ?= $(if $(filter Release,$(BUILD_TYPE)),OFF,ON)
-BUILD_TESTS		?= $(if $(filter Release,$(BUILD_TYPE)),OFF,ON)
-GENERATOR 		?= Ninja
-LINKER 			?= lld
-SANITIZER       ?= $(if $(filter Release,$(BUILD_TYPE)),None,General)
-CMAKE  			?= cmake
-LTO_FLAG		:= $(if $(filter Release,$(BUILD_TYPE)),ON,OFF)
+BUILD_TYPE 			?= Release
+BUILD_DIRECTORY 	?= $(if $(filter Release,$(BUILD_TYPE)),build/release,build/debug)
+BUILD_DASHBOARD 	?= $(if $(filter Release,$(BUILD_TYPE)),OFF,ON)
+BUILD_TESTS			?= $(if $(filter Release,$(BUILD_TYPE)),OFF,ON)
+RUN_PARALLEL_TESTS 	?= ON
+GENERATOR 			?= Ninja
+LINKER 				?= lld
+SANITIZER       	?= $(if $(filter Release,$(BUILD_TYPE)),None,General)
+CMAKE  				?= cmake
+LTO_FLAG			:= $(if $(filter Release,$(BUILD_TYPE)),ON,OFF)
 
 ifeq ($(OS),Windows_NT)
 	PLATFORM := Windows
@@ -64,6 +65,12 @@ else
 	endif
 endif
 
+ifeq ($(RUN_PARALLEL_TESTS),ON)
+	RUN_PARALLEL_TESTS := --parallel
+else
+	RUN_PARALLEL_TESTS :=
+endif
+
 .PHONY: configure build test clean help
 
 help:
@@ -82,6 +89,7 @@ help:
 	@echo "  BUILD_TYPE            	Debug | Release (default: Release)"
 	@echo "  BUILD_DASHBOARD		ON | OFF (default: OFF)"
 	@echo "  BUILD_TESTS		   	ON | OFF (default: OFF)"
+	@echo "  RUN_PARALLEL_TESTS		ON | OFF (default: ON)"
 	@echo "  GENERATOR             	Build Generator (default: Ninja)"
 	@echo "  LINKER                	Linker override (default: lld)"
 	@echo "  SANITIZER             	General | None  (default: None)"
@@ -137,7 +145,7 @@ build:
 	$(CMAKE) --build $(BUILD_DIRECTORY) --config $(BUILD_TYPE) --target all --parallel
 
 test:
-	$(CMAKE) -E chdir $(BUILD_DIRECTORY) ctest -C $(BUILD_TYPE) --output-on-failure --parallel --verbose
+	$(CMAKE) -E chdir $(BUILD_DIRECTORY) ctest -C $(BUILD_TYPE) --output-on-failure $(RUN_PARALLEL_TESTS) --verbose
 
 clean:
 		$(CMAKE) -E remove_directory $(BUILD_DIRECTORY)
