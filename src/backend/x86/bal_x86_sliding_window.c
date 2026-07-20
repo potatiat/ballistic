@@ -24,6 +24,7 @@ static const char *const BAL_X86_MACRO_NAMES[] = {
     "SUB_REGISTER_IMMEDIATE",
     "SUB_REGISTER_REGISTER",
     "TEST_REGISTER_REGISTER",
+    "UD2",
 };
 
 static inline const char *
@@ -277,6 +278,9 @@ flush_single_macro(bal_x86_assembler_t *BAL_RESTRICT   assembler,
             break;
         case BAL_X86_MACRO_SUB_REGISTER_REGISTER:
             bal_x86_emit_sub_r64_r64(assembler, destination, source);
+            break;
+        case BAL_X86_MACRO_UD2:
+            bal_x86_emit_ud2(assembler);
             break;
         default:
             BAL_LOG_ERROR(

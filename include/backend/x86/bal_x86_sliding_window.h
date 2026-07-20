@@ -96,6 +96,7 @@ extern "C"
         BAL_X86_MACRO_SUB_REGISTER_IMMEDIATE,
         BAL_X86_MACRO_SUB_REGISTER_REGISTER,
         BAL_X86_MACRO_TEST_REGISTER_REGISTER,
+        BAL_X86_MACRO_UD2,
     } bal_x86_macro_opcode_t;
 
     /// Represents a single un-lowered x86 instruction inside the sliding window.

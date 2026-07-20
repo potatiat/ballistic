@@ -398,6 +398,14 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                     BAL_LOG_INFO(logger,
                                  "Block terminated by TRAP/Unknown instruction: %s: ",
                                  metadata->name);
+                    const bal_x86_macro_t ud2_macro = {
+                        .opcode = BAL_X86_MACRO_UD2,
+                    };
+
+                    // Sync guest state before the CPU faults.
+                    bal_sliding_window_flush_all(&compiler->window);
+
+                    bal_sliding_window_push(&compiler->window, ud2_macro);
                     compiler->status    = BAL_ERROR_UNKNOWN_INSTRUCTION;
                     is_block_terminated = true;
                     break;
