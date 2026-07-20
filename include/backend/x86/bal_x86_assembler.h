@@ -433,6 +433,19 @@ extern "C"
                                    bal_x86_register_t   destination,
                                    bal_x86_register_t   source);
 
+    /// Emits an undefined instruction.
+    ///
+    /// Assembly equivalent: `ud2`
+    ///
+    /// # Warning
+    ///
+    /// This function fails if:
+    ///
+    /// - `assembler` is `NULL`.
+    /// - `assembler->status` != [`BAL_SUCCESS`]
+    /// - `assembler->buffer` is full.
+    void bal_x86_emit_ud2(bal_x86_assembler_t *assembler);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
