@@ -186,3 +186,20 @@ TEST_F(JitDebug, ArenaCapacityExactFit_Success)
     EXPECT_EQ(context.arena_offset, context.arena_capacity);
     bal_jit_debug_destroy(&allocator, &context);
 }
+
+TEST_F(JitDebug, ArenaCapacityOverflow_Failure)
+{
+    const uint32_t                               instruction_count = 524285;
+    const std::vector<bal_jit_instruction_map_t> mappings(instruction_count);
+    uint8_t                                      dummy_block[64];
+    const size_t                                 old_offset = context.arena_offset;
+    bal_error_t error = bal_jit_debug_init(&allocator, &context, logger);
+    EXPECT_EQ(error, BAL_SUCCESS);
+
+    error = bal_jit_debug_add_block(
+        &context, dummy_block, sizeof(dummy_block), 0x1000, mappings.data(), instruction_count);
+
+    EXPECT_EQ(error, BAL_ERROR_CAPACITY_TOO_BIG);
+    EXPECT_EQ(context.arena_offset, old_offset);
+    bal_jit_debug_destroy(&allocator, &context);
+}
