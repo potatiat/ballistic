@@ -298,6 +298,9 @@ if (BALLISTIC_BUILD_TESTS)
         gtest_discover_tests(${test_name} DISCOVERY_MODE PRE_TEST)
     endmacro()
 
+    # Needed to test certain private functions.
+    add_definitions(-DBALLISTIC_BUILD_TESTS)
+
     add_ballistic_test(test_engine tests/test_engine.cpp)
     add_ballistic_test(test_memory tests/test_memory.cpp)
     #    add_ballistic_test(test_decoder tests/test_decoder.cpp)
@@ -316,7 +319,7 @@ if (BALLISTIC_BUILD_TESTS)
 
     if (NOT MSVC)
         target_compile_options(test_jit_debug PRIVATE -Wno-unused-function)
-    endif()
+    endif ()
 
     set(BACKEND_X86_TESTS x86_assembler x86_sliding_window)
     foreach (test_name ${BACKEND_X86_TESTS})

@@ -7,6 +7,7 @@
 #include "bal_memory.h"
 
 #include <assert.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -117,6 +118,13 @@ extern "C"
                                                                size_t jit_buffer_size);
 
     BAL_COLD void bal_jit_debug_unregister_signal_handler(bal_jit_debug_context_t *context);
+
+#ifdef BALLISTIC_BUILD_TESTS
+
+    /// This functions is exposed for testing purposes only.
+    bool handle_jit_fault(uint64_t rip, uint64_t rbp);
+
+#endif // BALLISTIC_BUILD_TESTS
 
 #ifdef __cplusplus
 }

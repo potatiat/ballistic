@@ -66,7 +66,7 @@ extract_fault_context(void *os_context, uint64_t *out_rip, uint64_t *out_rbp)
 #endif // BAL_PLATFORM_LINUX
 }
 
-static bool
+bool
 handle_jit_fault(const uint64_t rip, const uint64_t rbp)
 {
     const bal_cpu_t *BAL_RESTRICT cpu = (bal_cpu_t *)rbp;
