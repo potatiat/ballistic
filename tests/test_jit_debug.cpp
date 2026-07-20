@@ -100,3 +100,24 @@ TEST_F(JitDebug, CrashAtBufferStart_Success)
     EXPECT_DEATH(handle_jit_fault(fault_rip, rbp), "JIT CRASH!.*Guest PC: 0x80000000");
     bal_jit_debug_destroy(&allocator, &context);
 }
+
+TEST_F(JitDebug, CrashAtBufferOffset_Success)
+{
+    uint8_t                         dummy_block[64];
+    const uint64_t                  base_guest_pc = 0x80001000;
+    const bal_jit_instruction_map_t mappings[]    = { { 0, 0 }, { 10, 4 }, { 20, 8 } };
+
+    bal_error_t error = bal_jit_debug_init(&allocator, &context, logger);
+    ASSERT_EQ(error, BAL_SUCCESS);
+
+    error = bal_jit_debug_add_block(
+        &context, dummy_block, sizeof(dummy_block), base_guest_pc, mappings, 3);
+    ASSERT_EQ(error, BAL_SUCCESS);
+
+    bal_cpu_t cpu            = {};
+    cpu.debug_context        = &context;
+    const auto     rbp       = (uint64_t)&cpu;
+    const uint64_t fault_rip = (uint64_t)dummy_block + 15;
+    EXPECT_DEATH(handle_jit_fault(fault_rip, rbp), "JIT CRASH!.*Guest PC: 0x80001004");
+    bal_jit_debug_destroy(&allocator, &context);
+}
