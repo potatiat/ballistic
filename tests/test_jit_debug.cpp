@@ -121,3 +121,47 @@ TEST_F(JitDebug, CrashAtBufferOffset_Success)
     EXPECT_DEATH(handle_jit_fault(fault_rip, rbp), "JIT CRASH!.*Guest PC: 0x80001004");
     bal_jit_debug_destroy(&allocator, &context);
 }
+
+static void
+test_crash_callback(void       *user_data,
+                    uint64_t    guest_pc,
+                    uint64_t    host_rip,
+                    uint32_t    jit_offset,
+                    const void *jit_block_start,
+                    uint32_t    jit_block_size)
+{
+    (void)user_data;
+
+    fprintf(stderr,
+            "CRASH_DATA: guest_pc=0x%llX, host_rip=0x%llX, jit_offset=%u, block_start=%p, "
+            "block_size=%u\n",
+            (unsigned long long)guest_pc,
+            (unsigned long long)host_rip,
+            jit_offset,
+            jit_block_start,
+            jit_block_size);
+}
+
+TEST_F(JitDebug, CrashWithCustomCallback_Success)
+{
+    uint8_t                         dummy_block[64];
+    const uint64_t                  base_guest_pc = 0x80002000;
+    const bal_jit_instruction_map_t mappings[]    = { { 0, 0 }, { 10, 4 }, { 20, 8 } };
+
+    bal_error_t error = bal_jit_debug_init(&allocator, &context, logger);
+    ASSERT_EQ(error, BAL_SUCCESS);
+
+    error = bal_jit_debug_add_block(
+        &context, dummy_block, sizeof(dummy_block), base_guest_pc, mappings, 3);
+    ASSERT_EQ(error, BAL_SUCCESS);
+    context.crash_callback           = test_crash_callback;
+    context.crash_callback_user_data = nullptr;
+
+    bal_cpu_t cpu            = {};
+    cpu.debug_context        = &context;
+    const auto     rbp       = (uint64_t)&cpu;
+    const uint64_t fault_rip = (uint64_t)dummy_block + 25;
+    EXPECT_DEATH(handle_jit_fault(fault_rip, rbp),
+                 "CRASH_DATA: guest_pc=0x80002008.*jit_offset=25.*block_size=64");
+    bal_jit_debug_destroy(&allocator, &context);
+}
