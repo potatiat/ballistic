@@ -221,3 +221,24 @@ TEST_F(JitDebug, ArenaCapacityOverflow_Failure)
     EXPECT_EQ(context.arena_offset, old_offset);
     bal_jit_debug_destroy(&allocator, &context);
 }
+
+TEST_F(JitDebug, ArenaCapacityOverflowWithLoop_Failure)
+{
+    uint8_t                         dummy_block[64];
+    const bal_jit_instruction_map_t mapping = { 0, 0 };
+    bal_error_t                     error   = bal_jit_debug_init(&allocator, &context, logger);
+    ASSERT_EQ(error, BAL_SUCCESS);
+
+    for (size_t i = 0; i < 8192; ++i)
+    {
+        (void)bal_jit_debug_add_block(
+            &context, dummy_block, sizeof(dummy_block), 0x1000 + i * 4, &mapping, 1);
+    }
+
+    error = bal_jit_debug_add_block(
+        &context, dummy_block, sizeof(dummy_block), 0x1000 + 8192 * 4, &mapping, 1);
+
+    EXPECT_EQ(error, BAL_ERROR_CAPACITY_TOO_BIG);
+    EXPECT_EQ(context.entry_count, 8192);
+    bal_jit_debug_destroy(&allocator, &context);
+}
