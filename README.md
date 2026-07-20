@@ -80,16 +80,16 @@ Set-ExecutionPolicy RemoteSigned
 ./tools/ci/setup_dependencies.ps1
 ```
 
-## Configure CMake
+## Configure Make
 
 ```bash
-make ballistic-configure
+make configure
 ```
 
 ## Build Binaries
 
 ```bash
-make ballistic-build
+make build
 ```
 
 If you are using Visual Studio and get the error:
