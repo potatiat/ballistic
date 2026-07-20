@@ -165,3 +165,24 @@ TEST_F(JitDebug, CrashWithCustomCallback_Success)
                  "CRASH_DATA: guest_pc=0x80002008.*jit_offset=25.*block_size=64");
     bal_jit_debug_destroy(&allocator, &context);
 }
+
+TEST_F(JitDebug, ArenaCapacityExactFit_Success)
+{
+    // Arena capacity is 4MB == 4194304 bytes.
+    // Metadata is 32 bytes. Each mapping is 8 bytes.
+    // 32 + N * 8 = 4194304  =>  N * 8 = 4194272  =>  N = 524284
+    const uint32_t instruction_count = 524284;
+
+    const std::vector<bal_jit_instruction_map_t> mappings(instruction_count);
+    uint8_t                                      dummy_block[64];
+    bal_error_t error = bal_jit_debug_init(&allocator, &context, logger);
+    ASSERT_EQ(error, BAL_SUCCESS);
+
+    error = bal_jit_debug_add_block(
+        &context, dummy_block, sizeof(dummy_block), 0x1000, mappings.data(), instruction_count);
+    ASSERT_EQ(error, BAL_SUCCESS);
+
+    EXPECT_EQ(error, BAL_SUCCESS);
+    EXPECT_EQ(context.arena_offset, context.arena_capacity);
+    bal_jit_debug_destroy(&allocator, &context);
+}
