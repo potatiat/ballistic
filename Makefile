@@ -109,7 +109,7 @@ define BUILD_ALL_TEMPLATE
 .PHONY: build-all-$(1)
 build-all-$(1):
 	@echo "==> Building $(1)..."
-	@$(MAKE) build BUILD_TYPE=$(1) BUILD_DIRECTORY=build/$(1) --no-print-directory
+	@$(MAKE) build BUILD_TYPE=$(1) --no-print-directory
 endef
 $(foreach type,$(BALLISTIC_BUILD_TYPES),$(eval $(call BUILD_ALL_TEMPLATE,$(type))))
 
