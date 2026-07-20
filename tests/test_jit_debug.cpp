@@ -187,6 +187,24 @@ TEST_F(JitDebug, ArenaCapacityExactFit_Success)
     bal_jit_debug_destroy(&allocator, &context);
 }
 
+TEST_F(JitDebug, ArenaCapacityExactFitWithLoop_Success)
+{
+    uint8_t                         dummy_block[64];
+    const bal_jit_instruction_map_t mapping = { 0, 0 };
+    bal_error_t                     error   = bal_jit_debug_init(&allocator, &context, logger);
+    EXPECT_EQ(error, BAL_SUCCESS);
+
+    for (size_t i = 0; i < 8192; ++i)
+    {
+        error = bal_jit_debug_add_block(
+            &context, dummy_block, sizeof(dummy_block), 0x1000 + i * 4, &mapping, 1);
+        ASSERT_EQ(error, BAL_SUCCESS) << "Failed at block " << i;
+    }
+
+    EXPECT_EQ(context.entry_count, 8192);
+    bal_jit_debug_destroy(&allocator, &context);
+}
+
 TEST_F(JitDebug, ArenaCapacityOverflow_Failure)
 {
     const uint32_t                               instruction_count = 524285;
