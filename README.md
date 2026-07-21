@@ -91,18 +91,3 @@ cmake --preset release
 ```bash
 cmake --build --preset release
 ```
-
-If you are using Visual Studio and get the error:
-
-```c++
-#error "Ballistic requires a 64-bit ARM or x86 environment."
-```
-
-make sure you are running your developer terminal in 64-bit mode.
-
-The compiled executables will be created in the `build/debug/bin` and `build/debug/lib` directories.
-
-# CLion
-
-You can generate Makefile Run targets with `tools/scripts/setup_clion_workspace.sh` and CLion will automatically detect
-them.
