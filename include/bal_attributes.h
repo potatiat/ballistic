@@ -19,82 +19,32 @@ extern "C"
 ///
 /// Usage:
 /// BAL_HOT bal_error_t emit_instruction(...);
-#if BAL_COMPILER_GCC
-
 #define BAL_HOT  __attribute__((hot))
 #define BAL_COLD __attribute__((cold))
-
-#else
-
-#define BAL_HOT
-#define BAL_COLD
-
-#endif
 
 /// BAL_LIKELY(x)/BAL_UNLIKELY(x)
 /// Hints to the CPU branch predictor. Should only be used in hot functions.
 ///
 /// Usage: if (BAL_UNLIKELY(ptr == NULL)) { ... }
-#if BAL_COMPILER_GCC
-
 #define BAL_LIKELY(x)   __builtin_expect(!!(x), 1)
 #define BAL_UNLIKELY(x) __builtin_expect(!!(x), 0)
-
-#else
-
-#define BAL_LIKELY(x)   (x)
-#define BAL_UNLIKELY(x) (x)
-
-#endif
 
 /// BAL_ALIGNED(x)
 /// Aligns a variable or a structure to x bytes.
 ///
 /// Usage: BAL_ALIGNED(64)  struct data { ... };
-#if BAL_COMPILER_GCC
-
 #define BAL_ALIGNED(x) __attribute__((aligned(x)))
-
-#elif BAL_COMPILER_MSVC
-
-#define BAL_ALIGNED(x) __declspec(align(x))
-
-#else
-
-#define BAL_ALIGNED(x)
-
-#endif
 
 /// BAL_RESTRICT
 /// Tells the compiler that a pointer does not alias any other pointer in
 /// current scope.
-#if BAL_COMPILER_GCC
-
 #define BAL_RESTRICT __restrict__
-
-#elif BAL_COMPILER_MSVC
-
-#define BAL_RESTRICT __restrict
-
-#else
-
-#define BAL_RESTRICT
-
-#endif
 
 /// BAL_EXPORT
 /// Marks a function or global variable for export.
 ///
 /// Usage: BAL_EXPORT void bal_public_api_function(void);
-#if BAL_PLATFORM_WINDOWS
-
-#define BAL_EXPORT __declspec(dllexport)
-
-#else
-
 #define BAL_EXPORT __attribute__((visibility("default")))
-
-#endif // BAL_EXPORT
 
 /// BAL_WEAK
 /// Marks a function or variable as weak, allowing the host application to override it at link-time
@@ -103,45 +53,17 @@ extern "C"
 /// WARNING: THIS IS NOT SUPPORTED ON WINDOWS.
 ///
 /// Usage: BAL_WEAK void bal_default_logger(...);
-#if BAL_COMPILER_GCC
-
 #define BAL_WEAK __attribute__((weak))
-
-#else
-
-#define BAL_WEAK
-
-#endif // BAL_WEAK
 
 /// BAL_THREAD_LOCAL
 /// Declares a variable with thread-local storage duration.
-#if BAL_COMPILER_MSVC
-
-#define BAL_THREAD_LOCAL __declspec(thread)
-
-#else
-
 #define BAL_THREAD_LOCAL _Thread_local
-
-#endif // BAL_THREAD_LOCAL
 
 /// BAL_NOINLINE
 /// Prevent function inlining.
 ///
 /// Usage: BAL_NOINLINE void my_function();
-#if BAL_COMPILER_GCC
-
 #define BAL_NOINLINE __attribute__((noinline))
-
-#elif BAL_COMPILER_MSVC
-
-#define BAL_NOINLINE __declspec(noinline)
-
-#else
-
-#define BAL_NOINLINE
-
-#endif // BAL_NOINLINE
 
 #ifdef __cplusplus
 }

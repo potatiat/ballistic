@@ -49,22 +49,6 @@ extern "C"
 
 #endif
 
-#if defined(_MSC_VER)
-
-#define BAL_COMPILER_MSVC 1
-#define BAL_COMPILER_GCC  0
-
-#elif defined(__GNUC__) || defined(__clang__)
-
-#define BAL_COMPILER_MSVC 0
-#define BAL_COMPILER_GCC  1
-
-#else
-
-#error "Unknown Compiler"
-
-#endif
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

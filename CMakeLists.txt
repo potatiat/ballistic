@@ -21,18 +21,8 @@ macro(add_external_subdirectory directory)
     set(_EXTERNAL_OLD_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
     set(_EXTERNAL_OLD_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO}")
     set(_EXTERNAL_OLD_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
-
-    if (MSVC)
-        string(REPLACE "/Zi" "/Z7" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
-        string(REPLACE "/Zi" "/Z7" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
-        string(REPLACE "/Zi" "/Z7" CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO}")
-        string(REPLACE "/Zi" "/Z7" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W0")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W0")
-    else ()
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -w")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")
-    endif ()
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -w")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")
 
     add_subdirectory(${directory} ${ARGN})
     set(CMAKE_C_FLAGS "${_EXTERNAL_OLD_C_FLAGS}")
@@ -138,10 +128,6 @@ add_custom_command(
 
 message(STATUS "[Ballistic] Configuring Ballistic Static Library...")
 
-if (MSVC)
-    add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
-endif ()
-
 add_library(Ballistic STATIC
         src/bal_assembler.c
         src/bal_assert.c
@@ -167,18 +153,6 @@ add_sanitizers(Ballistic)
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     target_compile_options(Ballistic PUBLIC
             /Zc:preprocessor /experimental:c11atomics)
-endif ()
-
-if (MSVC)
-    target_precompile_headers(Ballistic PRIVATE
-            <windows.h>
-            <intrin.h>
-            <stdint.h>
-            <stddef.h>
-            <stdbool.h>
-            <string.h>
-            <assert.h>
-    )
 endif ()
 
 if (BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION)
@@ -302,33 +276,24 @@ if (BALLISTIC_BUILD_TESTS)
     add_definitions(-DBALLISTIC_BUILD_TESTS)
 
     add_ballistic_test(test_engine tests/test_engine.cpp)
+    target_compile_options(test_engine PRIVATE -Wno-padded)
+
     add_ballistic_test(test_memory tests/test_memory.cpp)
     #    add_ballistic_test(test_decoder tests/test_decoder.cpp)
 
-    if (NOT MSVC)
-        target_compile_options(test_engine PRIVATE -Wno-padded)
-    endif ()
 
-    # MSVC does not support the weak attribute.
-    if (NOT MSVC)
-        add_ballistic_test(test_weak tests/test_weak.cpp)
-        target_compile_options(test_weak PRIVATE -w)
-    endif ()
+    add_ballistic_test(test_weak tests/test_weak.cpp)
+    target_compile_options(test_weak PRIVATE -w)
 
     add_ballistic_test(test_jit_debug tests/test_jit_debug.cpp)
-
-    if (NOT MSVC)
-        target_compile_options(test_jit_debug PRIVATE -Wno-unused-function)
-    endif ()
+    target_compile_options(test_jit_debug PRIVATE -Wno-unused-function)
 
     set(BACKEND_X86_TESTS x86_assembler x86_sliding_window)
     foreach (test_name ${BACKEND_X86_TESTS})
         add_ballistic_test("test_${test_name}" "tests/backend/x86/test_${test_name}.cpp")
     endforeach ()
 
-    if (NOT MSVC)
-        target_compile_options(test_x86_assembler PRIVATE -fno-sanitize=enum)
-    endif()
+    target_compile_options(test_x86_assembler PRIVATE -fno-sanitize=enum)
 
     add_test(
             NAME doctest

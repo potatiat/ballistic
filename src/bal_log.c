@@ -84,9 +84,6 @@ bal_default_logger(void *user_data, bal_log_data_t *bal_data, const char *format
     }
 
     const char *BAL_RESTRICT filename = bal_data->filename;
-
-#if BAL_COMPILER_MSVC
-
     const char *BAL_RESTRICT slash      = strrchr(filename, '/');
     const char *BAL_RESTRICT backslash  = strrchr(filename, '\\');
     const char *BAL_RESTRICT last_slash = slash > backslash ? slash : backslash;
@@ -95,8 +92,6 @@ bal_default_logger(void *user_data, bal_log_data_t *bal_data, const char *format
     {
         filename = last_slash;
     }
-
-#endif // BAL_COMPILER_MSVC
 
     fprintf(
         stderr, "[%s] [%s] [%s:%d] ", level_string, bal_data->function, filename, bal_data->line);
