@@ -243,6 +243,46 @@ TEST_F(JitDebug, ArenaCapacityOverflowWithLoop_Failure)
     bal_jit_debug_destroy(&allocator, &context);
 }
 
+TEST_F(JitDebug, ArenaOddThenEvenMappingsAlignmentPreserved_Success)
+{
+    bal_error_t error = bal_jit_debug_init(&allocator, &context, logger);
+    ASSERT_EQ(error, BAL_SUCCESS);
+    uint8_t block_a[64];
+    uint8_t block_b[64];
+
+    const bal_jit_instruction_map_t mappings_a[] = { { 0, 0 }, { 8, 4 }, { 16, 8 } };
+    error = bal_jit_debug_add_block(&context, block_a, sizeof(block_a), 0x1000, mappings_a, 3);
+    ASSERT_EQ(error, BAL_SUCCESS);
+
+    const bal_jit_instruction_map_t mappings_b[] = { { 0, 0 }, { 8, 4 } };
+    error = bal_jit_debug_add_block(&context, block_b, sizeof(block_b), 0x2000, mappings_b, 2);
+    ASSERT_EQ(error, BAL_SUCCESS);
+
+    const auto metadata_b_addr = (uintptr_t)context.entries[1].metadata;
+    EXPECT_EQ(metadata_b_addr % alignof(bal_jit_block_metadata_t), 0u)
+        << "Block B metadata is misaligned at " << metadata_b_addr;
+
+    const auto mappings_b_addr = (uintptr_t)context.entries[1].metadata->mappings;
+    EXPECT_EQ(mappings_b_addr % alignof(bal_jit_instruction_map_t), 0u)
+        << "Block B mappings pointer is misaligned at " << mappings_b_addr;
+    bal_jit_debug_destroy(&allocator, &context);
+}
+
+TEST_F(JitDebug, ArenaSingleMapppingAlignmentPreserved_Success)
+{
+    bal_error_t error = bal_jit_debug_init(&allocator, &context, logger);
+    ASSERT_EQ(error, BAL_SUCCESS);
+
+    uint8_t                         block[64];
+    const bal_jit_instruction_map_t mapping = { 0, 0 };
+    error = bal_jit_debug_add_block(&context, block, sizeof(block), 0x1000, &mapping, 1);
+    ASSERT_EQ(error, BAL_SUCCESS);
+
+    const auto metadata_addr = (uintptr_t)context.entries[0].metadata;
+    EXPECT_EQ(metadata_addr % alignof(bal_jit_block_metadata_t), 0u);
+    bal_jit_debug_destroy(&allocator, &context);
+}
+
 TEST_F(JitDebug, InstructionCountMin_Success)
 {
     uint8_t                         dummy_block[64];
