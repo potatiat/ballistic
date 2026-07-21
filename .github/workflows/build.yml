@@ -77,13 +77,14 @@ jobs:
           ccache -s     
 
       - name: Configure CMake
-        run: make configure BUILD_TYPE=${{ matrix.type }}
+        run: cmake --preset ${{ matrix.type == 'Debug' && 'debug' || 'release' }}
 
       - name: Build Project
-        run: make build
+        run: cmake --build --preset ${{ matrix.type == 'Debug' && 'debug' || 'release' }}
 
       - name: Run Test Suite
-        run: make test
+        if: matrix.type == 'Debug'
+        run: ctest --preset debug
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v7
@@ -139,13 +140,14 @@ jobs:
           Write-Host "✓ Build directory excluded from Windows Defender"
 
       - name: Configure CMake
-        run: make configure BUILD_TYPE=${{ matrix.type }}
+        run: cmake --preset ${{ matrix.type == 'Debug' && 'debug-windows' || 'release-windows' }}
 
       - name: Build Project
-        run: make build
+        run: cmake --build --preset ${{ matrix.type == 'Debug' && 'debug-windows' || 'release-windows' }}
 
       - name: Run Test Suite
-        run: make test
+        if: matrix.type == 'Debug'
+        run: ctest --preset debug-windows
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v7
