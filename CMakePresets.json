@@ -1,0 +1,124 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "debug",
+      "displayName": "Debug Unix",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build/debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_C_COMPILER_LAUNCHER": "ccache",
+        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
+        "CMAKE_C_FLAGS": "",
+        "CMAKE_CXX_FLAGS": "",
+        "CMAKE_EXE_LINKER_FLAGS": "-fuse-ld=mold",
+        "CMAKE_SHARED_LINKER_FLAGS": "-fuse-ld=mold",
+        "BALLISTIC_BUILD_DASHBOARD": "ON",
+        "BALLISTIC_BUILD_TESTS": "ON",
+        "BALLISTIC_STRICT_FLAGS": "-Wall -Wextra -Werror -Wconversion -Wsign-conversion -Wshadow -fstack-protector-strong -Wpadded -Wvla",
+        "BALLISTIC_SANITIZERS": "-fsanitize=address,undefined",
+        "BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION": "OFF"
+      }
+    },
+    {
+      "name": "release",
+      "displayName": "Release Unix",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build/release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_C_COMPILER_LAUNCHER": "ccache",
+        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
+        "CMAKE_C_FLAGS": "-ffile-prefix-map=${sourceDir}=. -O3",
+        "CMAKE_CXX_FLAGS": "-ffile-prefix-map=${sourceDir}=. -O3",
+        "CMAKE_EXE_LINKER_FLAGS": "-fuse-ld=lld",
+        "CMAKE_SHARED_LINKER_FLAGS": "-fuse-ld=lld",
+        "BALLISTIC_BUILD_DASHBOARD": "OFF",
+        "BALLISTIC_BUILD_TESTS": "OFF",
+        "BALLISTIC_STRICT_FLAGS": "",
+        "BALLISTIC_SANITIZERS": "",
+        "BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION": "ON"
+      }
+    },
+    {
+      "name": "debug-windows",
+      "displayName": "Debug Windows",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build/debug",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "cl",
+        "CMAKE_CXX_COMPILER": "cl",
+        "CMAKE_C_COMPILER_LAUNCHER": "sccache",
+        "CMAKE_CXX_COMPILER_LAUNCHER": "sccache",
+        "CMAKE_C_FLAGS": "-MP -Zf -DNOMINMAX -DWIN32_LEAN_AND_MEAN",
+        "CMAKE_CXX_FLAGS": "-MP -Zf -DNOMINMAX -DWIN32_LEAN_AND_MEAN",
+        "CMAKE_EXE_LINKER_FLAGS": "",
+        "CMAKE_SHARED_LINKER_FLAGS": "",
+        "BALLISTIC_BUILD_DASHBOARD": "ON",
+        "BALLISTIC_BUILD_TESTS": "ON",
+        "BALLISTIC_STRICT_FLAGS": "-fsanitize=address",
+        "BALLISTIC_SANITIZERS": "",
+        "BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION": "OFF"
+      }
+    },
+    {
+      "name": "release-windows",
+      "displayName": "Release Windows",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build/release",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "cl",
+        "CMAKE_CXX_COMPILER": "cl",
+        "CMAKE_C_COMPILER_LAUNCHER": "sccache",
+        "CMAKE_CXX_COMPILER_LAUNCHER": "sccache",
+        "CMAKE_C_FLAGS": "-MP -Zf -DNOMINMAX -DWIN32_LEAN_AND_MEAN -GL -O2",
+        "CMAKE_CXX_FLAGS": "-MP -Zf -DNOMINMAX -DWIN32_LEAN_AND_MEAN -GL -O2",
+        "CMAKE_EXE_LINKER_FLAGS": "-LTCG:incremental -OPT:REF -OPT:ICF",
+        "CMAKE_SHARED_LINKER_FLAGS": "-LTCG:incremental -OPT:REF -OPT:ICF",
+        "BALLISTIC_BUILD_DASHBOARD": "OFF",
+        "BALLISTIC_BUILD_TESTS": "OFF",
+        "BALLISTIC_STRICT_FLAGS": "",
+        "BALLISTIC_SANITIZERS": "",
+        "BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "debug", "configurePreset": "debug" },
+    { "name": "release", "configurePreset": "release" },
+    { "name": "debug-windows", "configurePreset": "debug-windows" },
+    { "name": "release-windows", "configurePreset": "release-windows" }
+  ],
+  "testPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "output": { "outputOnFailure": true, "verbosity": "verbose" },
+      "execution": { "noTestsAction": "error", "jobs": 0 }
+    },
+    {
+      "name": "debug-windows",
+      "configurePreset": "debug-windows",
+      "output": { "outputOnFailure": true, "verbosity": "verbose" },
+      "execution": { "noTestsAction": "error", "jobs": 0 }
+    }
+  ]
+}
