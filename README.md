@@ -80,16 +80,16 @@ Set-ExecutionPolicy RemoteSigned
 ./tools/ci/setup_dependencies.ps1
 ```
 
-## Configure Make
+## Configure CMake
 
 ```bash
-make configure
+cmake --preset release
 ```
 
 ## Build Binaries
 
 ```bash
-make build
+cmake --build --preset release
 ```
 
 If you are using Visual Studio and get the error:
