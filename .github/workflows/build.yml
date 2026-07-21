@@ -92,8 +92,8 @@ jobs:
         with:
           name: Ballistic-Engine Linux ${{ matrix.type }} Build ${{ matrix.commit.short_sha }}
           path: |
-            build/bin/**
-            build/lib/**
+            build/${{ matrix.type == 'Debug' && 'debug' || 'release' }}/bin/linux/**
+            build/${{ matrix.type == 'Debug' && 'debug' || 'release' }}/lib/linux/**
   
   
   Build-Windows:
@@ -156,9 +156,8 @@ jobs:
         with:
           name: Ballistic-Engine Windows ${{ matrix.type }} Build ${{ matrix.commit.short_sha }}
           path: |
-            build/bin/**
-            build/lib/**
-
+            build/${{ matrix.type == 'Debug' && 'debug' || 'release' }}/bin/windows/**
+            build/${{ matrix.type == 'Debug' && 'debug' || 'release' }}/lib/windows/**
 #  Build-macOS:
 #    name: macOS / ${{ matrix.type }}
 #    runs-on: macos-14
