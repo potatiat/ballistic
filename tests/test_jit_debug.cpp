@@ -342,3 +342,12 @@ TEST_F(JitDebug, CorruptedCPUContext_Failure)
     bal_jit_debug_unregister_signal_handler(&context);
     bal_jit_debug_destroy(&allocator, &context);
 }
+
+TEST_F(JitDebug, NullDebugContextInCPU_Failure)
+{
+    bal_cpu_t cpu            = {};
+    cpu.debug_context        = nullptr;
+    const auto     rbp       = (uint64_t)&cpu;
+    const uint64_t fault_rip = 0x12345678;
+    EXPECT_FALSE(handle_jit_fault(fault_rip, rbp));
+}
