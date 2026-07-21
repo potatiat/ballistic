@@ -366,4 +366,58 @@ TEST_F(JitDebug, NullDebugContextInCPU_Failure)
     EXPECT_FALSE(handle_jit_fault(fault_rip, rbp));
 }
 
+TEST_F(JitDebug, MappingLoop_BreakOnFirstMapping_Success)
+{
+    uint8_t     dummy_block[128];
+    bal_error_t error = bal_jit_debug_init(&allocator, &context, logger);
+    ASSERT_EQ(error, BAL_SUCCESS);
+
+    const bal_jit_instruction_map_t mappings[] = { { 16, 0 }, { 32, 4 }, { 64, 8 } };
+    error
+        = bal_jit_debug_add_block(&context, dummy_block, sizeof(dummy_block), 0x1000, mappings, 3);
+    ASSERT_EQ(error, BAL_SUCCESS);
+    bal_cpu_t cpu            = {};
+    cpu.debug_context        = &context;
+    const auto     rbp       = (uint64_t)&cpu;
+    const uint64_t fault_rip = (uint64_t)dummy_block + 4;
+    EXPECT_DEATH(handle_jit_fault(fault_rip, rbp), ".*Guest PC: 0x1000");
+    bal_jit_debug_destroy(&allocator, &context);
+}
+
+TEST_F(JitDebug, MappingLoop_BreakOnMiddleMapping_Success)
+{
+    uint8_t     dummy_block[128];
+    bal_error_t error = bal_jit_debug_init(&allocator, &context, logger);
+    ASSERT_EQ(error, BAL_SUCCESS);
+
+    const bal_jit_instruction_map_t mappings[] = { { 16, 0 }, { 32, 4 }, { 64, 8 } };
+    error
+        = bal_jit_debug_add_block(&context, dummy_block, sizeof(dummy_block), 0x1000, mappings, 3);
+    ASSERT_EQ(error, BAL_SUCCESS);
+    bal_cpu_t cpu            = {};
+    cpu.debug_context        = &context;
+    const auto     rbp       = (uint64_t)&cpu;
+    const uint64_t fault_rip = (uint64_t)dummy_block + 40;
+    EXPECT_DEATH(handle_jit_fault(fault_rip, rbp), ".*Guest PC: 0x1004");
+    bal_jit_debug_destroy(&allocator, &context);
+}
+
+TEST_F(JitDebug, MappingLoop_BreakAtLastMapping_Success)
+{
+    uint8_t     dummy_block[128];
+    bal_error_t error = bal_jit_debug_init(&allocator, &context, logger);
+    ASSERT_EQ(error, BAL_SUCCESS);
+
+    const bal_jit_instruction_map_t mappings[] = { { 16, 0 }, { 32, 4 }, { 64, 8 } };
+    error
+        = bal_jit_debug_add_block(&context, dummy_block, sizeof(dummy_block), 0x1000, mappings, 3);
+    ASSERT_EQ(error, BAL_SUCCESS);
+    bal_cpu_t cpu            = {};
+    cpu.debug_context        = &context;
+    const auto     rbp       = (uint64_t)&cpu;
+    const uint64_t fault_rip = (uint64_t)dummy_block + 100;
+    EXPECT_DEATH(handle_jit_fault(fault_rip, rbp), ".*Guest PC: 0x1008");
+    bal_jit_debug_destroy(&allocator, &context);
+}
+
 /*** end of file ***/
