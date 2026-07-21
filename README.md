@@ -45,7 +45,7 @@ Ballistic is being designed to have an extremely low Cache Footprint:
 
 # Building Ballistic
 
-Ballistic actively supports `clang` and `MSVC` only.
+Ballistic actively supports `clang` and `clang-cl` only.
 
 ## Install Dependencies
 
