@@ -271,6 +271,20 @@ TEST_F(JitDebug, InstructionCountMax_Failure)
     bal_jit_debug_destroy(&allocator, &context);
 }
 
+TEST_F(JitDebug, InstructionCountZero_Failure)
+{
+    uint8_t                         dummy_block[64];
+    const bal_jit_instruction_map_t map   = { 0, 0 };
+    bal_error_t                     error = bal_jit_debug_init(&allocator, &context, logger);
+    ASSERT_EQ(error, BAL_SUCCESS);
+
+    error = bal_jit_debug_add_block(&context, dummy_block, sizeof(dummy_block), 0x2000, &map, 0);
+    EXPECT_EQ(error, BAL_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(context.entry_count, 0);
+
+    bal_jit_debug_destroy(&allocator, &context);
+}
+
 TEST_F(JitDebug, JitBufferRIPBoundaries_Success)
 {
     uint8_t           dummy_buffer[100];
@@ -351,3 +365,5 @@ TEST_F(JitDebug, NullDebugContextInCPU_Failure)
     const uint64_t fault_rip = 0x12345678;
     EXPECT_FALSE(handle_jit_fault(fault_rip, rbp));
 }
+
+/*** end of file ***/
