@@ -25,7 +25,7 @@ condition_code_to_string(const bal_x86_condition_t condition)
 
 #endif // NDEBUG
 
-BAL_HOT static bool is_valid_register(bal_x86_register_t reg);
+BAL_HOT static bool is_valid_register(int reg);
 BAL_HOT static bool can_emit(bal_x86_assembler_t *assembler, size_t size);
 BAL_HOT static void emit8(uint8_t *buffer, size_t *offset, uint8_t value);
 BAL_HOT static void emit32(uint8_t *buffer, size_t *offset, uint32_t value);
@@ -38,15 +38,10 @@ BAL_HOT static void emit64(uint8_t *buffer, size_t *offset, uint64_t value);
 BAL_HOT static void emit_rex(uint8_t *buffer, size_t *offset, uint8_t w, uint8_t r, uint8_t b);
 
 /// Emits the ModR/M byte for Register-to-Register operations.
-BAL_HOT static void emit_modrm_register(uint8_t           *buffer,
-                                        size_t            *offset,
-                                        bal_x86_register_t reg,
-                                        bal_x86_register_t rm);
+BAL_HOT static void emit_modrm_register(uint8_t *buffer, size_t *offset, int reg, int rm);
 
 /// Emits the ModR/M byte for Memory Addressing: [RBP + disp32].
-BAL_HOT static void emit_modrm_memory_disp32_rbp(uint8_t           *buffer,
-                                                 size_t            *offset,
-                                                 bal_x86_register_t reg);
+BAL_HOT static void emit_modrm_memory_disp32_rbp(uint8_t *buffer, size_t *offset, int reg);
 
 bal_error_t
 bal_x86_assembler_init(bal_x86_assembler_t          *assembler,
@@ -1325,7 +1320,7 @@ bal_x86_emit_ud2(bal_x86_assembler_t *BAL_RESTRICT assembler)
 }
 
 bool
-is_valid_register(const bal_x86_register_t reg)
+is_valid_register(const int reg)
 {
     return reg >= BAL_X86_RAX && reg <= BAL_X86_R15;
 }
@@ -1427,10 +1422,7 @@ emit_rex(uint8_t *BAL_RESTRICT buffer,
 }
 
 void
-emit_modrm_register(uint8_t *BAL_RESTRICT    buffer,
-                    size_t *BAL_RESTRICT     offset,
-                    const bal_x86_register_t reg,
-                    const bal_x86_register_t rm)
+emit_modrm_register(uint8_t *BAL_RESTRICT buffer, size_t *BAL_RESTRICT offset, int reg, int rm)
 {
     // WARNING: Lossless conversion of reg (0 - 15) before applying mask.
     const uint8_t safe_reg = (uint8_t)reg & 7;
@@ -1447,9 +1439,7 @@ emit_modrm_register(uint8_t *BAL_RESTRICT    buffer,
 }
 
 void
-emit_modrm_memory_disp32_rbp(uint8_t *BAL_RESTRICT    buffer,
-                             size_t *BAL_RESTRICT     offset,
-                             const bal_x86_register_t reg)
+emit_modrm_memory_disp32_rbp(uint8_t *BAL_RESTRICT buffer, size_t *BAL_RESTRICT offset, int reg)
 {
     // WARNING: Lossless conversion of reg (0 - 15) before applying mask.
     const uint8_t safe_reg = (uint8_t)reg & 7;

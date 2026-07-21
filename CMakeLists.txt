@@ -295,7 +295,7 @@ if (BALLISTIC_BUILD_TESTS)
         add_strict_compiler_flags(${test_name})
         add_sanitizers(${test_name})
 
-        gtest_discover_tests(${test_name} DISCOVERY_MODE PRE_TEST)
+        gtest_discover_tests(${test_name} DISCOVERY_MODE POST_BUILD)
     endmacro()
 
     # Needed to test certain private functions.
@@ -325,6 +325,10 @@ if (BALLISTIC_BUILD_TESTS)
     foreach (test_name ${BACKEND_X86_TESTS})
         add_ballistic_test("test_${test_name}" "tests/backend/x86/test_${test_name}.cpp")
     endforeach ()
+
+    if (NOT MSVC)
+        target_compile_options(test_x86_assembler PRIVATE -fno-sanitize=enum)
+    endif()
 
     add_test(
             NAME doctest
