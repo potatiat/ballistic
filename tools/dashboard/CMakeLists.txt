@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(FFI_GENERATOR_SCRIPT ${CMAKE_SOURCE_DIR}/tools/generate_ffi.lua)
+set(FFI_GENERATOR_SCRIPT ${CMAKE_SOURCE_DIR}/tools/scripts/generate_ffi.lua)
 set(DASHBOARD_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/dashboard_file_dialog.h)
 set(GENERATED_FFI_BINDINGS ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generated/dashboard_file_dialog_ffi.lua)
 
