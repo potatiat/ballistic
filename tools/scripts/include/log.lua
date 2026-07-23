@@ -1,5 +1,5 @@
 -- Usage:
---   package.path = package.path .. ";path-to-this-file/?.lua"
+--   package.path = package.path .. ";path-to-this-file"
 --   local log = require("log")
 --   log.info("Engine initialized.")
 --   log.error("Failed: %s (%d)", reason, code)
