@@ -1,20 +1,11 @@
 -- doctest.lua
 -- Extracts and tests C code blocks from Ballistic headers.
 
-local function log_info(message)
-    io.stdout:write("[INFO] " .. message .. "\n")
-    io.stdout:flush()
-end
+local script_path = debug.getinfo(1, "S").source:sub(2)
+local script_dir = script_path:match("(.*[/\\])") or "./"
+package.path = package.path .. ";" .. script_dir .. "include/?.lua"
 
-local function log_warn(message)
-    io.stdout:write("[WARN] " .. message .. "\n")
-    io.stdout:flush()
-end
-
-local function log_error(message)
-    io.stderr:write("[ERROR] " .. message .. "\n")
-    io.stderr:flush()
-end
+local log = require("log")
 
 local function file_exists (name)
     local file = io.open(name, "r")
@@ -73,7 +64,7 @@ local function extract_code_blocks(filename)
     local file, error = io.open(filename, "r")
 
     if not file then
-        log_error("Could not open file:" .. filename .. " (" .. tostring(error) .. ").")
+        log.error("Could not open file:" .. filename .. " (" .. tostring(error) .. ").")
         return nil
     end
 
@@ -134,11 +125,11 @@ local function extract_code_blocks(filename)
 end
 
 local function test_file(header_file)
-    log_info("Testing examples in " .. header_file .. ".")
+    log.info("Testing examples in " .. header_file .. ".")
     local blocks = extract_code_blocks(header_file)
 
     if not blocks then
-        log_error("Found no blocks in " .. header_file .. ".")
+        log.error("Found no blocks in " .. header_file .. ".")
         return false
     end
 
@@ -177,7 +168,7 @@ local function test_file(header_file)
         local temp_file, error = io.open(temp_file_name, "w")
 
         if not temp_file then
-            log_error("Failed to create temp file " .. temp_file_name .. ": " .. tostring(error) .. ".")
+            log.error("Failed to create temp file " .. temp_file_name .. ": " .. tostring(error) .. ".")
             return false
         end
 
@@ -195,7 +186,7 @@ local function test_file(header_file)
                 if vcvarsall then
                     environment_prefix = string.format('call "%s" x64 >nul && ', vcvarsall)
                 else
-                    log_error("Could not find vcvarsall.bat. Please run from a Visual Studio Developer Command Prompt.")
+                    log.error("Could not find vcvarsall.bat. Please run from a Visual Studio Developer Command Prompt.")
                 end
             end
 
@@ -213,22 +204,22 @@ local function test_file(header_file)
             )
         end
 
-        log_info("Compiling: " .. compile_command)
+        log.info("Compiling: " .. compile_command)
         local compile_result = os.execute(compile_command)
 
         if compile_result ~= true and compile_result ~= 0 then
-            log_error("Compilation failed for Example " .. i .. " in " .. header_file .. ".")
+            log.error("Compilation failed for Example " .. i .. " in " .. header_file .. ".")
             success = false
         else
             local run_command = is_windows and temp_executable_name or ("./" .. temp_executable_name)
-            log_info("Running: " .. run_command)
+            log.info("Running: " .. run_command)
             local run_result = os.execute(run_command)
 
             if run_result ~= true and run_result ~= 0 then
-                log_error("Executable failed for Example " .. i .. " in " .. header_file)
+                log.error("Executable failed for Example " .. i .. " in " .. header_file)
                 success = false
             else
-                log_info("Example " .. i .. " passed.")
+                log.info("Example " .. i .. " passed.")
             end
         end
 
@@ -248,7 +239,7 @@ local function main(...)
     local args = { ... }
 
     if #args == 0 then
-        log_error("Aborting script: no header files provided to parse.")
+        log.error("Aborting script: no header files provided to parse.")
         os.exit(1)
     end
 
@@ -261,7 +252,7 @@ local function main(...)
 
     if use_lto and not is_windows then
         lto_flag = "-flto"
-        log_info("Link-Time Optimization detected, appending -flto flag")
+        log.info("Link-Time Optimization detected, appending -flto flag")
     end
 
     project_root = "."
@@ -293,7 +284,7 @@ local function main(...)
 
     for _, header in ipairs(args) do
         local test_file_status = test_file(header)
-        log_info("===============================================")
+        log.info("===============================================")
 
         if not test_file_status then
             all_passed = false
@@ -301,11 +292,11 @@ local function main(...)
     end
 
     if not all_passed then
-        log_error("One or more doctests failed.")
+        log.error("One or more doctests failed.")
         os.exit(1)
     end
 
-    log_info("All doctests passed successfully.")
+    log.info("All doctests passed successfully.")
     os.exit(0)
 end
 
