@@ -94,7 +94,7 @@ option(BALLISTIC_BUILD_TESTS "Enables Ballistic tests" ON)
 
 message(STATUS "[Ballistic] Verifying dependencies before generating ARM64 Decoder Lookup Table.")
 
-set(SCRIPT_GENERATE_DECODER_TABLE ${CMAKE_SOURCE_DIR}/tools/generate_decoder_tables.lua)
+set(SCRIPT_GENERATE_DECODER_TABLE ${CMAKE_SOURCE_DIR}/tools/scripts/generate_decoder_tables.lua)
 set(GENERATED_DECODER_TABLE_HEADER ${CMAKE_SOURCE_DIR}/src/generated/decoder_table.h)
 set(GENERATED_DECODER_TABLE_SOURCE ${CMAKE_SOURCE_DIR}/src/generated/decoder_table.c)
 set(ARM_SPECIFICATION_PATH ${CMAKE_SOURCE_DIR}/spec/arm64_xml)

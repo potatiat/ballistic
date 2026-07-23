@@ -1,26 +1,13 @@
+local script_path = debug.getinfo(1, "S").source:sub(2)
+local script_dir = script_path:match("(.*[/\\])") or "./"
+package.path = package.path .. ";" .. script_dir .. "/include/?.lua"
+
+local log = require("log")
 local bit = require("bit")
 local bor, band, bnot, lshift, rshift = bit.bor, bit.band, bit.bnot, bit.lshift, bit.rshift
 local ffi = require("ffi")
 local DECODER_HASH_TABLE_SIZE = 2048
 local DECODER_HASH_BITS_MASK = 0xFFE00000
-
-local function log_info(message, ...)
-    --local msg = string.format(message, ...)
-    --io.stdout:write(string.format("[INFO] %s\n", msg))
-    --io.stdout:flush()
-end
-
-local function log_warn(message, ...)
-    --local msg = string.format(message, ...)
-    --io.stdout:write(string.format("[WARN] %s\n", msg))
-    --io.stdout:flush()
-end
-
-local function log_error(message, ...)
-    --local msg = string.format(message, ...)
-    --io.stdout:write(string.format("[ERROR] %s\n", msg))
-    --io.stderr:flush()
-end
 
 local function get_text(node)
     local text = ""
@@ -230,11 +217,11 @@ local function parse_operands(asmtemplate, field_map, explanation_map)
 
                                 if not dup then
                                     operands[#operands + 1] = { operand_type, bit_position, bit_width }
-                                    log_info("Extracted operand: %s (pos: %d, width: %d) from part '%s'", operand_type, bit_position, bit_width, part)
+                                    log.debug("Extracted operand: %s (pos: %d, width: %d) from part '%s'", operand_type, bit_position, bit_width, part)
                                 end
                             end
                         else
-                            log_warn("Field '%s' (from '%s') not found in field_map", part, encoded_field)
+                            log.warn("Field '%s' (from '%s') not found in field_map", part, encoded_field)
                         end
                     end
                 end
@@ -363,7 +350,7 @@ local function parse_xml_fast(xml)
         table.insert(current.children, { tag = "__text__", text = text })
     end
 
-    log_info("Parsed %d XML noded.", node_count)
+    log.debug("Parsed %d XML noded.", node_count)
     return root
 end
 
@@ -477,11 +464,11 @@ local function parse_explanations(root)
 end
 
 local function parse_xml_file(filepath, arch)
-    log_info("Parsing XML file: %s", filepath)
+    log.debug("Parsing XML file: %s", filepath)
     local file = io.open(filepath, "r")
 
     if not file then
-        log_error("Failed to open file: %s", filepath)
+        log.error("Failed to open file: %s", filepath)
         return {}
     end
 
@@ -490,7 +477,7 @@ local function parse_xml_file(filepath, arch)
     local root = parse_xml_fast(xml)
 
     if not root then
-        log_error("Failed to parse XML structure for %s", filepath)
+        log.error("Failed to parse XML structure for %s", filepath)
         return {}
     end
 
@@ -504,12 +491,12 @@ local function parse_xml_file(filepath, arch)
     end
 
     if not actual_root then
-        log_warn("No valid root node found in %s", filepath)
+        log.warn("No valid root node found in %s", filepath)
         return {}
     end
 
     if actual_root.attrs.type == "alias" then
-        log_info("Skipping alias file: %s", filepath)
+        log.debug("Skipping alias file: %s", filepath)
         return {}
     end
 
@@ -539,7 +526,7 @@ local function parse_xml_file(filepath, arch)
     local instructions = {}
     local explanation_map = parse_explanations(actual_root)
     local iclasses = find_all(actual_root, "iclass")
-    log_info("Found %d iclasses in %s", #iclasses, filepath)
+    log.debug("Found %d iclasses in %s", #iclasses, filepath)
 
     for _, iclass in ipairs(iclasses) do
         local regdiagram = find_first(iclass, "regdiagram")
@@ -611,7 +598,7 @@ local function parse_xml_file(filepath, arch)
                                     operands = operands,
                                     arch = arch
                                 }
-                                log_info("Extracted instruction: %s (Mask: 0x%08X, Value: 0x%08X)",
+                                log.debug("Extracted instruction: %s (Mask: 0x%08X, Value: 0x%08X)",
                                         encoding_mnemonic, encoding_mask, encoding_value)
                             end
                         end
@@ -647,13 +634,13 @@ local function parse_xml_file(filepath, arch)
         return a.mnemonic < b.mnemonic
     end)
 
-    log_info("Extracted %d unique instructions from %s", #result, filepath)
+    log.debug("Extracted %d unique instructions from %s", #result, filepath)
     return result
 end
 
 local function get_xml_files(directory)
     local files = {}
-    log_info("Scanning for XML files in %s", directory)
+    log.debug("Scanning for XML files in %s", directory)
 
     if ffi.os == "Windows" then
         ffi.cdef [[
@@ -686,7 +673,7 @@ local function get_xml_files(directory)
             local handle = ffi.C.FindFirstFileA(search_path, fd)
 
             if handle == INVALID_HANDLE_VALUE then
-                log_error("FindFirstFileA failed for path %s", search_path)
+                log.error("FindFirstFileA failed for path %s", search_path)
                 return
             end
 
@@ -753,7 +740,7 @@ local function get_xml_files(directory)
                 ffi.C.closedir(d)
 
             else
-                log_error("opendir failed for path %s", path)
+                log.error("opendir failed for path %s", path)
             end
         end
 
@@ -783,17 +770,17 @@ local function format_generated_files(header_file, source_file)
         local cmd = string.format('clang-format -i "%s" "%s"', header_file, source_file)
 
         if run_cmd(cmd) then
-            log_info("Successfully formatted generated files with clang-format.")
+            log.debug("Successfully formatted generated files with clang-format.")
         else
-            log_warn("clang-format failed to format the files.\n")
+            log.warn("clang-format failed to format the files.\n")
         end
     else
-        log_warn("clang-format not found in PATH. Skipping formatting.\n")
+        log.warn("clang-format not found in PATH. Skipping formatting.\n")
     end
 end
 
 local function generate_hash_table(instructions)
-    log_info("Generating hash table for %d instructions...", #instructions)
+    log.debug("Generating hash table for %d instructions...", #instructions)
     local buckets = {}
 
     for i = 0, DECODER_HASH_TABLE_SIZE - 1 do
@@ -843,7 +830,7 @@ local function generate_hash_table(instructions)
         end
     end
 
-    log_info("Hash table stats: %d/%d buckets used. Max bucket size: %d", non_empty, DECODER_HASH_TABLE_SIZE, max_size)
+    log.debug("Hash table stats: %d/%d buckets used. Max bucket size: %d", non_empty, DECODER_HASH_TABLE_SIZE, max_size)
     return buckets
 end
 
@@ -856,7 +843,7 @@ local function generate_files(instructions, arch, out_directory, header_name, so
     local hf = io.open(out_directory .. "/" .. header_name, "w")
 
     if not hf then
-        log_error("Failed to open header file for writing: %s", out_directory .. "/" .. header_name)
+        log.error("Failed to open header file for writing: %s", out_directory .. "/" .. header_name)
         os.exit(1)
     end
 
@@ -917,7 +904,7 @@ local function generate_files(instructions, arch, out_directory, header_name, so
     local sf = io.open(out_directory .. "/" .. source_name, "w")
 
     if not sf then
-        log_error("Failed to open source file for writing: %s", out_directory .. "/" .. source_name)
+        log.error("Failed to open source file for writing: %s", out_directory .. "/" .. source_name)
         os.exit(1)
     end
 
@@ -995,12 +982,13 @@ local function main(...)
         end
     end
 
-    log_info("Configuration:")
-    log_info("  XML Directory:    %s", xml_directory)
-    log_info("  Output Directory: %s", out_directory)
-    log_info("  Header Name:      %s", header_name)
-    log_info("  Source Name:      %s", source_name)
-    log_info("  Architecture:     %s", arch)
+    log.min_level = log.levels.ERROR
+    log.info("Configuration:")
+    log.info("  XML Directory:    %s", xml_directory)
+    log.info("  Output Directory: %s", out_directory)
+    log.info("  Header Name:      %s", header_name)
+    log.info("  Source Name:      %s", source_name)
+    log.info("  Architecture:     %s", arch)
 
     if ffi.os == "Windows" then
         ffi.cdef [[ unsigned int GetFileAttributesA(const char *lpFileName); ]]
@@ -1047,7 +1035,7 @@ local function main(...)
     end
 
     if #all_instructions == 0 then
-        log_error("No instructions were extracted from the XML files!")
+        log.error("No instructions were extracted from the XML files!")
         os.exit(1)
     end
 
@@ -1055,7 +1043,7 @@ local function main(...)
         instruction.array_index = i - 1
     end
 
-    log_info("Total unique instructions collected: %d", #all_instructions)
+    log.debug("Total unique instructions collected: %d", #all_instructions)
     local clean_out_dir = out_directory:gsub("[/\\]+$", "")
     local full_header_path = clean_out_dir .. "/" .. header_name
     local full_source_path = clean_out_dir .. "/" .. source_name
