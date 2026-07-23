@@ -94,12 +94,6 @@ option(BALLISTIC_BUILD_TESTS "Enables Ballistic tests" ON)
 
 message(STATUS "[Ballistic] Verifying dependencies before generating ARM64 Decoder Lookup Table.")
 
-if (CMAKE_SYSTEM_NAME STREQUAL "Linux" OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-    set(BUILD_SHARED_LIBS ON CACHE BOOL "Build the CMark library as shared" FORCE)
-    set(CMARK_LIB_FUZZER OFF CACHE BOOL "Disable building CMark fuzzing harness" FORCE)
-    add_external_subdirectory(extern/cmark EXCLUDE_FROM_ALL)
-endif ()
-
 set(SCRIPT_GENERATE_DECODER_TABLE ${CMAKE_SOURCE_DIR}/tools/generate_decoder_tables.lua)
 set(GENERATED_DECODER_TABLE_HEADER ${CMAKE_SOURCE_DIR}/src/generated/decoder_table.h)
 set(GENERATED_DECODER_TABLE_SOURCE ${CMAKE_SOURCE_DIR}/src/generated/decoder_table.c)
