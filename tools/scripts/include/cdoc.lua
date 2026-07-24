@@ -1,8 +1,8 @@
 local script_path = debug.getinfo(1, "S").source:sub(2)
 local script_dir = script_path:match("(.*[/\\])") or "./"
-package.path = package.path .. ";" .. script_dir .. "cdoc/?.lua"
+package.path = package.path .. ";" .. script_dir .. "/?.lua"
 
-local clang = require("clang")
+local clang = require("cdoc.clang")
 
 local function main(...)
     local args = { ... }
