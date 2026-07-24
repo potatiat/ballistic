@@ -147,6 +147,25 @@ local function get_common_paths()
                 table.insert(paths, path)
             end
         end
+    elseif os_name == "Windows" then
+        table.insert(paths, "C:\\Program Files\\LLVM\\bin\\libclang.dll")
+        table.insert(paths, "C:\\Program Files (x86)\\LLVM\\bin\\libclang.dll")
+
+        local visual_studio_years = { "2022", "2019", "2017" }
+        local visual_studio_editions = { "Community", "Professional", "Enterprise", "BuildTools" }
+        local visual_studio_roots = {
+            "C:\\Program Files\\Microsoft Visual Studio",
+            "C:\\Program Files (x86)\\Microsoft Visual Studio",
+        }
+
+        for _, root in ipairs(visual_studio_roots) do
+            for _, year in ipairs(visual_studio_years) do 
+                for _, edition in ipairs(visual_studio_editions) do 
+                    local base = root .. "\\" .. year .. "\\" .. edition .. "\\VC\\Tools\\Llvm" .. "\\x86" 
+                    table.insert(paths, base .. "\\bin\\libclang.dll")
+                end
+            end
+        end
     else
         log.warn("Unrecognized OS '%s', using base library names only.", os_name)
     end
