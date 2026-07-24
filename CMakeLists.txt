@@ -147,6 +147,7 @@ add_sanitizers(Ballistic)
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     target_compile_options(Ballistic PUBLIC
             /Zc:preprocessor /experimental:c11atomics)
+    target_compile_definitions(Ballistic PRIVATE interface=interface)
 endif ()
 
 if (BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION)
