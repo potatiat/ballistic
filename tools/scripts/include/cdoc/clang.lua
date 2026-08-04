@@ -65,6 +65,22 @@ int closedir(DIR *dirp);
 local M = {}
 local C
 
+M.ERROR = {
+    SUCCESS = 0,
+    INVALID_ARGUMENT = -1,
+    STRUCT_CORUPTED = -2,
+    LIBRARY_NOT_FOUND = -50,
+    LIBRARY_NOT_LOADED = -52,
+}
+
+local ERROR_STRINGS = {
+    [0] = "no error",
+    [-1] = "invalid argument",
+    [-2] = "context struct corrupted",
+    [-50] = "libclang not found in any search paths",
+    [-51] = "libclang not loaded; call init() first",
+}
+
 local function scan_directory_for_libraries(directory, prefix, suffix)
     local results = {}
     local d = ffi.C.opendir(directory)
