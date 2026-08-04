@@ -3,6 +3,7 @@ local script_dir = script_path:match("(.*[/\\])") or "./"
 package.path = package.path .. ";" .. script_dir .. "/?.lua"
 
 local clang = require("cdoc.clang")
+local parser = require("cdoc.parser")
 
 local function main(...)
     local args = { ... }
@@ -34,6 +35,8 @@ local function main(...)
     end
 
     clang.init(clang_library_path)
+    local C = clang.get()
+    parser.parse_header(C, headers[1], nil)
 
     return 0
 end

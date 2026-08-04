@@ -2,8 +2,8 @@ local script_path = debug.getinfo(1, "S").source:sub(2)
 local script_dir = script_path:match("(.*[/\\])") or "./"
 package.path = package.path .. ";" .. script_dir .. "/?.lua"
 
+local log = require('log')
 local log = require("log")
-local ffi = require("ffi")
 
 ffi.cdef[[
 typedef void* CXIndex;
@@ -159,9 +159,9 @@ local function get_common_paths()
         }
 
         for _, root in ipairs(visual_studio_roots) do
-            for _, year in ipairs(visual_studio_years) do 
-                for _, edition in ipairs(visual_studio_editions) do 
-                    local base = root .. "\\" .. year .. "\\" .. edition .. "\\VC\\Tools\\Llvm" .. "\\x86" 
+            for _, year in ipairs(visual_studio_years) do
+                for _, edition in ipairs(visual_studio_editions) do
+                    local base = root .. "\\" .. year .. "\\" .. edition .. "\\VC\\Tools\\Llvm" .. "\\x86"
                     table.insert(paths, base .. "\\bin\\libclang.dll")
                 end
             end
@@ -214,6 +214,10 @@ function M.init(custom_path)
 
     log.warn("Pass --clang-library <path> to specify your libclang location manually.")
     return false
+end
+
+function M.get()
+    return C
 end
 
 return M
