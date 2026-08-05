@@ -34,9 +34,9 @@ local function main(...)
         return 1
     end
 
-    clang.init(clang_library_path)
-    local C = clang.get()
-    parser.parse_header(C, headers[1], nil)
+    local clang_context = clang.create_context()
+    clang.init(clang_context, clang_library_path)
+    parser.parse_header(clang_context, headers[1], nil)
 
     return 0
 end

@@ -3,7 +3,7 @@ local script_dir = script_path:match("(.*[/\\])") or "./"
 package.path = package.path .. ";" .. script_dir .. "/?.lua"
 
 local log = require('log')
-local log = require("log")
+local ffi = require('ffi')
 
 ffi.cdef[[
 typedef void* CXIndex;
@@ -63,7 +63,6 @@ int closedir(DIR *dirp);
 ]]
 
 local M = {}
-local C
 
 M.ERROR = {
     SUCCESS = 0,
@@ -80,6 +79,49 @@ local ERROR_STRINGS = {
     [-50] = "libclang not found in any search paths",
     [-51] = "libclang not loaded; call init() first",
 }
+
+M.MAGIC_UNINITIALIZED = 0x00000000
+M.MAGIC_ALIVE = 0xC1A2C3A4  -- CLANG
+M.MAGIC_DEAD = 0xDEADC1A2   -- DEADCLANG
+
+local function magic_to_string(magic)
+    if magic == M.MAGIC_UNINITIALIZED then
+        return "CLANG_UNINITIALIZED"
+    end
+
+    if magic == M.MAGIC_ALIVE then
+        return "CLANG_ALIVE"
+    end
+
+    if magic == M.MAGIC_DEAD then
+        return "CLANG_DEAD"
+    end
+
+    return string.format("Unknown (0x%08X)", magic)
+end
+
+local function check_magic(context)
+    if context == nil then
+        log.error("Aborting function: context is NULL.")
+        return false
+    end
+
+    local reason = ""
+
+    if context.magic == M.MAGIC_ALIVE then
+        return true
+    elseif context.magic == M.MAGIC_UNINITIALIZED then
+        reason = "context was never initialized"
+    elseif context.magic == M.MAGIC_DEAD then
+        reason = "context was explicitly destroyed"
+    else
+        reason = "memory corruption or wrong context passes"
+    end
+
+    log.error("Clang context integrity check failed (expected 0x%08X %s, got 0x%08X %s) because %s", M.MAGIC_ALIVE, magic_to_string(context.magic), context.magic, magic_to_string(context.magic), reason)
+    context.status = M.ERROR.STRUCT_CORRUPTED
+    return false
+end
 
 local function scan_directory_for_libraries(directory, prefix, suffix)
     local results = {}
@@ -193,10 +235,18 @@ function M.create_context()
     return {
         library = nil,
         status = M.ERROR.INVALID_ARGUMENT,
+        magic = M.MAGIC_UNINITIALIZED,
     }
 end
 
-function M.init(custom_path)
+function M.init(context, custom_path)
+    if context == nil then
+        log.error("Aborting function: context is NULL")
+        return false
+    end
+
+    check_magic(context)
+
     if custom_path then
         log.info("Initializing libclang with custom path %s.", custom_path)
     else
@@ -212,7 +262,9 @@ function M.init(custom_path)
         local ok, library = pcall(ffi.load, path)
         if ok then
             log.info("Successfully loaded libclang from %s (attempt %d/%d).", path, attempt, #paths)
-            C = library
+            context.library = library
+            context.status = M.ERROR.SUCCESS
+            context.magic = M.MAGIC_ALIVE
             return true
         else
             local error_message = tostring(library)
@@ -237,10 +289,6 @@ function M.init(custom_path)
 
     log.warn("Pass --clang-library <path> to specify your libclang location manually.")
     return false
-end
-
-function M.get()
-    return C
 end
 
 return M
