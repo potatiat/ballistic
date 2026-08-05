@@ -245,8 +245,6 @@ function M.init(context, custom_path)
         return false
     end
 
-    check_magic(context)
-
     if custom_path then
         log.info("Initializing libclang with custom path %s.", custom_path)
     else
