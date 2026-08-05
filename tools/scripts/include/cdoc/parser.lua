@@ -36,14 +36,15 @@ function M.parse_header(clang_context, header_path, clang_args)
         end
     end
 
-    local index = clang_context.library.clang_createIndex(0, 1)
+    local clang_library = clang_context.library
+    local index = clang_library.clang_createIndex(0, 1)
     local unsaved_files = nil
     local num_unsaved_files = 0
     local options = 0
-    local translation_unit = clang_context.library.clang_parseTranslationUnit(index, header_path, argv, argc, unsaved_files, num_unsaved_files, options)
+    local translation_unit = clang_library.clang_parseTranslationUnit(index, header_path, argv, argc, unsaved_files, num_unsaved_files, options)
 
     if translation_unit == nil then
-        clang_context.library.clang_disposeIndex(index)
+        clang_library.clang_disposeIndex(index)
         log.error("Aborting function: failed to create parse translation unit %s.", header_path)
         return
     end
