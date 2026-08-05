@@ -304,4 +304,49 @@ function M.destroy(context)
     end
 end
 
+function M.resource_directory(context)
+    if context == nil then
+        log.error("Aborting function: context is NULL.")
+        return nil
+    end
+
+    local os_name = jit and jit.os or "Unknown"
+    local candidates = {}
+
+    if os_name == "Linux" then
+        for ver = 22, 10, -1 do
+            candidates[#candidates + 1] = string.format("/usr/lib/clang/%d/include", ver)
+            candidates[#candidates + 1] = string.format("/usr/lib64/clang/%d/include", ver)
+            candidates[#candidates + 1] = string.format("/usr/lib/llvm-%d/lib/clang/%d/include", ver, ver)
+            candidates[#candidates + 1] = string.format("/usr/local/lib/clang/%d/include", ver)
+        end
+    end
+
+    for _, path in ipairs(candidates) do
+        local d = ffi.C.opendir(path)
+
+        if d ~= nil then
+            while true do
+                local ent = ffi.C.readdir(d)
+
+                if ent == nil then
+                    break
+                end
+
+                if ffi.string(ent.d_name) == "stdarg.h" then
+                    ffi.C.closedir(d)
+                    log.info("Found clang resource dir: %s", path)
+                    return path
+                end
+            end
+
+            ffi.C.closedir(d)
+        end
+    end
+
+    log.warn("Could not locate clang resource directory.")
+    return nil
+end
+
+
 return M
