@@ -10,7 +10,7 @@ local function main(...)
     local out_directory = "docs/"
     local clang_library_path = nil
     local headers = {}
-    local clang_arguments = {}
+    local user_clang_arguments = {}
 
     local i = 1
     while i <= #args do
@@ -21,7 +21,7 @@ local function main(...)
             clang_library_path = args[i+1]
             i = i + 2
         elseif args[i] == "--clang-arguments" and args[i+1] then
-            clang_arguments[#clang_arguments + 1] = args[i+1]
+            table.insert(user_clang_arguments, args[i+1])
             i = i + 2
         else
             headers[#headers + 1] = args[i]
@@ -36,7 +36,18 @@ local function main(...)
 
     local clang_context = clang_api.create_context()
     clang_api.init(clang_context, clang_library_path)
-    parser.parse_header(clang_context, headers[1], nil)
+    local clang_resource_directory = clang_api.resource_directory(clang_context)
+    local clang_arguments = {"-xc"}
+
+    if clang_resource_directory then
+        table.insert(clang_arguments, "-I" .. clang_resource_directory)
+    end
+
+    for _, user_clang_argument in ipairs(user_clang_arguments) do
+        table.insert(clang_arguments, user_clang_argument)
+    end
+
+    parser.parse_header(clang_context, headers[1], clang_arguments)
 
     return 0
 end
