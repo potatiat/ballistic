@@ -2,7 +2,7 @@ local script_path = debug.getinfo(1, "S").source:sub(2)
 local script_dir = script_path:match("(.*[/\\])") or "./"
 package.path = package.path .. ";" .. script_dir .. "/?.lua"
 
-local clang = require("cdoc.clang")
+local clang_api = require("cdoc.clang")
 local parser = require("cdoc.parser")
 
 local function main(...)
@@ -34,8 +34,8 @@ local function main(...)
         return 1
     end
 
-    local clang_context = clang.create_context()
-    clang.init(clang_context, clang_library_path)
+    local clang_context = clang_api.create_context()
+    clang_api.init(clang_context, clang_library_path)
     parser.parse_header(clang_context, headers[1], nil)
 
     return 0
