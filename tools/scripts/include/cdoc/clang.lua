@@ -189,6 +189,13 @@ local function get_common_paths()
     return paths
 end
 
+function M.create_context()
+    return {
+        library = nil,
+        status = M.ERROR.INVALID_ARGUMENT,
+    }
+end
+
 function M.init(custom_path)
     if custom_path then
         log.info("Initializing libclang with custom path %s.", custom_path)
