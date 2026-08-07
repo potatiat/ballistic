@@ -1,17 +1,12 @@
-/** @file bal_attributes.h
- *
- * @brief Compiler specific attribute macros.
- */
+//! Compiler specific attribute macros.
 
 #ifndef BALLISTIC_ATTRIBUTES_H
 #define BALLISTIC_ATTRIBUTES_H
 
-#include "bal_platform.h"
-
 #ifdef __cplusplus
 extern "C"
 {
-#endif /* __cplusplus */
+#endif // __cplusplus
 
 /// BAL_HOT()/BAL_COLD()
 /// Marks a function as hot or cold. Hot makes the compiler optimize it more
@@ -65,8 +60,8 @@ extern "C"
 
 #ifdef __cplusplus
 }
-#endif /* __cplusplus */
+#endif // __cplusplus
 
-#endif /* BALLISTIC_ATTRIBUTES_H */
+#endif // BALLISTIC_ATTRIBUTES_H
 
 /*** end of file ***/
