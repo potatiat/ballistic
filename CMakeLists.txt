@@ -262,7 +262,7 @@ if (BALLISTIC_BUILD_TESTS)
         add_strict_compiler_flags(${test_name})
         add_sanitizers(${test_name})
 
-        gtest_discover_tests(${test_name} DISCOVERY_MODE PRE_TEST)
+        gtest_discover_tests(${test_name} DISCOVERY_MODE POST_BUILD)
     endmacro()
 
     # Needed to test certain private functions.
