@@ -210,6 +210,15 @@ extern "C"
     /// * `shift_type` must be 0 (LSL), 1 (LSR), or 2 (ASR).
     /// * Function does not emit instructions if `assembler->status` != [`BAL_SUCCESS`].
     ///
+    /// # Errors
+    ///
+    /// Modifies `assembler->status` to the following if an error occurs:
+    ///
+    /// * [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if `assembler->offset >= assembler->capacity`.
+    /// * [`BAL_ERROR_INVALID_ARGUMENT`] if `assembler` or `assembler->buffer` is NULL, or if
+    ///   register/shift arguments are invalid.
+    /// * [`BAL_ERROR_STRUCT_CORRUPTED`] if the assembler's magic number fails integrity checks.
+    ///
     /// # Examples
     ///
     /// ```c
