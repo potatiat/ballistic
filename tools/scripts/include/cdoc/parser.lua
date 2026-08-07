@@ -1,5 +1,6 @@
 local ffi = require("ffi")
 local log = require("log")
+local ast = require("ast")
 local documentation = require("documentation")
 
 local M = {}
@@ -87,6 +88,8 @@ function M.parse_header(clang_context, header_path, clang_args)
 
     log.debug("Translation unit created successfully.")
     local file_level_documentation = parse_file_level_docs(header_path)
+    local module_name = header_path:match("([^/\\]+)$") or header_path
+    local module_node = ast.create_module(module_name, header_path, file_level_documentation)
 end
 
 return M
