@@ -1,5 +1,6 @@
 local ffi = require("ffi")
 local log = require("log")
+local documentation = require("documentation")
 
 local M = {}
 
@@ -8,6 +9,41 @@ function is_array(t)
         return false
     end
     return #t > 0 and next(t, #t) == nil
+end
+
+local function parse_file_level_docs(header_path)
+    local file = io.open(header_path, "r")
+
+    if not file then
+        log.error("parser: cannot open '%s' for file-level docs", header_path)
+        return nil
+    end
+
+    local lines = {}
+
+    for line in file:lines() do
+        local stripped = line:match("^%s*(.-)%s*$")
+
+        if stripped and stripped:sub(1, 3) == "//!" then
+            local content = stripped:sub(4)
+
+            if content:sub(1, 1) == " " then
+                content = content:sub(2)
+            end
+
+            table.insert(lines, content)
+        end
+    end
+
+    file:close()
+
+    if #lines == 0 then
+        return nil
+    end
+
+    local raw = table.concat(lines, "\n")
+    local documentation_table = documentation.parse(raw)
+    return documentation_table
 end
 
 function M.parse_header(clang_context, header_path, clang_args)
@@ -50,6 +86,7 @@ function M.parse_header(clang_context, header_path, clang_args)
     end
 
     log.debug("Translation unit created successfully.")
+    local file_level_documentation = parse_file_level_docs(header_path)
 end
 
 return M
