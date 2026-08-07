@@ -78,7 +78,12 @@ function M.parse_header(clang_context, header_path, clang_args)
     local unsaved_files = nil
     local num_unsaved_files = 0
     local options = 0
-    local translation_unit = clang_library.clang_parseTranslationUnit(index, header_path, argv, argc, unsaved_files, num_unsaved_files, options)
+    local ok, translation_unit = pcall(clang_library.clang_parseTranslationUnit, index, header_path, argv, argc, unsaved_files, num_unsaved_files, options)
+
+    if not ok then
+        log.error("Aborting function: failed to parse translation unit because %s.", tostring(translation_unit))
+        return nil
+    end
 
     if translation_unit == nil then
         clang_library.clang_disposeIndex(index)
