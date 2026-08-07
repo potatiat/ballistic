@@ -230,9 +230,9 @@ local function test_file(header_file)
             pcall(os.remove, temp_executable_name .. ".ilk")
             pcall(os.remove, temp_executable_name .. ".pdb")
         end
-
-        return success
     end
+
+    return success
 end
 
 local function main(...)
