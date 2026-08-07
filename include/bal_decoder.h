@@ -1,10 +1,4 @@
-/**
- * @file bal_decoder.h
- * @brief ARM Instruction Decoder Interface.
- *
- * @details
- * This module provides the interface for decoding ARM instructions.
- */
+//! Decodes raw 32-bit ARM64 instruction words into static metadata.
 
 #ifndef BAL_DECODER_H
 #define BAL_DECODER_H
