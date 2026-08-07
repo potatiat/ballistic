@@ -77,6 +77,22 @@ extern "C"
     /// * [`BAL_ERROR_MEMORY_ALIGNMENT`] if `buffer` is not 4-byte aligned.
     /// * [`BAL_ERROR_CAPACITY_TOO_BIG`] if `size` is large enough to cause a `size_t` integer
     ///   overflow.
+    ///
+    /// # Examples
+    ///
+    /// ```c
+    /// #include "bal_assembler.h"
+    /// #include <assert.h>
+    ///
+    /// // ---
+    /// uint32_t code[64];
+    /// bal_assembler_t assembler;
+    /// bal_logger_t logger = {0};
+    /// bal_error_t error = bal_assembler_init(&assembler, code, 64, logger);
+    /// assert(error == BAL_SUCCESS);
+    /// assert(assembler.capacity == 64);
+    /// assert(assembler.offset == 0);
+    /// ```
     bal_error_t bal_assembler_init(bal_assembler_t *assembler,
                                    void            *buffer,
                                    size_t           size,
@@ -92,6 +108,26 @@ extern "C"
     ///
     /// * `assembler` must be a valid pointer.
     /// * `assembler` struct integrity must be valid.
+    ///
+    /// # Examples
+    ///
+    /// ```c
+    /// #include "bal_assembler.h"
+    /// #include <assert.h>
+    ///
+    /// // ---
+    /// uint32_t code[64];
+    /// bal_assembler_t assembler;
+    /// bal_logger_t logger = {0};
+    /// bal_assembler_init(&assembler, code, 64, logger);
+    /// bal_emit_movz(&assembler,BAL_REGISTER_X0, 42, 0);
+    /// assert(assembler.offset == 1);
+    ///
+    /// bal_assembler_reset(&assembler);
+    /// assert(assembler.offset == 0);
+    /// assert(assembler.status == BAL_SUCCESS);
+    /// assert(code[0] == 0);
+    /// ```
     void bal_assembler_reset(bal_assembler_t *assembler);
 
     /// Destroys the assembler context.
@@ -101,6 +137,24 @@ extern "C"
     /// * `assembler` must be a valid pointer.
     /// * This function does NOT free the memory backing the `buffer` pointer.
     /// * Calls to any function that uses this context will fail.
+    ///
+    /// # Examples
+    ///
+    /// ```c
+    /// #include "bal_assembler.h"
+    /// #include <assert.h>
+    ///
+    /// // ---
+    /// uint32_t code[64];
+    /// bal_assembler_t assembler;
+    /// bal_logger_t logger = {0};
+    /// bal_assembler_init(&assembler, code, 64, logger);
+    /// bal_assembler_destroy(&assembler);
+    ///
+    /// // Emitting after a destroy is a no-op. You must call bal_assembler_init() again.
+    /// bal_emit_movz(&assembler, BAL_REGISTER_X0, 42, 0);
+    /// assert(assembler.status == BAL_ERROR_STRUCT_CORRUPTED);
+    /// ```
     void bal_assembler_destroy(bal_assembler_t *assembler);
 
     /// Emit a `ADD` (Immediate) instruction.
@@ -122,6 +176,23 @@ extern "C"
     /// * [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if `assembler->offset >= assembler->capacity`.
     /// * [`BAL_ERROR_INVALID_ARGUMENT`] if function arguments are invalid.
     /// * [`BAL_ERROR_STRUCT_CORRUPTED`] if the assembler's magic number fails integrity checks.
+    ///
+    /// # Examples
+    ///
+    /// ```c
+    /// #include "bal_assembler.h"
+    /// #include <assert.h>
+    ///
+    /// // ---
+    /// uint32_t code[64];
+    /// bal_assembler_t assembler;
+    /// bal_logger_t logger = {0};
+    /// bal_assembler_init(&assembler, code, 64, logger);
+    ///
+    /// bal_emit_add_immediate(&assembler, BAL_REGISTER_X0, BAL_REGISTER_X1, 42, 0);
+    /// assert(assembler.offset == 1);
+    /// assert(code[0] == 0x9100A820);
+    /// ```
     void bal_emit_add_immediate(bal_assembler_t     *assembler,
                                 bal_register_index_t rd,
                                 bal_register_index_t rn,
@@ -138,6 +209,24 @@ extern "C"
     /// * `shift` must be between 0 and 63.
     /// * `shift_type` must be 0 (LSL), 1 (LSR), or 2 (ASR).
     /// * Function does not emit instructions if `assembler->status` != [`BAL_SUCCESS`].
+    ///
+    /// # Examples
+    ///
+    /// ```c
+    /// #include "bal_assembler.h"
+    /// #include <assert.h>
+    ///
+    /// // ---
+    /// uint32_t code[64];
+    /// bal_assembler_t assembler;
+    /// bal_logger_t logger = {0};
+    /// bal_assembler_init(&assembler, code, 64, logger);
+    ///
+    /// bal_emit_add_shifted_register(&assembler, BAL_REGISTER_X0, BAL_REGISTER_X1, BAL_REGISTER_X2,
+    ///                               0, 0);
+    /// assert(assembler.offset == 1);
+    /// assert(code[0] == 0x8B020020);
+    /// ```
     void bal_emit_add_shifted_register(bal_assembler_t     *assembler,
                                        bal_register_index_t rd,
                                        bal_register_index_t rn,
@@ -165,6 +254,23 @@ extern "C"
     /// * [`BAL_ERROR_BRANCH_OFFSET_OVERFLOW`] if `offset` exceeds the signed 26-bit displacement
     ///   limits.
     /// * [`BAL_ERROR_STRUCT_CORRUPTED`] if the assembler's magic number fails integrity checks.
+    ///
+    /// # Examples
+    ///
+    /// ```c
+    /// #include "bal_assembler.h"
+    /// #include <assert.h>
+    ///
+    /// //---
+    /// uint32_t code[64];
+    /// bal_assembler_t assembler;
+    /// bal_logger_t logger = {0};
+    /// bal_assembler_init(&assembler, code, 64, logger);
+    ///
+    /// bal_emit_b(&assembler, 16);
+    /// assert(assembler.offset == 1);
+    /// assert(code[0] == 0x14000004);
+    /// ```
     void bal_emit_b(bal_assembler_t *assembler, int32_t offset);
 
     /// Emits a `BR` (Branch Register) instruction.
@@ -184,6 +290,23 @@ extern "C"
     /// * [`BAL_ERROR_INVALID_ARGUMENT`] if `assembler` or `assembler->buffer` is NULL or `rn` is
     ///   not between 0-31 inclusive.
     /// * [`BAL_ERROR_STRUCT_CORRUPTED`] if the assembler's magic number fails integrity checks.
+    ///
+    /// # Examples
+    ///
+    /// ```c
+    /// #include "bal_assembler.h"
+    /// #include <assert.h>
+    ///
+    /// // ---
+    /// uint32_t code[64];
+    /// bal_assembler_t assembler;
+    /// bal_logger_t logger = {0};
+    /// bal_assembler_init(&assembler, code, 64, logger);
+    ///
+    /// bal_emit_br(&assembler, BAL_REGISTER_X30);
+    /// assert(assembler.offset == 1);
+    /// assert(code[0] == 0xD61F03C0);
+    /// ```
     void bal_emit_br(bal_assembler_t *assembler, bal_register_index_t rn);
 
     /// Emit a `SUB` (Immediate) instruction.
@@ -206,6 +329,23 @@ extern "C"
     /// * [`BAL_ERROR_INVALID_ARGUMENT`] if `rd` > 31, `rn` > 31, `imm12` > 4095, or `shift` > 1.
     /// * [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if `assembler->offset >= assembler->capacity`.
     /// * [`BAL_ERROR_STRUCT_CORRUPTED`] if the assembler's magic number fails integrity checks.
+    ///
+    /// # Examples
+    ///
+    /// ```c
+    /// #include "bal_assembler.h"
+    /// #include <assert.h>
+    ///
+    /// // ---
+    /// uint32_t code[64];
+    /// bal_assembler_t assembler;
+    /// bal_logger_t logger = {0};
+    /// bal_assembler_init(&assembler, code, 64, logger);
+    ///
+    /// bal_emit_sub_immediate(&assembler, BAL_REGISTER_X0, BAL_REGISTER_X1, 10, 0);
+    /// assert(assembler.offset == 1);
+    /// assert(code[0] == 0xD1002820);
+    /// ```
     void bal_emit_sub_immediate(bal_assembler_t     *assembler,
                                 bal_register_index_t rd,
                                 bal_register_index_t rn,
@@ -230,6 +370,23 @@ extern "C"
     /// * [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if `assembler->offset >= assembler->capacity`.
     /// * [`BAL_ERROR_INVALID_ARGUMENT`] if function arguments are invalid.
     /// * [`BAL_ERROR_STRUCT_CORRUPTED`] if the assembler's magic number fails integrity checks.
+    ///
+    /// # Examples
+    ///
+    /// ```c
+    /// #include "bal_assembler.h"
+    /// #include <assert.h>
+    ///
+    /// // ---
+    /// uint32_t code[64];
+    /// bal_assembler_t assembler;
+    /// bal_logger_t logger = {0};
+    /// bal_assembler_init(&assembler, code, 64, logger);
+    ///
+    /// bal_emit_movz(&assembler, BAL_REGISTER_X0, 42, 0);
+    /// assert(assembler.offset == 1);
+    /// assert(code[0] == 0xD2800540);
+    /// ```
     void bal_emit_movz(bal_assembler_t     *assembler,
                        bal_register_index_t rd,
                        uint16_t             imm,
@@ -253,6 +410,22 @@ extern "C"
     /// * [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if `assembler->offset >= assembler->capacity`.
     /// * [`BAL_ERROR_INVALID_ARGUMENT`] if function arguments are invalid.
     /// * [`BAL_ERROR_STRUCT_CORRUPTED`] if the assembler's magic number fails integrity checks.
+    ///
+    /// # Examples
+    ///
+    /// ```c
+    /// #include "bal_assembler.h"
+    /// #include <assert.h>
+    ///
+    /// // ---
+    /// uint32_t code[64];
+    /// bal_assembler_t assembler;
+    /// bal_logger_t logger = {0};
+    /// bal_assembler_init(&assembler, code, 64, logger);
+    /// bal_emit_movk(&assembler, BAL_REGISTER_X0, 0x1234, 16);
+    /// assert(assembler.offset == 1);
+    /// assert(code[0] == 0xF2A24680);
+    /// ```
     void bal_emit_movk(bal_assembler_t     *assembler,
                        bal_register_index_t rd,
                        uint16_t             imm,
@@ -276,6 +449,23 @@ extern "C"
     /// * [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if `assembler->offset >= assembler->capacity`.
     /// * [`BAL_ERROR_INVALID_ARGUMENT`] if function arguments are invalid.
     /// * [`BAL_ERROR_STRUCT_CORRUPTED`] if the assembler's magic number fails integrity checks.
+    ///
+    /// # Examples
+    ///
+    /// ```c
+    /// #include "bal_assembler.h"
+    /// #include <assert.h>
+    ///
+    /// // ---
+    /// uint32_t code[64];
+    /// bal_assembler_t assembler;
+    /// bal_logger_t logger = {0};
+    /// bal_assembler_init(&assembler, code, 64, logger);
+    ///
+    /// bal_emit_movn(&assembler, BAL_REGISTER_X0, 0xFFFF, 0);
+    /// assert(assembler.offset == 1);
+    /// assert(code[0] == 0x929FFFE0);
+    /// ```
     void bal_emit_movn(bal_assembler_t     *assembler,
                        bal_register_index_t rd,
                        uint16_t             imm,
@@ -298,6 +488,23 @@ extern "C"
     /// * [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if `assembler->offset >= assembler->capacity`.
     /// * [`BAL_ERROR_INVALID_ARGUMENT`] if function arguments are invalid.
     /// * [`BAL_ERROR_STRUCT_CORRUPTED`] if the assembler's magic number fails integrity checks.
+    ///
+    /// # Examples
+    ///
+    /// ```c
+    /// #include "bal_assembler.h"
+    /// #include <assert.h>
+    ///
+    /// // ---
+    /// uint32_t code[64];
+    /// bal_assembler_t assembler;
+    /// bal_logger_t logger = {0};
+    /// bal_assembler_init(&assembler, code, 64, logger);
+    ///
+    /// bal_emit_ret(&assembler, BAL_REGISTER_X30);
+    /// assert(assembler.offset == 1);
+    /// assert(code[0] == 0xD65F03C0);
+    /// ```
     void bal_emit_ret(bal_assembler_t *assembler, bal_register_index_t rn);
 
 #ifdef __cplusplus
