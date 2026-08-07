@@ -83,6 +83,19 @@ extern "C"
     ///
     /// The pointer refers to static readonly memory. It is valid for the
     /// lifetime of the program and must not be freed.
+    ///
+    /// # Examples
+    ///
+    /// ```c
+    /// #include "bal_decoder.h"
+    /// #include <assert.h>
+    ///
+    /// // RET X30.
+    /// uint32_t instruction = 0xD65F03C0;
+    ///
+    /// const bal_decoder_instruction_metadata_t* metadata bal_decode_arm64(instruction);
+    /// assert(metadata->name == "RET");
+    /// ```
     BAL_HOT const bal_decoder_instruction_metadata_t *bal_decode_arm64(uint32_t instruction);
 
 #ifdef __cplusplus
