@@ -102,7 +102,11 @@ extern "C"
     ///
     /// # Errors
     ///
-    /// `assembler->status` is set to [`BAL_ERROR_INVALID_ARGUMENT`] if this function fails.
+    /// `assembler->status` is set to the following if an error occurs:
+    ///
+    /// * [`BAL_ERROR_INVALID_ARGUMENT`] if `assembler->buffer` is NULL or `assembler->capacity` is
+    ///   0.
+    /// * [`BAL_ERROR_STRUCT_CORRUPTED`] if the assembler's magic number fails integrity checks.
     ///
     /// # Safety
     ///
