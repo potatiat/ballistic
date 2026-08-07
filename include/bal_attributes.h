@@ -50,8 +50,6 @@ extern "C"
 /// Marks a function or variable as weak, allowing the host application to override it at link-time
 /// by providing a strong symbol with the same name.
 ///
-/// WARNING: THIS IS NOT SUPPORTED ON WINDOWS.
-///
 /// Usage: BAL_WEAK void bal_default_logger(...);
 #define BAL_WEAK __attribute__((weak))
 
