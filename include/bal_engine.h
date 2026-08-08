@@ -8,6 +8,11 @@
 //! - [`bal_allocator_t`]: Provides memory allocation.
 //! - [`bal_memory_interface_t`]: Translates Guest Virtual Addresses to Host Virtual Addresses.
 //!
+//! # Engine Flags
+//!
+//! You can control the engine's behaviour via the `engine.flags` bitmask. Flags can be set at
+//! any time during compilation. See [`bal_engine_flags.h`] for more details.
+//!
 //! # Examples
 //!
 //! Basic initialization and execution:
@@ -119,6 +124,13 @@ extern "C"
 
     /// Initializes a Ballistic engine.
     ///
+    /// # Safety
+    ///
+    /// * `engine`, `cpu`, `allocator`, and `memory_interface` must be valid pointers.
+    /// * The host application retains ownership of `cpu`, `allocator`, and `memory_interface`.
+    ///   They must outlive the `bal_engine_t` instance and remain unmodified while the engine is
+    ///   running.
+    ///
     /// # Errors
     ///
     /// * Returns [`BAL_SUCCESS`] if the engine is ready for use.
@@ -132,9 +144,29 @@ extern "C"
 
     /// The sole entry point for executing guest code.
     ///
+    /// # Safety
+    ///
+    /// * This function must run on a dedicated thread.
+    /// * Do not call this function concurrently on the same `engine` instance.
+    /// * The guest memory mapped via `memory_interface` must remain valid and accessible for the
+    ///   duration of the execution.
+    ///
     /// # Errors
     ///
-    /// Returns [`BAL_ERROR_ENGINE_ALREADY_RUNNING`] if the thread is still running.
+    /// * Returns [`BAL_SUCCESS`] when execution halts normally.
+    /// * Returns [`BAL_ERROR_ENGINE_ALREADY_RUNNING`] if the thread is still running.
+    /// * Returns [`BAL_ERROR_MEMORY_FAULT`] if the guest attempts to fetch instructions from an
+    ///   unmapped or invalid Guest Virtual Address (GVA).
+    /// * Returns [`BAL_ERROR_PC_ALIGNMENT`] if the guest PC is not 4-byte aligned
+    ///   (when `BAL_ENGINE_FLAG_STRICT_ALIGNMENT` is set) or if instruction fetching crosses a page
+    ///   boundary improperly.
+    /// * Returns [`BAL_ERROR_UNKNOWN_INSTRUCTION`] if the decoder encounters an undefined, invalid,
+    ///   or unsupported ARM64 instruction.
+    /// * Returns [`BAL_ERROR_INSTRUCTION_OVERFLOW`] if the JIT executable buffer is completely
+    ///   exhausted and the block cannot be compiled even after a cache reset.
+    /// * Returns [`BAL_ERROR_BRANCH_OFFSET_OVERFLOW`] if a compiled relative branch exceeds the x86
+    ///   displacement limits during code generation.
+    /// * Returns [`BAL_ERROR_INVALID_ARGUMENT`] if an internal compiler state corruption occurs.
     BAL_HOT bal_error_t bal_engine_run_thread(bal_engine_t *engine);
 
     /// Stops the engine execution asynchronously.
@@ -145,11 +177,16 @@ extern "C"
     /// Resets `engine` for the next compilation unit. This is a low-cost memory
     /// operation designed to be called between translation units.
     ///
-    /// Returns [`BAL_SUCCESS`] on success.
+    /// # Safety
+    ///
+    /// * Must NOT be called while the engine is actively compiling code via
+    ///  [`bal_engine_run_thread`].
+    /// * `engine` must be a valid pointer.
     ///
     /// # Errors
     ///
-    /// Returns [`BAL_ERROR_INVALID_ARGUMENT`] if `engine` is `NULl`.
+    /// * Returns [`BAL_SUCCESS`] on success.
+    /// * Returns [`BAL_ERROR_INVALID_ARGUMENT`] if `engine` is `NULl`.
     BAL_HOT bal_error_t bal_engine_reset(bal_engine_t *engine);
 
     /// Destroys a Ballistic engine and frees all internal resources.
@@ -159,17 +196,27 @@ extern "C"
     ///
     /// # Safety
     ///
-    /// `engine` must be a valid pointer to an initialized engine (or a zeroed struct).
+    /// * Must NOT be called while the engine is actively compiling code via
+    ///  [`bal_engine_run_thread`].
+    /// * `engine` must be a valid pointer.
     BAL_COLD void bal_engine_destroy(bal_engine_t *engine);
 
     /// Checks if the engine is currently executing guest code.
     ///
     /// This function is thread-safe and can be called from any thread.
+    ///
+    /// # Safety
+    ///
+    /// `engine` must be a valid pointer.
     BAL_HOT bool bal_engine_is_running(bal_engine_t *engine);
 
     /// Requests the engine to clear its compiled code cache and JIT buffers.
     ///
     /// This function is completely lock-free and thread-safe.
+    ///
+    ///  # Safety
+    ///
+    /// `engine` must be a valid pointer.
     BAL_HOT void bal_engine_clear_cache(bal_engine_t *engine);
 
 #ifdef __cplusplus
