@@ -91,3 +91,50 @@ cmake --preset release
 ```bash
 cmake --build --preset release
 ```
+
+# Usage
+
+```c
+#include "bal_engine.h"
+#include "bal_memory.h"
+#include "bal_log.h"
+#include <stdlib.h>
+#include <string.h>
+
+// Setup logging and default system allocator.
+bal_logger_t logger = {0};
+bal_logger_init_default(&logger);
+
+bal_allocator_t allocator = {0};
+bal_allocator_default_init(&allocator);
+
+// Allocate guest memory and setup a flat 1:1 translation interface,
+size_t guest_memory_size = 4096;
+uint32_t *guest_memory = allocator.allocate(allocator.context, 16, guest_memory_size);
+memset(guest_memory, 0, guest_memory_size);
+
+bal_memory_interface_t memory_interface = {0};
+bal_flat_translation_interface_init(&allocator, &memory_interface, guest_memory,
+guest_memory_size, logger);
+
+// Initialize CPU and Engine.
+bal_cpu_t cpu = {0};
+bal_engine_t engine = {0};
+bal_engine_init(&engine, &cpu, &allocator, &memory_interface, logger);
+
+guest_memory[0] = 0xD2800054; // MOVZ X0, #42
+guest_memory[1] = 0xD65F03C0; // RET
+
+cpu.pc = 0;
+cpu.x[30] = BAL_ENGINE_SENTINEL; // Triggers a safe exit when RET is executed.
+
+// Execute the JIT compiled block.
+bal_engine_run_thread(&engine);
+
+// cpu.x[0] now contains 42.
+
+// Cleanup.
+bal_engine_destroy(&engine);
+bal_flat_translation_interface_destroy(&allocator, &memory_interface);
+allocator.free(allocator.context, guest_memory, guest_memory_size);
+```
