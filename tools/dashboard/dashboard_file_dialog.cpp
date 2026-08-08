@@ -1,5 +1,5 @@
 #include "dashboard_file_dialog.h"
-
+#include "bal_platform.h"
 #include <imgui.h>
 #include <stdbool.h>
 #include <stdlib.h>
