@@ -17,11 +17,20 @@ extern "C"
     {
         // General Errors.
 
-        BAL_SUCCESS                 = 0,
-        BAL_ERROR_INVALID_ARGUMENT  = -1,
+        /// Operation completed successfully.
+        BAL_SUCCESS = 0,
+
+        /// A function argument was invalid.
+        BAL_ERROR_INVALID_ARGUMENT = -1,
+
+        /// A memory allocation failed.
         BAL_ERROR_ALLOCATION_FAILED = -2,
-        BAL_ERROR_STRUCT_CORRUPTED  = -3,
-        BAL_ERROR_BUFFER_OVERFLOW   = -4,
+
+        /// A struct integrity check failed. See [`bal_safety.h`].
+        BAL_ERROR_STRUCT_CORRUPTED = -3,
+
+        /// An internal buffer is full.
+        BAL_ERROR_BUFFER_OVERFLOW = -4,
 
         // Memory and Translation Errors
 
