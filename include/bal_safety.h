@@ -1,3 +1,10 @@
+//! Struct integrity checking for magic numbers.
+//!
+//! Every long-lived Ballistic struct carries a magic field. It is set to a known ALIVE pattern
+//! on init() and a DEAD pattern on destroy(). All public functions verify the magic before doing
+//! any work. This should make using Ballistic just a little bit safer. When a check fails, the
+//! log output tells you exactly what went wrong.
+
 #ifndef BALLISTIC_SAFETY_H
 #define BALLISTIC_SAFETY_H
 
