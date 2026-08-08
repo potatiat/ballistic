@@ -41,6 +41,14 @@ function(add_strict_compiler_flags target_name)
     endif ()
 endfunction()
 
+# Macro to add linker flags.
+function(add_linker_flags target_name)
+    if (DEFINED BALLISTIC_LINKER_FLAGS AND NOT BALLISTIC_LINKER_FLAGS STREQUAL "")
+        separate_arguments(LINKER_FLAGS_LIST NATIVE_COMMAND "${BALLISTIC_LINKER_FLAGS}")
+        target_link_options(${target_name} PRIVATE ${LINKER_FLAGS_LIST})
+    endif ()
+endfunction()
+
 # Macro to add sanitizers.
 function(add_sanitizers target_name)
     if (DEFINED BALLISTIC_SANITIZERS AND NOT BALLISTIC_SANITIZERS STREQUAL "")
@@ -141,6 +149,7 @@ target_include_directories(Ballistic PUBLIC include)
 target_include_directories(Ballistic PRIVATE src)
 target_compile_definitions(Ballistic PUBLIC BAL_MAX_LOG_LEVEL=4)
 add_strict_compiler_flags(Ballistic)
+add_linker_flags(Ballistic)
 add_sanitizers(Ballistic)
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
