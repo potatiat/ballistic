@@ -94,6 +94,7 @@ jobs:
           path: |
             build/${{ matrix.type == 'Debug' && 'debug' || 'release' }}/bin/linux/**
             build/${{ matrix.type == 'Debug' && 'debug' || 'release' }}/lib/linux/**
+            include/**
   
   
   Build-Windows:
@@ -158,6 +159,7 @@ jobs:
           path: |
             build/${{ matrix.type == 'Debug' && 'debug' || 'release' }}/bin/windows/**
             build/${{ matrix.type == 'Debug' && 'debug' || 'release' }}/lib/windows/**
+            include/**
 #  Build-macOS:
 #    name: macOS / ${{ matrix.type }}
 #    runs-on: macos-14
