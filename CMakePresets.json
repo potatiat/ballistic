@@ -31,7 +31,7 @@
         "CMAKE_SHARED_LINKER_FLAGS": "-fuse-ld=mold",
         "BALLISTIC_BUILD_DASHBOARD": "ON",
         "BALLISTIC_BUILD_TESTS": "ON",
-        "BALLISTIC_STRICT_FLAGS": "-Wall -Wextra -Werror -Wconversion -Wsign-conversion -Wshadow -fstack-protector-strong -Wpadded -Wvla -fstrict-aliasing",
+        "BALLISTIC_STRICT_FLAGS": "-Wall -Wextra -Werror -Wconversion -Wsign-conversion -Wshadow -fstack-protector-strong -Wpadded -Wvla -fstrict-aliasing -fno-omit-frame-pointer",
         "BALLISTIC_SANITIZERS": "-fsanitize=address,undefined",
         "BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION": "OFF"
       }
@@ -53,7 +53,7 @@
         "CMAKE_SHARED_LINKER_FLAGS": "-fuse-ld=lld",
         "BALLISTIC_BUILD_DASHBOARD": "OFF",
         "BALLISTIC_BUILD_TESTS": "OFF",
-        "BALLISTIC_STRICT_FLAGS": "-fstrict-aliasing",
+        "BALLISTIC_STRICT_FLAGS": "-fstrict-aliasing -fno-omit-frame-pointer",
         "BALLISTIC_SANITIZERS": "",
         "BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION": "ON"
       }
@@ -80,7 +80,7 @@
         "CMAKE_SHARED_LINKER_FLAGS": "",
         "BALLISTIC_BUILD_DASHBOARD": "ON",
         "BALLISTIC_BUILD_TESTS": "ON",
-        "BALLISTIC_STRICT_FLAGS": "-fstrict-aliasing",
+        "BALLISTIC_STRICT_FLAGS": "-fstrict-aliasing -fno-omit-frame-pointer",
         "BALLISTIC_SANITIZERS": "",
         "BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION": "OFF"
       }
@@ -107,7 +107,7 @@
         "CMAKE_SHARED_LINKER_FLAGS": "-LTCG:incremental -OPT:REF -OPT:ICF",
         "BALLISTIC_BUILD_DASHBOARD": "OFF",
         "BALLISTIC_BUILD_TESTS": "OFF",
-        "BALLISTIC_STRICT_FLAGS": "-fstrict-aliasing",
+        "BALLISTIC_STRICT_FLAGS": "-fstrict-aliasing -fno-omit-frame-pointer",
         "BALLISTIC_SANITIZERS": "",
         "BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION": "ON"
       }
