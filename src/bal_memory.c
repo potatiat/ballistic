@@ -1,4 +1,5 @@
 #include "bal_memory.h"
+#include "bal_platform.h"
 #include <assert.h>
 #include <stddef.h>
 #include <stdio.h>

@@ -4,6 +4,7 @@
 
 #include "backend/bal_cpu.h"
 #include "bal_jit_debug.h"
+#include "bal_platform.h"
 
 #include <stdbool.h>
 #include <stdlib.h>

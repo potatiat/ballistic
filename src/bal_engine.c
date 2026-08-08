@@ -3,6 +3,7 @@
 #include "bal_decoder.h"
 #include "bal_engine_flags.h"
 #include "bal_log.h"
+#include "bal_platform.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <string.h>
