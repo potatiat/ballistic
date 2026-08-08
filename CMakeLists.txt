@@ -35,10 +35,9 @@ endmacro()
 
 # Macro to add strict compiler flags
 function(add_strict_compiler_flags target_name)
-    if (DEFINED BALLISTIC_STRICT_FLAGS AND NOT BALLISTIC_STRICT_FLAGS STREQUAL "")
-        separate_arguments(STRICT_FLAGS_LIST NATIVE_COMMAND "${BALLISTIC_STRICT_FLAGS}")
-        target_compile_options(${target_name} PRIVATE ${STRICT_FLAGS_LIST})
-        target_link_options(${target_name} PRIVATE ${STRICT_FLAGS_LIST})
+    if (DEFINED BALLISTIC_COMPILER_FLAGS AND NOT BALLISTIC_COMPILER_FLAGS STREQUAL "")
+        separate_arguments(COMPILER_FLAGS_LIST NATIVE_COMMAND "${BALLISTIC_COMPILER_FLAGS}")
+        target_compile_options(${target_name} PRIVATE ${COMPILER_FLAGS_LIST})
     endif ()
 endfunction()
 
