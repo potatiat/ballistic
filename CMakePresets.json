@@ -1,6 +1,10 @@
 {
   "version": 6,
-  "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
   "configurePresets": [
     {
       "name": "base",
@@ -27,7 +31,7 @@
         "CMAKE_SHARED_LINKER_FLAGS": "-fuse-ld=mold",
         "BALLISTIC_BUILD_DASHBOARD": "ON",
         "BALLISTIC_BUILD_TESTS": "ON",
-        "BALLISTIC_STRICT_FLAGS": "-Wall -Wextra -Werror -Wconversion -Wsign-conversion -Wshadow -fstack-protector-strong -Wpadded -Wvla",
+        "BALLISTIC_STRICT_FLAGS": "-Wall -Wextra -Werror -Wconversion -Wsign-conversion -Wshadow -fstack-protector-strong -Wpadded -Wvla -fstrict-aliasing",
         "BALLISTIC_SANITIZERS": "-fsanitize=address,undefined",
         "BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION": "OFF"
       }
@@ -49,7 +53,7 @@
         "CMAKE_SHARED_LINKER_FLAGS": "-fuse-ld=lld",
         "BALLISTIC_BUILD_DASHBOARD": "OFF",
         "BALLISTIC_BUILD_TESTS": "OFF",
-        "BALLISTIC_STRICT_FLAGS": "",
+        "BALLISTIC_STRICT_FLAGS": "-fstrict-aliasing",
         "BALLISTIC_SANITIZERS": "",
         "BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION": "ON"
       }
@@ -59,7 +63,11 @@
       "displayName": "Debug Windows",
       "inherits": "base",
       "binaryDir": "${sourceDir}/build/debug",
-      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_C_COMPILER": "clang-cl",
@@ -72,7 +80,7 @@
         "CMAKE_SHARED_LINKER_FLAGS": "",
         "BALLISTIC_BUILD_DASHBOARD": "ON",
         "BALLISTIC_BUILD_TESTS": "ON",
-        "BALLISTIC_STRICT_FLAGS": "",
+        "BALLISTIC_STRICT_FLAGS": "-fstrict-aliasing",
         "BALLISTIC_SANITIZERS": "",
         "BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION": "OFF"
       }
@@ -82,7 +90,11 @@
       "displayName": "Release Windows",
       "inherits": "base",
       "binaryDir": "${sourceDir}/build/release",
-      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_C_COMPILER": "clang-cl",
@@ -95,30 +107,54 @@
         "CMAKE_SHARED_LINKER_FLAGS": "-LTCG:incremental -OPT:REF -OPT:ICF",
         "BALLISTIC_BUILD_DASHBOARD": "OFF",
         "BALLISTIC_BUILD_TESTS": "OFF",
-        "BALLISTIC_STRICT_FLAGS": "",
+        "BALLISTIC_STRICT_FLAGS": "-fstrict-aliasing",
         "BALLISTIC_SANITIZERS": "",
         "BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION": "ON"
       }
     }
   ],
   "buildPresets": [
-    { "name": "debug", "configurePreset": "debug" },
-    { "name": "release", "configurePreset": "release" },
-    { "name": "debug-windows", "configurePreset": "debug-windows" },
-    { "name": "release-windows", "configurePreset": "release-windows" }
+    {
+      "name": "debug",
+      "configurePreset": "debug"
+    },
+    {
+      "name": "release",
+      "configurePreset": "release"
+    },
+    {
+      "name": "debug-windows",
+      "configurePreset": "debug-windows"
+    },
+    {
+      "name": "release-windows",
+      "configurePreset": "release-windows"
+    }
   ],
   "testPresets": [
     {
       "name": "debug",
       "configurePreset": "debug",
-      "output": { "outputOnFailure": true, "verbosity": "verbose" },
-      "execution": { "noTestsAction": "error", "jobs": 0 }
+      "output": {
+        "outputOnFailure": true,
+        "verbosity": "verbose"
+      },
+      "execution": {
+        "noTestsAction": "error",
+        "jobs": 0
+      }
     },
     {
       "name": "debug-windows",
       "configurePreset": "debug-windows",
-      "output": { "outputOnFailure": true, "verbosity": "verbose" },
-      "execution": { "noTestsAction": "error", "jobs": 0 }
+      "output": {
+        "outputOnFailure": true,
+        "verbosity": "verbose"
+      },
+      "execution": {
+        "noTestsAction": "error",
+        "jobs": 0
+      }
     }
   ]
 }
