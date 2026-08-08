@@ -275,7 +275,7 @@ local function main(...)
     is_msvc = is_windows and compiler:match("cl%.exe$")
 
     if is_msvc then
-        library_link_flags = string.format('/LIBPATH:"%s" Ballistic.lib', library_directory)
+        library_link_flags = string.format('/LIBPATH:"%s" Ballistic.lib msvcrt.lib ucrt.lib', library_directory)
     else
         library_link_flags = string.format('-L"%s" -lBallistic', library_directory)
     end
