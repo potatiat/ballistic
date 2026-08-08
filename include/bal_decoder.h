@@ -89,12 +89,13 @@ extern "C"
     /// ```c
     /// #include "bal_decoder.h"
     /// #include <assert.h>
+    /// #include <string.h>
     ///
     /// // RET X30.
     /// uint32_t instruction = 0xD65F03C0;
     ///
-    /// const bal_decoder_instruction_metadata_t* metadata bal_decode_arm64(instruction);
-    /// assert(metadata->name == "RET");
+    /// const bal_decoder_instruction_metadata_t* metadata = bal_decode_arm64(instruction);
+    /// assert(strcmp(metadata->name, "RET") == 0);
     /// ```
     BAL_HOT const bal_decoder_instruction_metadata_t *bal_decode_arm64(uint32_t instruction);
 
