@@ -86,15 +86,22 @@ jobs:
         if: matrix.type == 'Debug'
         run: ctest --preset debug
 
+      - name: Stage Artifacts
+        if: github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p bin lib
+          cp -r build/${{ matrix.type == 'Debug' && 'debug' || 'release' }}/bin/linux/* bin/
+          cp -r build/${{ matrix.type == 'Debug' && 'debug' || 'release' }}/lib/linux/* lib/
+
       - name: Upload Artifacts
         if: github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v7
         with:
           name: Ballistic-Engine Linux ${{ matrix.type }} Build ${{ matrix.commit.short_sha }}
           path: |
-            build/${{ matrix.type == 'Debug' && 'debug' || 'release' }}/bin/linux/**
-            build/${{ matrix.type == 'Debug' && 'debug' || 'release' }}/lib/linux/**
             include/**
+            bin/**
+            lib/**
   
   
   Build-Windows:
@@ -151,15 +158,24 @@ jobs:
         if: matrix.type == 'Debug'
         run: ctest --preset debug-windows
 
+      - name: Stage Artifacts
+        if: github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          mkdir -p bin lib
+          cp -r build/${{ matrix.type == 'Debug' && 'debug' || 'release' }}/bin/windows/* bin/
+          cp -r build/${{ matrix.type == 'Debug' && 'debug' || 'release' }}/lib/windows/* lib/
+
       - name: Upload Artifacts
         if: github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v7
         with:
           name: Ballistic-Engine Windows ${{ matrix.type }} Build ${{ matrix.commit.short_sha }}
           path: |
-            build/${{ matrix.type == 'Debug' && 'debug' || 'release' }}/bin/windows/**
-            build/${{ matrix.type == 'Debug' && 'debug' || 'release' }}/lib/windows/**
             include/**
+            bin/**
+            lib/**
+
 #  Build-macOS:
 #    name: macOS / ${{ matrix.type }}
 #    runs-on: macos-14
