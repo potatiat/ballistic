@@ -31,7 +31,7 @@
         "CMAKE_SHARED_LINKER_FLAGS": "-fuse-ld=mold",
         "BALLISTIC_BUILD_DASHBOARD": "ON",
         "BALLISTIC_BUILD_TESTS": "ON",
-        "BALLISTIC_COMPILER_FLAGS": "-Wall -Wextra -Werror -Wconversion -Wsign-conversion -Wshadow -fstack-protector-strong -Wpadded -Wvla -fstrict-aliasing -fno-omit-frame-pointer -ftrivial-auto-var-init=zero -gsplit-dwarf -g",
+        "BALLISTIC_COMPILER_FLAGS": "-Wall -Wextra -Werror -Wconversion -Wsign-conversion -Wshadow -Wstrict-prototypes -fstack-protector-strong -Wpadded -Wvla -fstrict-aliasing -fno-omit-frame-pointer -ftrivial-auto-var-init=zero -gsplit-dwarf -g",
         "BALLISTIC_LINKER_FLAGS": "",
         "BALLISTIC_SANITIZERS": "-fsanitize=address,undefined",
         "BALLISTIC_ENABLE_LINK_TIME_OPTIMIZATION": "OFF"
