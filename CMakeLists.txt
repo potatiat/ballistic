@@ -303,6 +303,7 @@ if (BALLISTIC_BUILD_TESTS)
             ${CMAKE_CURRENT_SOURCE_DIR}/include/bal_assembler.h
             ${CMAKE_CURRENT_SOURCE_DIR}/include/bal_engine.h
             ${CMAKE_CURRENT_SOURCE_DIR}/include/bal_log.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/bal_jit_debug.h
             ${CMAKE_CURRENT_SOURCE_DIR}/include/backend/x86/bal_x86_sliding_window.h
             WORKING_DIRECTORY ${BALLISTIC_LIBRARIES_DIRECTORY}
     )

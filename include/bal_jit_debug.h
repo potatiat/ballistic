@@ -1,3 +1,44 @@
+//! This module provides JIT crash debugging and Guest PC tracking for Ballistic.
+//!
+//! When the host CPU encounters a fault like SIGSEGV or SIGILL inside the JIT buffer, this module
+//! intercepts the OS signal, maps the faulting host instruction pointer (RIP) back to the original
+//! Guest Program Counter, and invokes a user-defined callback or logs the error before aborting.
+//!
+//! # Examples
+//!
+//! Initialization and tracking a JIT block:
+//!
+//! ```c
+//! #include "bal_jit_debug.h"
+//! #include "bal_memory.h"
+//! #include <assert.h>
+//!
+//! bal_allocator_t allocator = {0};
+//! bal_allocator_default_init(&allocator);
+//!
+//! bal_logger_t logger = {0};
+//! bal_logger_init_default(&logger);
+//!
+//! bal_jit_debug_context_t debug_context = {0};
+//! bal_error_t err = bal_jit_debug_init(&allocator, &debug_context, logger);
+//! assert(err == BAL_SUCCESS);
+//!
+//! uint8_t jit_code[64] = {0};
+//! bal_jit_instruction_map_t mappings[] = {
+//!     { .x86_offset = 0,  .guest_pc_offset = 0 },
+//!     { .x86_offset = 16, .guest_pc_offset = 4 }
+//! };
+//!
+//! err = bal_jit_debug_add_block(&debug_context, jit_code, sizeof(jit_code), 0x1000, mappings, 2);
+//! assert(err == BAL_SUCCESS);
+//!
+//! err = bal_jit_debug_register_signal_handler(&debug_context, jit_code, sizeof(jit_code));
+//! assert(err == BAL_SUCCESS);
+//!
+//! bal_jit_debug_unregister_signal_handler(&debug_context);
+//! bal_jit_debug_destroy(&allocator, &debug_context);
+//! ```
+
 #ifndef BALLISTIC_BAL_JIT_DEBUG_H
 #define BALLISTIC_BAL_JIT_DEBUG_H
 
