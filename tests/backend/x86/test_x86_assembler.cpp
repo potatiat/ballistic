@@ -178,6 +178,7 @@ TEST_F(Backendx86Assembler, Public_NullContext_NoCrash)
     bal_x86_emit_pop_r64(nullptr, BAL_X86_RAX);
     bal_x86_emit_test_r64_r64(nullptr, BAL_X86_RAX, BAL_X86_RAX);
     bal_x86_emit_sub_r64_imm32(nullptr, BAL_X86_RAX, 0);
+    bal_x86_emit_ud2(nullptr);
     SUCCEED();
 }
 
@@ -243,6 +244,9 @@ TEST_F(Backendx86Assembler, Public_BadStatus_NoEmit)
     EXPECT_EQ(assembler.offset, 0);
 
     bal_x86_emit_ret(&assembler);
+    EXPECT_EQ(assembler.offset, 0);
+
+    bal_x86_emit_ud2(&assembler);
     EXPECT_EQ(assembler.offset, 0);
 }
 
@@ -433,6 +437,11 @@ TEST_F(Backendx86Assembler, Public_FullBuffer_NoEmit)
 
     assembler.status = BAL_SUCCESS;
     bal_x86_emit_ret(&assembler);
+    EXPECT_EQ(assembler.status, BAL_ERROR_INSTRUCTION_OVERFLOW);
+    EXPECT_EQ(assembler.offset, sizeof(buffer));
+
+    assembler.status = BAL_SUCCESS;
+    bal_x86_emit_ud2(&assembler);
     EXPECT_EQ(assembler.status, BAL_ERROR_INSTRUCTION_OVERFLOW);
     EXPECT_EQ(assembler.offset, sizeof(buffer));
 }
@@ -928,4 +937,12 @@ TEST_F(Backendx86Assembler, Encode_TestRegToReg_HighHigh)
     EXPECT_EQ(assembler.buffer[2], 0xFE); // ModRM: 0xC0 | 7 << 3 | 6
 }
 
+TEST_F(Backendx86Assembler, Encode_Ud2)
+{
+    bal_x86_emit_ud2(&assembler);
+    EXPECT_EQ(assembler.status, BAL_SUCCESS);
+    EXPECT_EQ(assembler.offset, 2);
+    EXPECT_EQ(assembler.buffer[0], 0x0F);
+    EXPECT_EQ(assembler.buffer[1], 0x0B);
+}
 /*** end of file ***/
