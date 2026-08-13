@@ -430,6 +430,21 @@ extern "C"
                                    bal_x86_register_t   destination,
                                    bal_x86_register_t   source);
 
+    /// Emits a bitwise XOR instruction between two 64-bit registers.
+    ///
+    /// Assembly equivalent: `xor destination, source`.
+    ///
+    /// # Warning
+    ///
+    /// This function fails if:
+    ///
+    /// - `assembler` is `NULL`.
+    /// - `assembler->status` != [`BAL_SUCCESS`]
+    /// - `assembler->buffer` is full.
+    void bal_x86_emit_xor_r64_r64(bal_x86_assembler_t *assembler,
+                                  bal_x86_register_t   destination,
+                                  bal_x86_register_t   source);
+
     /// Emits an undefined instruction.
     ///
     /// Assembly equivalent: `ud2`
