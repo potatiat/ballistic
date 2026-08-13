@@ -140,6 +140,8 @@ extern "C"
         uint32_t pad;
     } bal_logger_t;
 
+    extern BAL_THREAD_LOCAL bal_logger_t bal_thread_logger;
+
 // Remove all log code if log level not defined.
 //
 #ifndef BAL_MAX_LOG_LEVEL

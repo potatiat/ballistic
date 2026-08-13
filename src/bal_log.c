@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <string.h>
 
+BAL_THREAD_LOCAL bal_logger_t bal_thread_logger = { 0 };
+
 BAL_WEAK BAL_HOT void bal_default_logger(void           *user_data,
                                          bal_log_data_t *bal_data,
                                          const char     *format,
@@ -83,7 +85,7 @@ bal_default_logger(void *user_data, bal_log_data_t *bal_data, const char *format
         }
     }
 
-    const char *BAL_RESTRICT filename = bal_data->filename;
+    const char *BAL_RESTRICT filename   = bal_data->filename;
     const char *BAL_RESTRICT slash      = strrchr(filename, '/');
     const char *BAL_RESTRICT backslash  = strrchr(filename, '\\');
     const char *BAL_RESTRICT last_slash = slash > backslash ? slash : backslash;
