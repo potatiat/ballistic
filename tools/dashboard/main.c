@@ -18,7 +18,7 @@ int
 main(void)
 {
     bal_logger_t logger = {};
-    bal_logger_init_default(&logger);
+    bal_logger_init_default();
     int glfw_status = glfwInit();
 
     if (GLFW_FALSE == glfw_status)

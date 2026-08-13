@@ -46,27 +46,26 @@ BAL_HOT static void emit_modrm_memory_disp32_rbp(uint8_t *buffer, size_t *offset
 bal_error_t
 bal_x86_assembler_init(bal_x86_assembler_t          *assembler,
                        const bal_executable_buffer_t executable_buffer,
-                       const size_t                  size,
-                       const bal_logger_t            logger)
+                       const size_t                  size)
 {
     const bal_error_t error = BAL_ERROR_INVALID_ARGUMENT;
 
     if (BAL_UNLIKELY(NULL == assembler))
     {
-        BAL_LOG_ERROR(&logger, "Aborting function: Assembler is NULL");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: Assembler is NULL");
         return error;
     }
 
     if (BAL_UNLIKELY(NULL == executable_buffer.rx_pointer)
         || BAL_UNLIKELY(NULL == executable_buffer.rw_pointer))
     {
-        BAL_LOG_ERROR(&logger, "Aborting function: Buffer is NULL");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: Buffer is NULL");
         return error;
     }
 
     if (BAL_UNLIKELY(0 == size))
     {
-        BAL_LOG_ERROR(&logger, "Aborting function: Size is 0");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: Size is 0");
         return error;
     }
 
@@ -79,10 +78,9 @@ bal_x86_assembler_init(bal_x86_assembler_t          *assembler,
     assembler->rx_buffer = (uint8_t *)executable_buffer.rx_pointer;
     assembler->capacity  = size;
     assembler->offset    = 0;
-    assembler->logger    = logger;
     assembler->status    = BAL_SUCCESS;
 
-    BAL_LOG_INFO(&logger,
+    BAL_LOG_INFO(&bal_thread_logger,
                  "x86 Assembler initialized. RW Buffer: %p, RX Buffer: %p, Capacity: %zu bytes",
                  executable_buffer.rw_pointer,
                  executable_buffer.rx_pointer,
@@ -116,7 +114,7 @@ bal_x86_emit_add_mem64_rbp_offset_imm(bal_x86_assembler_t *assembler,
 
     if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler status != BAL_SUCCESS");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler status != BAL_SUCCESS");
         return;
     }
 
@@ -129,7 +127,7 @@ bal_x86_emit_add_mem64_rbp_offset_imm(bal_x86_assembler_t *assembler,
         return;
     }
 
-    BAL_LOG_DEBUG(&assembler->logger,
+    BAL_LOG_DEBUG(&bal_thread_logger,
                   "[0x%04zx] add qword ptr [rbp + 0x%X], 0x%X",
                   assembler->offset,
                   offset,
@@ -177,7 +175,7 @@ bal_x86_emit_and_r64_r64(bal_x86_assembler_t     *assembler,
 
     if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler status != BAL_SUCCESS");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler status != BAL_SUCCESS");
         return;
     }
 
@@ -185,7 +183,7 @@ bal_x86_emit_and_r64_r64(bal_x86_assembler_t     *assembler,
 
     if (BAL_UNLIKELY(false == is_valid_register_result))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Invalid destination register: %d", destination);
+        BAL_LOG_ERROR(&bal_thread_logger, "Invalid destination register: %d", destination);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -194,7 +192,7 @@ bal_x86_emit_and_r64_r64(bal_x86_assembler_t     *assembler,
 
     if (BAL_UNLIKELY(false == is_valid_register_result))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Invalid source register: %d", destination);
+        BAL_LOG_ERROR(&bal_thread_logger, "Invalid source register: %d", destination);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -209,7 +207,7 @@ bal_x86_emit_and_r64_r64(bal_x86_assembler_t     *assembler,
     }
 
     BAL_LOG_DEBUG(
-        &assembler->logger, "[0x%04zx] and r%d, r%d", assembler->offset, destination, source);
+        &bal_thread_logger, "[0x%04zx] and r%d, r%d", assembler->offset, destination, source);
 
     const uint8_t w = 1;
 
@@ -243,7 +241,7 @@ bal_x86_emit_jmp_r64(bal_x86_assembler_t *assembler, const bal_x86_register_t re
 
     if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler status != BAL_SUCCESS");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler status != BAL_SUCCESS");
         return;
     }
 
@@ -251,7 +249,7 @@ bal_x86_emit_jmp_r64(bal_x86_assembler_t *assembler, const bal_x86_register_t re
 
     if (BAL_UNLIKELY(false == is_valid_register_result))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Invalid register: %d", reg);
+        BAL_LOG_ERROR(&bal_thread_logger, "Invalid register: %d", reg);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -264,7 +262,7 @@ bal_x86_emit_jmp_r64(bal_x86_assembler_t *assembler, const bal_x86_register_t re
         return;
     }
 
-    BAL_LOG_DEBUG(&assembler->logger, "[+0x%04zx] jmp r%d", assembler->offset, reg);
+    BAL_LOG_DEBUG(&bal_thread_logger, "[+0x%04zx] jmp r%d", assembler->offset, reg);
     const size_t old_offset = assembler->offset;
 
     if (reg > 7)
@@ -301,7 +299,7 @@ bal_x86_emit_jmp_rel32(bal_x86_assembler_t *assembler, const int32_t offset)
 
     if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler status != BAL_SUCCESS");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler status != BAL_SUCCESS");
         return;
     }
 
@@ -313,7 +311,7 @@ bal_x86_emit_jmp_rel32(bal_x86_assembler_t *assembler, const int32_t offset)
         return;
     }
 
-    BAL_LOG_DEBUG(&assembler->logger, "[+0x%04zx] jmp 0x%X", assembler->offset, offset);
+    BAL_LOG_DEBUG(&bal_thread_logger, "[+0x%04zx] jmp 0x%X", assembler->offset, offset);
     const size_t  old_offset = assembler->offset;
     const uint8_t opcode     = 0xE9;
     emit8(assembler->buffer, &assembler->offset, opcode);
@@ -340,7 +338,7 @@ bal_x86_emit_load_r64_rbp_offset(bal_x86_assembler_t     *assembler,
 
     if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler status != BAL_SUCCESS");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler status != BAL_SUCCESS");
         return;
     }
 
@@ -348,7 +346,7 @@ bal_x86_emit_load_r64_rbp_offset(bal_x86_assembler_t     *assembler,
 
     if (BAL_UNLIKELY(false == is_valid_register_result))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Invalid destination register: %d", destination);
+        BAL_LOG_ERROR(&bal_thread_logger, "Invalid destination register: %d", destination);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -361,7 +359,7 @@ bal_x86_emit_load_r64_rbp_offset(bal_x86_assembler_t     *assembler,
         return;
     }
 
-    BAL_LOG_DEBUG(&assembler->logger,
+    BAL_LOG_DEBUG(&bal_thread_logger,
                   "[0x%04zx] mov r%d, [rbp + 0x%X]",
                   assembler->offset,
                   destination,
@@ -402,7 +400,7 @@ bal_x86_emit_store_r64_rbp_offset(bal_x86_assembler_t     *assembler,
 
     if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler status != BAL_SUCCESS");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler status != BAL_SUCCESS");
         return;
     }
 
@@ -410,7 +408,7 @@ bal_x86_emit_store_r64_rbp_offset(bal_x86_assembler_t     *assembler,
 
     if (BAL_UNLIKELY(false == is_valid_register_result))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Invalid source register: %d", source);
+        BAL_LOG_ERROR(&bal_thread_logger, "Invalid source register: %d", source);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -424,7 +422,7 @@ bal_x86_emit_store_r64_rbp_offset(bal_x86_assembler_t     *assembler,
     }
 
     BAL_LOG_DEBUG(
-        &assembler->logger, "[0x%04zx] mov[rbp + 0x%X], r%d", assembler->offset, offset, source);
+        &bal_thread_logger, "[0x%04zx] mov[rbp + 0x%X], r%d", assembler->offset, offset, source);
     const uint8_t w = 1;
 
     // WARNING: Source is verified by is_valid_register() to fall within the safe enum range
@@ -460,7 +458,7 @@ bal_x86_emit_mov_r64_r64(bal_x86_assembler_t     *assembler,
 
     if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Assembler status != BAL_SUCCESS, aborting function");
+        BAL_LOG_ERROR(&bal_thread_logger, "Assembler status != BAL_SUCCESS, aborting function");
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -469,7 +467,7 @@ bal_x86_emit_mov_r64_r64(bal_x86_assembler_t     *assembler,
 
     if (BAL_UNLIKELY(false == is_valid_register_result))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Invalid source register: %d", source);
+        BAL_LOG_ERROR(&bal_thread_logger, "Invalid source register: %d", source);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -478,7 +476,7 @@ bal_x86_emit_mov_r64_r64(bal_x86_assembler_t     *assembler,
 
     if (BAL_UNLIKELY(false == is_valid_register_result))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Invalid destination register: %d", destination);
+        BAL_LOG_ERROR(&bal_thread_logger, "Invalid destination register: %d", destination);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -492,7 +490,7 @@ bal_x86_emit_mov_r64_r64(bal_x86_assembler_t     *assembler,
     }
 
     BAL_LOG_DEBUG(
-        &assembler->logger, "[+0x%04zx] mov r%d, r%d", assembler->offset, destination, source);
+        &bal_thread_logger, "[+0x%04zx] mov r%d, r%d", assembler->offset, destination, source);
     const uint8_t w = 1;
 
     // WARNING: Destination is verified by is_valid_register() to fall within the safe enum range
@@ -527,7 +525,7 @@ bal_x86_emit_mov_r64_imm64(bal_x86_assembler_t     *assembler,
 
     if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Assembler status != BAL_SUCCESS, aborting function");
+        BAL_LOG_ERROR(&bal_thread_logger, "Assembler status != BAL_SUCCESS, aborting function");
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -536,7 +534,7 @@ bal_x86_emit_mov_r64_imm64(bal_x86_assembler_t     *assembler,
 
     if (BAL_UNLIKELY(false == is_valid_register_result))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Invalid destination register: %d", destination);
+        BAL_LOG_ERROR(&bal_thread_logger, "Invalid destination register: %d", destination);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -566,7 +564,7 @@ bal_x86_emit_mov_r64_imm64(bal_x86_assembler_t     *assembler,
         return;
     }
 
-    BAL_LOG_DEBUG(&assembler->logger,
+    BAL_LOG_DEBUG(&bal_thread_logger,
                   "[+0x%04zx] mov r%d, 0x%llX",
                   assembler->offset,
                   destination,
@@ -615,7 +613,7 @@ bal_x86_emit_ret(bal_x86_assembler_t *assembler)
 
     if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Assembler status != BAL_SUCCESS, aborting function");
+        BAL_LOG_ERROR(&bal_thread_logger, "Assembler status != BAL_SUCCESS, aborting function");
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -628,7 +626,7 @@ bal_x86_emit_ret(bal_x86_assembler_t *assembler)
         return;
     }
 
-    BAL_LOG_DEBUG(&assembler->logger, "[+0x%04zx] ret", assembler->offset);
+    BAL_LOG_DEBUG(&bal_thread_logger, "[+0x%04zx] ret", assembler->offset);
     emit8(assembler->buffer, &assembler->offset, 0XC3);
 }
 
@@ -644,7 +642,7 @@ bal_x86_emit_or_r64_r64(bal_x86_assembler_t     *assembler,
 
     if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Assembler status != BAL_SUCCESS, aborting function");
+        BAL_LOG_ERROR(&bal_thread_logger, "Assembler status != BAL_SUCCESS, aborting function");
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -653,7 +651,7 @@ bal_x86_emit_or_r64_r64(bal_x86_assembler_t     *assembler,
 
     if (BAL_UNLIKELY(false == is_valid_register_result))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Invalid source register: %d", source);
+        BAL_LOG_ERROR(&bal_thread_logger, "Invalid source register: %d", source);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -662,7 +660,7 @@ bal_x86_emit_or_r64_r64(bal_x86_assembler_t     *assembler,
 
     if (BAL_UNLIKELY(false == is_valid_register_result))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Invalid destination register: %d", destination);
+        BAL_LOG_ERROR(&bal_thread_logger, "Invalid destination register: %d", destination);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -676,7 +674,7 @@ bal_x86_emit_or_r64_r64(bal_x86_assembler_t     *assembler,
     }
 
     BAL_LOG_DEBUG(
-        &assembler->logger, "[+0x%04zx] or r%d, r%d", assembler->offset, destination, source);
+        &bal_thread_logger, "[+0x%04zx] or r%d, r%d", assembler->offset, destination, source);
     const uint8_t w = 1;
 
     // WARNING: Destination is verified by is_valid_register() to fall within the safe enum range
@@ -709,7 +707,7 @@ bal_x86_emit_push_r64(bal_x86_assembler_t *assembler, const bal_x86_register_t r
 
     if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Assembler status != BAL_SUCCESS, aborting function");
+        BAL_LOG_ERROR(&bal_thread_logger, "Assembler status != BAL_SUCCESS, aborting function");
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -718,7 +716,7 @@ bal_x86_emit_push_r64(bal_x86_assembler_t *assembler, const bal_x86_register_t r
 
     if (BAL_UNLIKELY(false == is_valid_register_result))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Invalid register: %d", reg);
+        BAL_LOG_ERROR(&bal_thread_logger, "Invalid register: %d", reg);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -731,7 +729,7 @@ bal_x86_emit_push_r64(bal_x86_assembler_t *assembler, const bal_x86_register_t r
         return;
     }
 
-    BAL_LOG_DEBUG(&assembler->logger, "[+0x%04zx] push r%d", assembler->offset, reg);
+    BAL_LOG_DEBUG(&bal_thread_logger, "[+0x%04zx] push r%d", assembler->offset, reg);
     const size_t old_offset = assembler->offset;
 
     if (reg > 7)
@@ -766,7 +764,7 @@ bal_x86_emit_pop_r64(bal_x86_assembler_t *assembler, const bal_x86_register_t re
 
     if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Assembler status != BAL_SUCCESS, aborting function");
+        BAL_LOG_ERROR(&bal_thread_logger, "Assembler status != BAL_SUCCESS, aborting function");
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -775,7 +773,7 @@ bal_x86_emit_pop_r64(bal_x86_assembler_t *assembler, const bal_x86_register_t re
 
     if (BAL_UNLIKELY(false == is_valid_register_result))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Invalid register: %d", reg);
+        BAL_LOG_ERROR(&bal_thread_logger, "Invalid register: %d", reg);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -788,7 +786,7 @@ bal_x86_emit_pop_r64(bal_x86_assembler_t *assembler, const bal_x86_register_t re
         return;
     }
 
-    BAL_LOG_DEBUG(&assembler->logger, "[+0x%04zx] pop r%d", assembler->offset, reg);
+    BAL_LOG_DEBUG(&bal_thread_logger, "[+0x%04zx] pop r%d", assembler->offset, reg);
     const size_t old_offset = assembler->offset;
 
     if (reg > 7)
@@ -825,7 +823,7 @@ bal_x86_emit_setcc_mem8_rbp_offset(bal_x86_assembler_t      *assembler,
 
     if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Assembler status != BAL_SUCCESS, aborting function");
+        BAL_LOG_ERROR(&bal_thread_logger, "Assembler status != BAL_SUCCESS, aborting function");
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -838,7 +836,7 @@ bal_x86_emit_setcc_mem8_rbp_offset(bal_x86_assembler_t      *assembler,
         return;
     }
 
-    BAL_LOG_DEBUG(&assembler->logger,
+    BAL_LOG_DEBUG(&bal_thread_logger,
                   "[+0x%04zx] set%s byte ptr [rbp + 0x%X]",
                   assembler->offset,
                   condition_code_to_string(condition),
@@ -877,7 +875,7 @@ bal_x86_emit_jcc_rel32(bal_x86_assembler_t      *assembler,
 
     if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Assembler status != BAL_SUCCESS, aborting function");
+        BAL_LOG_ERROR(&bal_thread_logger, "Assembler status != BAL_SUCCESS, aborting function");
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -890,7 +888,7 @@ bal_x86_emit_jcc_rel32(bal_x86_assembler_t      *assembler,
         return;
     }
 
-    BAL_LOG_DEBUG(&assembler->logger,
+    BAL_LOG_DEBUG(&bal_thread_logger,
                   "[0x%04zx] j%s 0x%X",
                   assembler->offset,
                   condition_code_to_string(condition),
@@ -925,7 +923,7 @@ bal_x86_emit_add_r64_r64(bal_x86_assembler_t     *assembler,
 
     if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->status != BAL_SUCCESS");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler->status != BAL_SUCCESS");
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -934,7 +932,7 @@ bal_x86_emit_add_r64_r64(bal_x86_assembler_t     *assembler,
 
     if (BAL_UNLIKELY(false == is_valid_register_result))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: invalid source register: %d", source);
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: invalid source register: %d", source);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -944,7 +942,7 @@ bal_x86_emit_add_r64_r64(bal_x86_assembler_t     *assembler,
     if (BAL_UNLIKELY(false == is_valid_register_result))
     {
         BAL_LOG_ERROR(
-            &assembler->logger, "Aborting function: invalid destination register: %d", destination);
+            &bal_thread_logger, "Aborting function: invalid destination register: %d", destination);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -958,7 +956,7 @@ bal_x86_emit_add_r64_r64(bal_x86_assembler_t     *assembler,
     }
 
     BAL_LOG_DEBUG(
-        &assembler->logger, "[+0x%04zx] add r%d, r%d", assembler->offset, destination, source);
+        &bal_thread_logger, "[+0x%04zx] add r%d, r%d", assembler->offset, destination, source);
     const uint8_t w = 1;
 
     // WARNING: Destination is verified by is_valid_register().
@@ -992,7 +990,7 @@ bal_x86_emit_sub_r64_r64(bal_x86_assembler_t     *assembler,
 
     if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->status != BAL_SUCCESS");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler->status != BAL_SUCCESS");
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -1001,7 +999,7 @@ bal_x86_emit_sub_r64_r64(bal_x86_assembler_t     *assembler,
 
     if (BAL_UNLIKELY(false == is_valid_register_result))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: invalid source register: %d", source);
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: invalid source register: %d", source);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -1011,7 +1009,7 @@ bal_x86_emit_sub_r64_r64(bal_x86_assembler_t     *assembler,
     if (BAL_UNLIKELY(false == is_valid_register_result))
     {
         BAL_LOG_ERROR(
-            &assembler->logger, "Aborting function: invalid destination register: %d", destination);
+            &bal_thread_logger, "Aborting function: invalid destination register: %d", destination);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -1025,7 +1023,7 @@ bal_x86_emit_sub_r64_r64(bal_x86_assembler_t     *assembler,
     }
 
     BAL_LOG_DEBUG(
-        &assembler->logger, "[+0x%04zx] sub r%d, r%d", assembler->offset, destination, source);
+        &bal_thread_logger, "[+0x%04zx] sub r%d, r%d", assembler->offset, destination, source);
     const uint8_t w = 1;
 
     // WARNING: Destination is verified by is_valid_register().
@@ -1058,7 +1056,7 @@ bal_x86_emit_add_r64_imm32(bal_x86_assembler_t     *assembler,
 
     if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->status != BAL_SUCCESS");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler->status != BAL_SUCCESS");
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -1068,7 +1066,7 @@ bal_x86_emit_add_r64_imm32(bal_x86_assembler_t     *assembler,
     if (BAL_UNLIKELY(false == is_valid_register_result))
     {
         BAL_LOG_ERROR(
-            &assembler->logger, "Aborting function: invalid destination register: %d", destination);
+            &bal_thread_logger, "Aborting function: invalid destination register: %d", destination);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -1087,7 +1085,7 @@ bal_x86_emit_add_r64_imm32(bal_x86_assembler_t     *assembler,
     }
 
     BAL_LOG_DEBUG(
-        &assembler->logger, "[+0x%04zx] add r%d, 0x%X", assembler->offset, destination, immediate);
+        &bal_thread_logger, "[+0x%04zx] add r%d, 0x%X", assembler->offset, destination, immediate);
     const size_t  old_offset = assembler->offset;
     const uint8_t w          = 1;
     const uint8_t r          = 0;
@@ -1125,7 +1123,7 @@ bal_x86_emit_test_r64_r64(bal_x86_assembler_t     *assembler,
     }
     if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler status != BAL_SUCCESS");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler status != BAL_SUCCESS");
         return;
     }
 
@@ -1133,7 +1131,7 @@ bal_x86_emit_test_r64_r64(bal_x86_assembler_t     *assembler,
 
     if (BAL_UNLIKELY(false == is_valid_register_result))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Invalid destination register: %d", destination);
+        BAL_LOG_ERROR(&bal_thread_logger, "Invalid destination register: %d", destination);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -1142,7 +1140,7 @@ bal_x86_emit_test_r64_r64(bal_x86_assembler_t     *assembler,
 
     if (BAL_UNLIKELY(false == is_valid_register_result))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Invalid source register: %d", source);
+        BAL_LOG_ERROR(&bal_thread_logger, "Invalid source register: %d", source);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -1156,7 +1154,7 @@ bal_x86_emit_test_r64_r64(bal_x86_assembler_t     *assembler,
     }
 
     BAL_LOG_DEBUG(
-        &assembler->logger, "[+0x%04zx] test r%d, r%d", assembler->offset, destination, source);
+        &bal_thread_logger, "[+0x%04zx] test r%d, r%d", assembler->offset, destination, source);
 
     const uint8_t w = 1;
     const uint8_t r = (uint8_t)source >> 3;
@@ -1186,7 +1184,7 @@ bal_x86_emit_sub_r64_imm32(bal_x86_assembler_t     *assembler,
     }
     if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler status != BAL_SUCCESS");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler status != BAL_SUCCESS");
         return;
     }
 
@@ -1194,7 +1192,7 @@ bal_x86_emit_sub_r64_imm32(bal_x86_assembler_t     *assembler,
 
     if (BAL_UNLIKELY(false == is_valid_register_result))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Invalid destination register: %d", destination);
+        BAL_LOG_ERROR(&bal_thread_logger, "Invalid destination register: %d", destination);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -1209,7 +1207,7 @@ bal_x86_emit_sub_r64_imm32(bal_x86_assembler_t     *assembler,
     }
 
     BAL_LOG_DEBUG(
-        &assembler->logger, "[+0x%04zx] sub r%d, 0x%X", assembler->offset, destination, immediate);
+        &bal_thread_logger, "[+0x%04zx] sub r%d, 0x%X", assembler->offset, destination, immediate);
 
     const size_t  old_offset = assembler->offset;
     const uint8_t b          = (uint8_t)destination >> 3;
@@ -1248,7 +1246,7 @@ bal_x86_emit_cmp_mem8_rbp_offset_imm(bal_x86_assembler_t *assembler,
 
     if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->status != BAL_SUCCESS ");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler->status != BAL_SUCCESS ");
         return;
     }
 
@@ -1260,7 +1258,7 @@ bal_x86_emit_cmp_mem8_rbp_offset_imm(bal_x86_assembler_t *assembler,
         return;
     }
 
-    BAL_LOG_DEBUG(&assembler->logger,
+    BAL_LOG_DEBUG(&bal_thread_logger,
                   "[+0x%04zx] cmp byte ptr [rbp + 0x%X], 0x%X",
                   assembler->offset,
                   offset,
@@ -1294,7 +1292,7 @@ bal_x86_emit_ud2(bal_x86_assembler_t *BAL_RESTRICT assembler)
 
     if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler status != BAL_SUCCESS.");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler status != BAL_SUCCESS.");
         return;
     }
 
@@ -1306,7 +1304,7 @@ bal_x86_emit_ud2(bal_x86_assembler_t *BAL_RESTRICT assembler)
         return;
     }
 
-    BAL_LOG_DEBUG(&assembler->logger, "[+0x%04zx] ud2", assembler->offset);
+    BAL_LOG_DEBUG(&bal_thread_logger, "[+0x%04zx] ud2", assembler->offset);
 
     const size_t old_offset = assembler->offset;
     emit8(assembler->buffer, &assembler->offset, 0x0F);
@@ -1335,13 +1333,13 @@ can_emit(bal_x86_assembler_t *assembler, const size_t size)
 
     if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: Assembler status != BAL_SUCCESS");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: Assembler status != BAL_SUCCESS");
         return false;
     }
 
     if (BAL_UNLIKELY(SIZE_MAX - assembler->offset < size))
     {
-        BAL_LOG_ERROR(&assembler->logger,
+        BAL_LOG_ERROR(&bal_thread_logger,
                       "x86 Assembler Integer Overflow. Current offset: %zu, Requested size: %zu",
                       assembler->offset,
                       size);
@@ -1353,7 +1351,7 @@ can_emit(bal_x86_assembler_t *assembler, const size_t size)
 
     if (assembler_size > assembler->capacity)
     {
-        BAL_LOG_ERROR(&assembler->logger,
+        BAL_LOG_ERROR(&bal_thread_logger,
                       "x86 Assembler Overflow. Capacity %zu reached",
                       assembler->capacity);
         assembler->status = BAL_ERROR_INSTRUCTION_OVERFLOW;

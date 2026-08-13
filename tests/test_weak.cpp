@@ -29,12 +29,12 @@ extern "C"
         g_assert_override_called = true;
     }
 
-    void bal_logger_init_default(bal_logger_t *logger)
+    void bal_logger_init_default(void)
     {
         g_logger_init_override_called = true;
-        logger->log                   = nullptr;
-        logger->min_level             = BAL_LOG_LEVEL_NONE;
-        logger->user_data             = nullptr;
+        bal_thread_logger.log         = nullptr;
+        bal_thread_logger.min_level   = BAL_LOG_LEVEL_NONE;
+        bal_thread_logger.user_data   = nullptr;
     }
 
     void bal_default_logger(void           *user_data,
@@ -116,10 +116,9 @@ TEST(WeakSymbolsTest, AssertOverride)
 TEST(WeakSymbolsTest, LoggerInitOverride)
 {
     g_logger_init_override_called = false;
-    bal_logger_t logger           = {};
-    bal_logger_init_default(&logger);
+    bal_logger_init_default();
     EXPECT_TRUE(g_logger_init_override_called);
-    EXPECT_EQ(logger.min_level, BAL_LOG_LEVEL_NONE);
+    EXPECT_EQ(bal_thread_logger.min_level, BAL_LOG_LEVEL_NONE);
 }
 
 TEST(WeakSymbolsTest, DefaultLoggerOverride)

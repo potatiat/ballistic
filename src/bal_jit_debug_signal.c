@@ -59,13 +59,13 @@ bal_jit_debug_register_signal_handler(bal_jit_debug_context_t *BAL_RESTRICT cont
 
     if (NULL == jit_buffer_start)
     {
-        BAL_LOG_ERROR(&context->logger, "Aborting function: jit_buffer_start is NULL.");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: jit_buffer_start is NULL.");
         return invalid_argument;
     }
 
     if (0 == jit_buffer_size)
     {
-        BAL_LOG_ERROR(&context->logger, "Aborting function: jit_buffer_size == 0.");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: jit_buffer_size == 0.");
         return invalid_argument;
     }
 
@@ -81,14 +81,14 @@ bal_jit_debug_register_signal_handler(bal_jit_debug_context_t *BAL_RESTRICT cont
 
     if (sigaction(SIGSEGV, &sa, NULL) != 0)
     {
-        BAL_LOG_ERROR(&context->logger,
+        BAL_LOG_ERROR(&bal_thread_logger,
                       "Aborting function: failed to register SIGSEGV signal handler");
         return BAL_ERROR_ALLOCATION_FAILED;
     }
 
     if (sigaction(SIGILL, &sa, NULL) != 0)
     {
-        BAL_LOG_ERROR(&context->logger,
+        BAL_LOG_ERROR(&bal_thread_logger,
                       "Aborting function: failed to register SIGKILL signal handler");
         return BAL_ERROR_ALLOCATION_FAILED;
     }
@@ -97,7 +97,8 @@ bal_jit_debug_register_signal_handler(bal_jit_debug_context_t *BAL_RESTRICT cont
 
     if (NULL == AddVectoredExceptionHandler(1, segv_handler))
     {
-        BAL_LOG_ERROR(&context->logger, "Aborting function: AddVectoredExceptionHandler() failed.");
+        BAL_LOG_ERROR(&bal_thread_logger,
+                      "Aborting function: AddVectoredExceptionHandler() failed.");
         return BAL_ERROR_ALLOCATION_FAILED;
     }
 
@@ -158,7 +159,7 @@ handle_jit_fault(const uint64_t rip, const uint64_t rbp)
 
     if (NULL == context->entries)
     {
-        BAL_LOG_ERROR(&context->logger, "Aborting function: context->entries is NULL.");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: context->entries is NULL.");
         return false;
     }
 
@@ -189,7 +190,7 @@ handle_jit_fault(const uint64_t rip, const uint64_t rbp)
             if (NULL == context->crash_callback)
             {
                 BAL_LOG_ERROR(
-                    &context->logger,
+                    &bal_thread_logger,
                     "JIT CRASH! Host RIP: 0x%llX | JIT Buffer Offset: 0x%X | Guest PC: 0x%llX",
                     (unsigned long long)rip,
                     buffer_offset,
@@ -211,7 +212,7 @@ handle_jit_fault(const uint64_t rip, const uint64_t rbp)
 
     if (rip >= (uintptr_t)context->jit_buffer_start && rip < (uintptr_t)context->jit_buffer_end)
     {
-        BAL_LOG_ERROR(&context->logger,
+        BAL_LOG_ERROR(&bal_thread_logger,
                       "JIT CRASH in UNKNOWN block! Host RIP: 0x%llX (Buffer: %p - %p)",
                       (unsigned long long)rip,
                       context->jit_buffer_start,

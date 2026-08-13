@@ -41,10 +41,10 @@ bal_log_message(const bal_logger_t   *logger,
 }
 
 BAL_WEAK void
-bal_logger_init_default(bal_logger_t *logger)
+bal_logger_init_default(void)
 {
-    logger->log       = bal_default_logger;
-    logger->min_level = BAL_LOG_LEVEL_TRACE;
+    bal_thread_logger.log       = bal_default_logger;
+    bal_thread_logger.min_level = BAL_LOG_LEVEL_TRACE;
 }
 
 void

@@ -10,51 +10,46 @@ class Backendx86Assembler : public testing::Test
 protected:
     uint8_t                 buffer[1024]      = {};
     bal_executable_buffer_t executable_buffer = { buffer, buffer };
-    bal_logger_t            logger            = {};
     bal_x86_assembler_t     assembler         = {};
 
     void SetUp() override
     {
         memset(&buffer, 0, sizeof(executable_buffer));
-        memset(&logger, 0, sizeof(bal_logger_t));
         memset(&assembler, 0, sizeof(bal_x86_assembler_t));
-        bal_logger_init_default(&logger);
         const bal_error_t error
-            = bal_x86_assembler_init(&assembler, executable_buffer, sizeof(buffer), logger);
+            = bal_x86_assembler_init(&assembler, executable_buffer, sizeof(buffer));
         ASSERT_EQ(error, error);
     }
 };
 
 TEST_F(Backendx86Assembler, Init_NullAssembler)
 {
-    EXPECT_EQ(bal_x86_assembler_init(nullptr, executable_buffer, 100, logger),
-              BAL_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(bal_x86_assembler_init(nullptr, executable_buffer, 100), BAL_ERROR_INVALID_ARGUMENT);
 }
 
 TEST_F(Backendx86Assembler, Init_NullBuffer)
 {
     bal_x86_assembler_t local_assembler;
     executable_buffer.rw_pointer = nullptr;
-    EXPECT_EQ(bal_x86_assembler_init(&local_assembler, executable_buffer, 100, logger),
+    EXPECT_EQ(bal_x86_assembler_init(&local_assembler, executable_buffer, 100),
               BAL_ERROR_INVALID_ARGUMENT);
     executable_buffer.rw_pointer = buffer;
     executable_buffer.rx_pointer = nullptr;
-    EXPECT_EQ(bal_x86_assembler_init(&local_assembler, executable_buffer, 100, logger),
+    EXPECT_EQ(bal_x86_assembler_init(&local_assembler, executable_buffer, 100),
               BAL_ERROR_INVALID_ARGUMENT);
 }
 
 TEST_F(Backendx86Assembler, Init_ZeroSize)
 {
     bal_x86_assembler_t local_assembler;
-    EXPECT_EQ(bal_x86_assembler_init(&local_assembler, executable_buffer, 0, logger),
+    EXPECT_EQ(bal_x86_assembler_init(&local_assembler, executable_buffer, 0),
               BAL_ERROR_INVALID_ARGUMENT);
 }
 
 TEST_F(Backendx86Assembler, Init_Success)
 {
     bal_x86_assembler_t local_assembler;
-    EXPECT_EQ(bal_x86_assembler_init(&local_assembler, executable_buffer, 100, logger),
-              BAL_SUCCESS);
+    EXPECT_EQ(bal_x86_assembler_init(&local_assembler, executable_buffer, 100), BAL_SUCCESS);
     EXPECT_EQ(local_assembler.capacity, 100);
     EXPECT_EQ(local_assembler.offset, 0);
     EXPECT_EQ(local_assembler.status, BAL_SUCCESS);

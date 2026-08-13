@@ -11,19 +11,18 @@ protected:
     bal_allocator_t         allocator = {};
     char                    pad0[56]  = {};
     bal_jit_debug_context_t context   = {};
-    bal_logger_t            logger    = {};
-    char                    pad1[40]  = {};
+    char                    pad1[64]  = {};
 
     void SetUp() override
     {
         bal_allocator_default_init(&allocator);
-        bal_logger_init_default(&logger);
+        bal_logger_init_default();
     }
 };
 
 TEST_F(JitDebug, Init_Success)
 {
-    EXPECT_EQ(bal_jit_debug_init(&allocator, &context, logger), BAL_SUCCESS);
+    EXPECT_EQ(bal_jit_debug_init(&allocator, &context), BAL_SUCCESS);
     EXPECT_NE(context.entries, nullptr);
     EXPECT_NE(context.metadata_arena, nullptr);
     EXPECT_EQ(context.entry_capacity, BAL_JIT_DEBUG_ENTRY_CAPACITY);
@@ -34,7 +33,7 @@ TEST_F(JitDebug, Init_Success)
 
 TEST_F(JitDebug, Destroy_Success)
 {
-    bal_jit_debug_init(&allocator, &context, logger);
+    bal_jit_debug_init(&allocator, &context);
     bal_jit_debug_destroy(&allocator, &context);
     EXPECT_EQ(context.entries, nullptr);
     EXPECT_EQ(context.metadata_arena, nullptr);
@@ -43,7 +42,7 @@ TEST_F(JitDebug, Destroy_Success)
 
 TEST_F(JitDebug, AddBlock_Success)
 {
-    bal_jit_debug_init(&allocator, &context, logger);
+    bal_jit_debug_init(&allocator, &context);
     const bal_jit_instruction_map_t map      = { 0, 0 };
     const auto                      dummy_rx = reinterpret_cast<void *>(0x1000);
 
@@ -58,7 +57,7 @@ TEST_F(JitDebug, AddBlock_Success)
 
 TEST_F(JitDebug, SignalRegistration_Success)
 {
-    bal_jit_debug_init(&allocator, &context, logger);
+    bal_jit_debug_init(&allocator, &context);
     auto dummy_buffer = reinterpret_cast<void *>(0x3000);
 
     EXPECT_EQ(bal_jit_debug_register_signal_handler(&context, dummy_buffer, 4096), BAL_SUCCESS);
@@ -71,7 +70,7 @@ TEST_F(JitDebug, SignalRegistration_Success)
 
 TEST_F(JitDebug, SignalUnregistration_Success)
 {
-    bal_jit_debug_init(&allocator, &context, logger);
+    bal_jit_debug_init(&allocator, &context);
     const auto dummy_buffer = reinterpret_cast<void *>(0x3000);
     bal_jit_debug_register_signal_handler(&context, dummy_buffer, 4096);
     bal_jit_debug_unregister_signal_handler(&context);
@@ -86,7 +85,7 @@ TEST_F(JitDebug, CrashAtBufferStart_Success)
     const uint64_t                  base_guest_pc = 0x80000000;
     const bal_jit_instruction_map_t mappings[]    = { { 0, 0 }, { 16, 4 }, { 32, 8 } };
 
-    bal_error_t error = bal_jit_debug_init(&allocator, &context, logger);
+    bal_error_t error = bal_jit_debug_init(&allocator, &context);
     ASSERT_EQ(error, BAL_SUCCESS);
 
     error = bal_jit_debug_add_block(
@@ -107,7 +106,7 @@ TEST_F(JitDebug, CrashAtBufferOffset_Success)
     const uint64_t                  base_guest_pc = 0x80001000;
     const bal_jit_instruction_map_t mappings[]    = { { 0, 0 }, { 10, 4 }, { 20, 8 } };
 
-    bal_error_t error = bal_jit_debug_init(&allocator, &context, logger);
+    bal_error_t error = bal_jit_debug_init(&allocator, &context);
     ASSERT_EQ(error, BAL_SUCCESS);
 
     error = bal_jit_debug_add_block(
@@ -148,7 +147,7 @@ TEST_F(JitDebug, CrashWithCustomCallback_Success)
     const uint64_t                  base_guest_pc = 0x80002000;
     const bal_jit_instruction_map_t mappings[]    = { { 0, 0 }, { 10, 4 }, { 20, 8 } };
 
-    bal_error_t error = bal_jit_debug_init(&allocator, &context, logger);
+    bal_error_t error = bal_jit_debug_init(&allocator, &context);
     ASSERT_EQ(error, BAL_SUCCESS);
 
     error = bal_jit_debug_add_block(
@@ -175,7 +174,7 @@ TEST_F(JitDebug, ArenaCapacityExactFit_Success)
 
     const std::vector<bal_jit_instruction_map_t> mappings(instruction_count);
     uint8_t                                      dummy_block[64];
-    bal_error_t error = bal_jit_debug_init(&allocator, &context, logger);
+    bal_error_t                                  error = bal_jit_debug_init(&allocator, &context);
     ASSERT_EQ(error, BAL_SUCCESS);
 
     error = bal_jit_debug_add_block(
@@ -191,7 +190,7 @@ TEST_F(JitDebug, ArenaCapacityExactFitWithLoop_Success)
 {
     uint8_t                         dummy_block[64];
     const bal_jit_instruction_map_t mapping = { 0, 0 };
-    bal_error_t                     error   = bal_jit_debug_init(&allocator, &context, logger);
+    bal_error_t                     error   = bal_jit_debug_init(&allocator, &context);
     EXPECT_EQ(error, BAL_SUCCESS);
 
     for (size_t i = 0; i < 8192; ++i)
@@ -211,7 +210,7 @@ TEST_F(JitDebug, ArenaCapacityOverflow_Failure)
     const std::vector<bal_jit_instruction_map_t> mappings(instruction_count);
     uint8_t                                      dummy_block[64];
     const size_t                                 old_offset = context.arena_offset;
-    bal_error_t error = bal_jit_debug_init(&allocator, &context, logger);
+    bal_error_t                                  error = bal_jit_debug_init(&allocator, &context);
     EXPECT_EQ(error, BAL_SUCCESS);
 
     error = bal_jit_debug_add_block(
@@ -226,7 +225,7 @@ TEST_F(JitDebug, ArenaCapacityOverflowWithLoop_Failure)
 {
     uint8_t                         dummy_block[64];
     const bal_jit_instruction_map_t mapping = { 0, 0 };
-    bal_error_t                     error   = bal_jit_debug_init(&allocator, &context, logger);
+    bal_error_t                     error   = bal_jit_debug_init(&allocator, &context);
     ASSERT_EQ(error, BAL_SUCCESS);
 
     for (size_t i = 0; i < 8192; ++i)
@@ -245,7 +244,7 @@ TEST_F(JitDebug, ArenaCapacityOverflowWithLoop_Failure)
 
 TEST_F(JitDebug, ArenaOddThenEvenMappingsAlignmentPreserved_Success)
 {
-    bal_error_t error = bal_jit_debug_init(&allocator, &context, logger);
+    bal_error_t error = bal_jit_debug_init(&allocator, &context);
     ASSERT_EQ(error, BAL_SUCCESS);
     uint8_t block_a[64];
     uint8_t block_b[64];
@@ -270,7 +269,7 @@ TEST_F(JitDebug, ArenaOddThenEvenMappingsAlignmentPreserved_Success)
 
 TEST_F(JitDebug, ArenaSingleMapppingAlignmentPreserved_Success)
 {
-    bal_error_t error = bal_jit_debug_init(&allocator, &context, logger);
+    bal_error_t error = bal_jit_debug_init(&allocator, &context);
     ASSERT_EQ(error, BAL_SUCCESS);
 
     uint8_t                         block[64];
@@ -287,7 +286,7 @@ TEST_F(JitDebug, InstructionCountMin_Success)
 {
     uint8_t                         dummy_block[64];
     const bal_jit_instruction_map_t mapping = { 0, 0 };
-    bal_error_t                     error   = bal_jit_debug_init(&allocator, &context, logger);
+    bal_error_t                     error   = bal_jit_debug_init(&allocator, &context);
     ASSERT_EQ(error, BAL_SUCCESS);
 
     error
@@ -301,7 +300,7 @@ TEST_F(JitDebug, InstructionCountMax_Failure)
 {
     uint8_t                         dummy_block[64];
     const bal_jit_instruction_map_t mapping = { 0, 0 };
-    bal_error_t                     error   = bal_jit_debug_init(&allocator, &context, logger);
+    bal_error_t                     error   = bal_jit_debug_init(&allocator, &context);
     ASSERT_EQ(error, BAL_SUCCESS);
 
     error = bal_jit_debug_add_block(
@@ -315,7 +314,7 @@ TEST_F(JitDebug, InstructionCountZero_Failure)
 {
     uint8_t                         dummy_block[64];
     const bal_jit_instruction_map_t map   = { 0, 0 };
-    bal_error_t                     error = bal_jit_debug_init(&allocator, &context, logger);
+    bal_error_t                     error = bal_jit_debug_init(&allocator, &context);
     ASSERT_EQ(error, BAL_SUCCESS);
 
     error = bal_jit_debug_add_block(&context, dummy_block, sizeof(dummy_block), 0x2000, &map, 0);
@@ -328,7 +327,7 @@ TEST_F(JitDebug, InstructionCountZero_Failure)
 TEST_F(JitDebug, JitBufferRIPBoundaries_Success)
 {
     uint8_t           dummy_buffer[100];
-    const bal_error_t error  = bal_jit_debug_init(&allocator, &context, logger);
+    const bal_error_t error  = bal_jit_debug_init(&allocator, &context);
     context.jit_buffer_start = dummy_buffer;
     context.jit_buffer_end   = dummy_buffer + 100;
     ASSERT_EQ(error, BAL_SUCCESS);
@@ -350,9 +349,9 @@ TEST_F(JitDebug, JitBufferRIPBoundaries_Success)
 
 TEST_F(JitDebug, NullPointer_Failure)
 {
-    EXPECT_EQ(bal_jit_debug_init(nullptr, &context, logger), BAL_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(bal_jit_debug_init(&allocator, nullptr, logger), BAL_ERROR_INVALID_ARGUMENT);
-    ASSERT_EQ(bal_jit_debug_init(&allocator, &context, logger), BAL_SUCCESS);
+    EXPECT_EQ(bal_jit_debug_init(nullptr, &context), BAL_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(bal_jit_debug_init(&allocator, nullptr), BAL_ERROR_INVALID_ARGUMENT);
+    ASSERT_EQ(bal_jit_debug_init(&allocator, &context), BAL_SUCCESS);
 
     const bal_jit_instruction_map_t map      = { 0, 0 };
     const auto                      dummy_rx = reinterpret_cast<void *>(0x1000);
@@ -378,14 +377,14 @@ TEST_F(JitDebug, InitOOM_Failure)
     oom_allocator.allocate
         = [](bal_allocator_handle_t, size_t, size_t) -> void * { return nullptr; };
 
-    EXPECT_EQ(bal_jit_debug_init(&oom_allocator, &context, logger), BAL_ERROR_ALLOCATION_FAILED);
+    EXPECT_EQ(bal_jit_debug_init(&oom_allocator, &context), BAL_ERROR_ALLOCATION_FAILED);
     EXPECT_EQ(context.entries, nullptr);
     EXPECT_EQ(context.metadata_arena, nullptr);
 }
 
 TEST_F(JitDebug, CorruptedCPUContext_Failure)
 {
-    bal_jit_debug_init(&allocator, &context, logger);
+    bal_jit_debug_init(&allocator, &context);
     const auto dummy_buffer = reinterpret_cast<void *>(0x3000);
     bal_jit_debug_register_signal_handler(&context, dummy_buffer, 4096);
 
@@ -409,7 +408,7 @@ TEST_F(JitDebug, NullDebugContextInCPU_Failure)
 TEST_F(JitDebug, MappingLoop_BreakOnFirstMapping_Success)
 {
     uint8_t     dummy_block[128];
-    bal_error_t error = bal_jit_debug_init(&allocator, &context, logger);
+    bal_error_t error = bal_jit_debug_init(&allocator, &context);
     ASSERT_EQ(error, BAL_SUCCESS);
 
     const bal_jit_instruction_map_t mappings[] = { { 16, 0 }, { 32, 4 }, { 64, 8 } };
@@ -427,7 +426,7 @@ TEST_F(JitDebug, MappingLoop_BreakOnFirstMapping_Success)
 TEST_F(JitDebug, MappingLoop_BreakOnMiddleMapping_Success)
 {
     uint8_t     dummy_block[128];
-    bal_error_t error = bal_jit_debug_init(&allocator, &context, logger);
+    bal_error_t error = bal_jit_debug_init(&allocator, &context);
     ASSERT_EQ(error, BAL_SUCCESS);
 
     const bal_jit_instruction_map_t mappings[] = { { 16, 0 }, { 32, 4 }, { 64, 8 } };
@@ -445,7 +444,7 @@ TEST_F(JitDebug, MappingLoop_BreakOnMiddleMapping_Success)
 TEST_F(JitDebug, MappingLoop_BreakAtLastMapping_Success)
 {
     uint8_t     dummy_block[128];
-    bal_error_t error = bal_jit_debug_init(&allocator, &context, logger);
+    bal_error_t error = bal_jit_debug_init(&allocator, &context);
     ASSERT_EQ(error, BAL_SUCCESS);
 
     const bal_jit_instruction_map_t mappings[] = { { 16, 0 }, { 32, 4 }, { 64, 8 } };

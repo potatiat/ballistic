@@ -19,10 +19,10 @@ protected:
         (void)std::memset(&logger, 0, sizeof(bal_logger_t));
         (void)std::memset(&assembler, 0, sizeof(bal_x86_assembler_t));
         (void)std::memset(&window, 0, sizeof(bal_sliding_window_t));
-        bal_logger_init_default(&logger);
+        bal_logger_init_default();
         const bal_executable_buffer_t executable_buffer = { buffer, buffer };
         const bal_error_t             error
-            = bal_x86_assembler_init(&assembler, executable_buffer, BUFFER_SIZE, logger);
+            = bal_x86_assembler_init(&assembler, executable_buffer, BUFFER_SIZE);
         ASSERT_EQ(error, BAL_SUCCESS);
     }
 

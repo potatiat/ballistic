@@ -26,10 +26,9 @@ BAL_WEAK BAL_HOT const uint8_t *bal_flat_translation_interface_translate(void *,
 
 typedef struct
 {
-    uint8_t     *host;
-    size_t       size;
-    bal_logger_t logger;
-    char         _pad[8];
+    uint8_t *host;
+    size_t   size;
+    char     _pad[16];
 } flat_translation_interface_t;
 
 static_assert(0 == sizeof(flat_translation_interface_t) % 16, "Struct must be aligned to 16 bytes");
@@ -50,13 +49,12 @@ BAL_COLD bal_error_t
 bal_flat_translation_interface_init(bal_allocator_t *BAL_RESTRICT        allocator,
                                     bal_memory_interface_t *BAL_RESTRICT interface,
                                     void *BAL_RESTRICT                   buffer,
-                                    const size_t                         size,
-                                    const bal_logger_t                   logger)
+                                    const size_t                         size)
 
 {
     if (NULL == allocator || NULL == interface || NULL == buffer || 0 == size)
     {
-        BAL_LOG_ERROR(&logger,
+        BAL_LOG_ERROR(&bal_thread_logger,
                       "Memory init failed. Invalid arguments (Allocator: %p, Interface: %p, "
                       "Buffer: %p, Size: %zu).",
                       allocator,
@@ -67,15 +65,17 @@ bal_flat_translation_interface_init(bal_allocator_t *BAL_RESTRICT        allocat
         return BAL_ERROR_INVALID_ARGUMENT;
     }
 
-    BAL_LOG_INFO(
-        &logger, "Initializing Flat Memory Model. Base: %p, Size: %zu bytes.", buffer, size);
+    BAL_LOG_INFO(&bal_thread_logger,
+                 "Initializing Flat Memory Model. Base: %p, Size: %zu bytes.",
+                 buffer,
+                 size);
 
     // ABI compliant 16-byte memory alignment.
     const size_t memory_alignment = 15U;
 
     if (((uintptr_t)buffer & memory_alignment) != 0)
     {
-        BAL_LOG_ERROR(&logger, "Buffer %p is not 16-byte aligned.", buffer);
+        BAL_LOG_ERROR(&bal_thread_logger, "Buffer %p is not 16-byte aligned.", buffer);
         return BAL_ERROR_MEMORY_ALIGNMENT;
     }
 
@@ -85,19 +85,19 @@ bal_flat_translation_interface_init(bal_allocator_t *BAL_RESTRICT        allocat
 
     if (NULL == flat_interface)
     {
-        BAL_LOG_ERROR(&logger,
+        BAL_LOG_ERROR(&bal_thread_logger,
                       "Failed to allocate interface context (%zu bytes).",
                       sizeof(flat_translation_interface_t));
         return BAL_ERROR_ALLOCATION_FAILED;
     }
 
-    flat_interface->host   = (uint8_t *)buffer;
-    flat_interface->size   = size;
-    flat_interface->logger = logger;
-    interface->context     = flat_interface;
-    interface->translate   = bal_flat_translation_interface_translate;
+    flat_interface->host = (uint8_t *)buffer;
+    flat_interface->size = size;
+    interface->context   = flat_interface;
+    interface->translate = bal_flat_translation_interface_translate;
 
-    BAL_LOG_INFO(&logger, "Flat interface created successfully at %p.", (void *)flat_interface);
+    BAL_LOG_INFO(
+        &bal_thread_logger, "Flat interface created successfully at %p.", (void *)flat_interface);
 
     return BAL_SUCCESS;
 }
@@ -455,7 +455,7 @@ bal_flat_translation_interface_translate(void *BAL_RESTRICT   interface,
     //
     if (guest_address >= context->size)
     {
-        BAL_LOG_ERROR(&context->logger,
+        BAL_LOG_ERROR(&bal_thread_logger,
                       "GVA 0x%llX Out of bounds (Limit: 0x%llX)",
                       (unsigned long long)guest_address,
                       (unsigned long long)context->size);
@@ -465,7 +465,7 @@ bal_flat_translation_interface_translate(void *BAL_RESTRICT   interface,
     *max_readable_size          = context->size - guest_address;
     const uint8_t *host_address = context->host + guest_address;
 
-    BAL_LOG_TRACE(&context->logger,
+    BAL_LOG_TRACE(&bal_thread_logger,
                   "Translate 0x%llx -> Host %p",
                   (unsigned long long)guest_address,
                   (void *)host_address);

@@ -59,18 +59,18 @@ bal_sliding_window_init(bal_sliding_window_t *BAL_RESTRICT window,
 
     if (BAL_UNLIKELY(NULL == window))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: window is NULL");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: window is NULL");
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return assembler->status;
     }
 
     if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler status != BAL_SUCCESS");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler status != BAL_SUCCESS");
         return assembler->status;
     }
 
-    BAL_LOG_INFO(&assembler->logger, "Initializing sliding window");
+    BAL_LOG_INFO(&bal_thread_logger, "Initializing sliding window");
     memset(window, 0, sizeof(*window));
     window->assembler = assembler;
     return BAL_SUCCESS;
@@ -107,7 +107,7 @@ bal_sliding_window_push(bal_sliding_window_t *BAL_RESTRICT window, const bal_x86
 
     if (BAL_UNLIKELY(window_count == BAL_SLIDING_WINDOW_CAPACITY))
     {
-        BAL_LOG_DEBUG(&assembler->logger,
+        BAL_LOG_DEBUG(&bal_thread_logger,
                       "Sliding window capacity reached (%d), flushing macros",
                       BAL_SLIDING_WINDOW_CAPACITY);
         const bal_x86_macro_t *BAL_RESTRICT macro_cursor = window->macros;
@@ -122,7 +122,7 @@ bal_sliding_window_push(bal_sliding_window_t *BAL_RESTRICT window, const bal_x86
 
 #ifndef NDEBUG
 
-    BAL_LOG_DEBUG(&assembler->logger,
+    BAL_LOG_DEBUG(&bal_thread_logger,
                   "Pushing macro opcode %s (dest: r%d, src: r%d, imm/off: 0x%llX)",
                   bal_x86_macro_opcode_to_string(macro.opcode),
                   macro.destination,
@@ -174,14 +174,14 @@ flush_single_macro(bal_x86_assembler_t *BAL_RESTRICT   assembler,
 
     if (BAL_UNLIKELY(NULL == macro))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: macro is NULL");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: macro is NULL");
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
 
     if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler status != BAL_SUCCESS");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler status != BAL_SUCCESS");
         return;
     }
 
@@ -193,7 +193,7 @@ flush_single_macro(bal_x86_assembler_t *BAL_RESTRICT   assembler,
     switch (opcode)
     {
         case BAL_X86_MACRO_NOP:
-            BAL_LOG_DEBUG(&assembler->logger, "Flush skipped: NOP macro");
+            BAL_LOG_DEBUG(&bal_thread_logger, "Flush skipped: NOP macro");
             break;
         case BAL_X86_MACRO_ADD_CPU_ICOUNT:
             // WARNING: Cast of offset (size_t) to int32_t is safe because the bal_cpu_t struct
@@ -221,7 +221,7 @@ flush_single_macro(bal_x86_assembler_t *BAL_RESTRICT   assembler,
             }
             else
             {
-                BAL_LOG_ERROR(&assembler->logger,
+                BAL_LOG_ERROR(&bal_thread_logger,
                               "[+0x%04zu] Relative jump offset 0x%X out of bounds for `jcc rel32`",
                               assembler->offset,
                               immediate_or_offset);
@@ -239,7 +239,7 @@ flush_single_macro(bal_x86_assembler_t *BAL_RESTRICT   assembler,
             }
             else
             {
-                BAL_LOG_ERROR(&assembler->logger,
+                BAL_LOG_ERROR(&bal_thread_logger,
                               "[+0x%04zu] Relative jump offset 0x%X out of bounds for `jmp rel32`",
                               assembler->offset,
                               immediate_or_offset);
@@ -284,7 +284,7 @@ flush_single_macro(bal_x86_assembler_t *BAL_RESTRICT   assembler,
             break;
         default:
             BAL_LOG_ERROR(
-                &assembler->logger, "Aborting function: Unknown x86 macro opcode: %d", opcode);
+                &bal_thread_logger, "Aborting function: Unknown x86 macro opcode: %d", opcode);
             break;
     }
 }
@@ -301,30 +301,27 @@ run_peephole_optimizer(bal_sliding_window_t *BAL_RESTRICT window)
 
     if (0 == count)
     {
-        BAL_LOG_WARN(&window->assembler->logger, "Aborting function: window is empty");
+        BAL_LOG_WARN(&bal_thread_logger, "Aborting function: window is empty");
         return;
     }
 
     if (BAL_UNLIKELY(window->assembler->status != BAL_SUCCESS))
     {
-        BAL_LOG_ERROR(&window->assembler->logger,
-                      "Aborting function: Assembler status != BAL_SUCCESS");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: Assembler status != BAL_SUCCESS");
         return;
     }
 
-    const bal_logger_t *BAL_RESTRICT logger             = &window->assembler->logger;
-    bal_x86_macro_t *BAL_RESTRICT    macro1             = &window->macros[window->count - 1];
-    const bal_x86_macro_opcode_t     macro1_opcode      = macro1->opcode;
-    const bal_x86_register_t         macro1_destination = macro1->destination;
-    const bal_x86_register_t         macro1_source      = macro1->source;
+    bal_x86_macro_t *BAL_RESTRICT macro1             = &window->macros[window->count - 1];
+    const bal_x86_macro_opcode_t  macro1_opcode      = macro1->opcode;
+    const bal_x86_register_t      macro1_destination = macro1->destination;
+    const bal_x86_register_t      macro1_source      = macro1->source;
 
     // PEEPHOLE 1: Identity Move (mov rax, rax).
     if (BAL_UNLIKELY(BAL_X86_MACRO_MOV_REGISTER_REGISTER == macro1_opcode
                      && macro1_destination == macro1_source))
     {
         // WARNING: Prevents unsued local variable compiler warning.
-        (void)logger;
-        BAL_LOG_DEBUG(logger,
+        BAL_LOG_DEBUG(&bal_thread_logger,
                       "Peephole: Killed identity MOV (r%d -> r%d)",
                       macro1_source,
                       macro1_destination);
@@ -348,7 +345,7 @@ run_peephole_optimizer(bal_sliding_window_t *BAL_RESTRICT window)
     {
         if (macro1_destination == macro2_destination && macro1_source == macro2_source)
         {
-            BAL_LOG_DEBUG(logger,
+            BAL_LOG_DEBUG(&bal_thread_logger,
                           "Peephole: Killed redundant MOV (r%d -> r%d)",
                           macro1_source,
                           macro1_destination);

@@ -86,34 +86,32 @@ bal_error_t
 bal_tier1_compiler_init(bal_tier1_compiler_t         *compiler,
                         const bal_executable_buffer_t executable_buffer,
                         const size_t                  buffer_size,
-                        const bal_logger_t            logger,
                         bal_jit_debug_context_t      *debug_context)
 {
     if (BAL_UNLIKELY(NULL == compiler))
     {
-        BAL_LOG_ERROR(&logger, "Aborting function: compiler is NULL");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: compiler is NULL");
         return BAL_ERROR_INVALID_ARGUMENT;
     }
 
     if (BAL_UNLIKELY(NULL == executable_buffer.rw_pointer)
         || BAL_UNLIKELY(NULL == executable_buffer.rx_pointer))
     {
-        BAL_LOG_ERROR(&logger, "Aborting function: executable_buffer is NULL");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: executable_buffer is NULL");
         compiler->status = BAL_ERROR_INVALID_ARGUMENT;
         return compiler->status;
     }
 
     if (BAL_UNLIKELY(0 == buffer_size))
     {
-        BAL_LOG_ERROR(&logger, "Aborting function: buffer_size is 0");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: buffer_size is 0");
         compiler->status = BAL_ERROR_INVALID_ARGUMENT;
         return compiler->status;
     }
 
     compiler->debug_context = debug_context;
-    compiler->logger        = logger;
     bal_error_t error
-        = bal_x86_assembler_init(&compiler->assembler, executable_buffer, buffer_size, logger);
+        = bal_x86_assembler_init(&compiler->assembler, executable_buffer, buffer_size);
 
     if (BAL_UNLIKELY(error != BAL_SUCCESS))
     {
@@ -156,31 +154,29 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
         return NULL;
     }
 
-    const bal_logger_t *logger = &compiler->logger;
-
     if (BAL_UNLIKELY(NULL == memory_interface))
     {
-        BAL_LOG_ERROR(logger, "Aborting function: memory_interface is NULL");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: memory_interface is NULL");
         compiler->status = BAL_ERROR_INVALID_ARGUMENT;
         return NULL;
     }
 
     if (BAL_UNLIKELY(NULL == memory_interface->translate))
     {
-        BAL_LOG_ERROR(logger, "Aborting function: memory_interface->translate is NULL");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: memory_interface->translate is NULL");
         compiler->status = BAL_ERROR_INVALID_ARGUMENT;
         return NULL;
     }
 
     if (BAL_UNLIKELY(0 == max_instructions))
     {
-        BAL_LOG_INFO(logger, "Aborting function: max Instructions is 0");
+        BAL_LOG_INFO(&bal_thread_logger, "Aborting function: max Instructions is 0");
         compiler->status = BAL_ERROR_INVALID_ARGUMENT;
         return NULL;
     }
 
-    BAL_LOG_INFO(logger, "Starting Tier 1 JIT Compilation");
-    BAL_LOG_INFO(logger,
+    BAL_LOG_INFO(&bal_thread_logger, "Starting Tier 1 JIT Compilation");
+    BAL_LOG_INFO(&bal_thread_logger,
                  "GVA: 0x%016llX | Max Instructions: %zu",
                  (unsigned long long)guest_address,
                  max_instructions);
@@ -214,7 +210,7 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
 
         if (BAL_UNLIKELY(NULL == host_address_base))
         {
-            BAL_LOG_ERROR(logger,
+            BAL_LOG_ERROR(&bal_thread_logger,
                           "Aborting function: memory translation fault at GVA 0x%016llX",
                           (unsigned long long)guest_address);
             compiler->status = BAL_ERROR_MEMORY_FAULT;
@@ -230,7 +226,7 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
         //
         if (BAL_UNLIKELY(0 == max_readable_instructions))
         {
-            BAL_LOG_ERROR(logger,
+            BAL_LOG_ERROR(&bal_thread_logger,
                           "Aborting function: insufficient memory at GVA 0x%016llX. Need 4 bytes "
                           "for an instruction, but only %zu bytes are readable",
                           (unsigned long long)guest_address,
@@ -248,7 +244,7 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
         {
             if (guest_address % 4 != 0)
             {
-                BAL_LOG_ERROR(logger,
+                BAL_LOG_ERROR(&bal_thread_logger,
                               "Aborting function: strict alignment fault at GVA 0x%016llX",
                               (unsigned long)guest_address);
                 compiler->status = BAL_ERROR_PC_ALIGNMENT;
@@ -263,7 +259,7 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
 
             if (BAL_UNLIKELY(NULL == metadata))
             {
-                BAL_LOG_ERROR(logger,
+                BAL_LOG_ERROR(&bal_thread_logger,
                               "Aborting function: failed to decode instruction %08X at GVA 0x%llX",
                               instruction,
                               (unsigned long long)guest_address);
@@ -271,7 +267,7 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                 break;
             }
 
-            BAL_LOG_TRACE(logger,
+            BAL_LOG_TRACE(&bal_thread_logger,
                           "[0X%016llX] %08x : %s",
                           (unsigned long long)guest_address,
                           instruction,
@@ -281,7 +277,7 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
             {
                 if (BAL_UNLIKELY(0 == strncmp(metadata->name, "SVC", 3)))
                 {
-                    BAL_LOG_INFO(logger,
+                    BAL_LOG_INFO(&bal_thread_logger,
                                  "Trapping on SVC instruction at 0x%016llX",
                                  (unsigned long long)guest_address);
                     is_block_terminated = true;
@@ -294,7 +290,7 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                 if (BAL_UNLIKELY((0 == strncmp(metadata->name, "SMC", 3)
                                   || (strncmp(metadata->name, "HVC", 3) == 0))))
                 {
-                    BAL_LOG_INFO(logger,
+                    BAL_LOG_INFO(&bal_thread_logger,
                                  "Trapping on SMC/HVC instruction at 0x%016llX",
                                  (unsigned long long)guest_address);
                     is_block_terminated = true;
@@ -306,7 +302,7 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
             {
                 if (BAL_UNLIKELY(0 == strncmp(metadata->name, "WFI", 3)))
                 {
-                    BAL_LOG_INFO(logger,
+                    BAL_LOG_INFO(&bal_thread_logger,
                                  "WFI instruction encountered at 0x%016llX, yielding to host",
                                  (unsigned long long)guest_address);
                     is_block_terminated = true;
@@ -328,7 +324,7 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                         break;
                     }
 
-                    BAL_LOG_ERROR(logger,
+                    BAL_LOG_ERROR(&bal_thread_logger,
                                   "Aborting function: Invalid CONST instruction detected: %s",
                                   metadata->name);
                     is_block_terminated = true;
@@ -353,7 +349,7 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                         break;
                     }
 
-                    BAL_LOG_ERROR(logger,
+                    BAL_LOG_ERROR(&bal_thread_logger,
                                   "Aborting function: Tier 1 unsupported opcode variant: "
                                   "%s",
                                   metadata->name);
@@ -379,7 +375,7 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                     is_block_terminated = true;
                     break;
                 case OPCODE_RETURN:
-                    BAL_LOG_DEBUG(logger, "Block terminated by RET");
+                    BAL_LOG_DEBUG(&bal_thread_logger, "Block terminated by RET");
                     const uint8_t rn
                         = (uint8_t)extract_operand_value(instruction, &metadata->operands[0]);
                     const bool               skip_load_instruction = false;
@@ -396,7 +392,7 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                     is_block_terminated = true;
                     break;
                 case OPCODE_TRAP:
-                    BAL_LOG_INFO(logger,
+                    BAL_LOG_INFO(&bal_thread_logger,
                                  "Block terminated by TRAP/Unknown instruction: %s: ",
                                  metadata->name);
                     const bal_x86_macro_t ud2_macro = {
@@ -411,7 +407,7 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                     is_block_terminated = true;
                     break;
                 default:
-                    BAL_LOG_ERROR(logger,
+                    BAL_LOG_ERROR(&bal_thread_logger,
                                   " Aborting function: Tier 1 Unsupported Opcode: %s",
                                   metadata->name);
                     compiler->status    = BAL_ERROR_UNKNOWN_INSTRUCTION;
@@ -427,7 +423,8 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                     compiler->status = compiler->assembler.status;
                 }
 
-                BAL_LOG_ERROR(logger, "Status failure during translation: %d", compiler->status);
+                BAL_LOG_ERROR(
+                    &bal_thread_logger, "Status failure during translation: %d", compiler->status);
                 is_block_terminated = true;
                 break;
             }
@@ -445,7 +442,8 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
 
             if (i + 1 == max_instructions)
             {
-                BAL_LOG_WARN(logger, "Max instructions limit reached, terminating block");
+                BAL_LOG_WARN(&bal_thread_logger,
+                             "Max instructions limit reached, terminating block");
                 is_block_terminated = true;
                 break;
             }
@@ -466,7 +464,7 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
     {
         const bal_error_t status
             = compiler->status == BAL_SUCCESS ? compiler->assembler.status : compiler->status;
-        BAL_LOG_ERROR(logger,
+        BAL_LOG_ERROR(&bal_thread_logger,
                       "Aborting function: block assembly was truncated due to error: %s",
                       bal_error_to_string(status));
         return NULL;
@@ -484,8 +482,9 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                                 mapping_count);
     }
 
-    BAL_LOG_INFO(
-        logger, "Tier 1 compiled block ends at GVA 0x%016llX", (unsigned long long)guest_address);
+    BAL_LOG_INFO(&bal_thread_logger,
+                 "Tier 1 compiled block ends at GVA 0x%016llX",
+                 (unsigned long long)guest_address);
     return host_address;
 }
 
@@ -497,7 +496,7 @@ reset_register_allocator(bal_tier1_compiler_t *compiler)
         return;
     }
 
-    BAL_LOG_TRACE(&compiler->logger, "Resetting Register Allocator");
+    BAL_LOG_TRACE(&bal_thread_logger, "Resetting Register Allocator");
     compiler->is_dirty = 0;
     memset(compiler->arm_to_x86, -1, sizeof(compiler->arm_to_x86));
     memset(compiler->x86_to_arm, -1, sizeof(compiler->x86_to_arm));
@@ -510,13 +509,13 @@ allocate_x86_register(bal_tier1_compiler_t *compiler,
 {
     if (BAL_UNLIKELY(NULL == compiler))
     {
-        BAL_LOG_ERROR(&compiler->logger, "Aborting function: compiler is NULL");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: compiler is NULL");
         return BAL_X86_INVALID;
     }
 
     if (compiler->arm_to_x86[arm_register] != -1)
     {
-        BAL_LOG_DEBUG(&compiler->logger,
+        BAL_LOG_DEBUG(&bal_thread_logger,
                       "RegAlloc: Hit - ARM X%u is already in x86 r%d",
                       arm_register,
                       compiler->arm_to_x86[arm_register]);
@@ -540,7 +539,7 @@ allocate_x86_register(bal_tier1_compiler_t *compiler,
     if (false == free_register_found)
     {
         // TODO: add spilling
-        BAL_LOG_ERROR(&compiler->logger, "Greedy Allocator ran out of scratch registers!");
+        BAL_LOG_ERROR(&bal_thread_logger, "Greedy Allocator ran out of scratch registers!");
     }
 
     compiler->arm_to_x86[arm_register]  = (int8_t)free_register;
@@ -548,7 +547,7 @@ allocate_x86_register(bal_tier1_compiler_t *compiler,
 
     if (false == skip_load_instruction)
     {
-        BAL_LOG_DEBUG(&compiler->logger,
+        BAL_LOG_DEBUG(&bal_thread_logger,
                       "RegAlloc: Miss - mapped ARM X%u to x86 r%d",
                       arm_register,
                       free_register);
@@ -560,11 +559,11 @@ allocate_x86_register(bal_tier1_compiler_t *compiler,
         };
 
         bal_sliding_window_push(&compiler->window, load_register_macro);
-        BAL_LOG_DEBUG(&compiler->logger, "RegAlloc: emitted LOAD macro for ARM X%u", arm_register);
+        BAL_LOG_DEBUG(&bal_thread_logger, "RegAlloc: emitted LOAD macro for ARM X%u", arm_register);
     }
     else
     {
-        BAL_LOG_DEBUG(&compiler->logger,
+        BAL_LOG_DEBUG(&bal_thread_logger,
                       "RegAlloc: skipped LOAD macro for ARM X%u (write only)",
                       arm_register);
     }
@@ -579,7 +578,7 @@ flush_dirty_registers(bal_tier1_compiler_t *compiler)
         return;
     }
 
-    const bal_logger_t *BAL_RESTRICT logger            = &compiler->logger;
+    const bal_logger_t *BAL_RESTRICT logger            = &bal_thread_logger;
     const uint32_t                   dirty_mask        = compiler->is_dirty;
     const int8_t *BAL_RESTRICT       arm_to_x86_cursor = compiler->arm_to_x86;
 
@@ -594,7 +593,8 @@ flush_dirty_registers(bal_tier1_compiler_t *compiler)
                     .source              = x86_register,
                     .immediate_or_offset = offset,
             };
-            BAL_LOG_DEBUG(logger, "Flush: dirty ARM X%u to x86 r%d", arm_register, x86_register);
+            BAL_LOG_DEBUG(
+                &bal_thread_logger, "Flush: dirty ARM X%u to x86 r%d", arm_register, x86_register);
             (void)logger;
             bal_sliding_window_push(&compiler->window, store_macro);
         }
@@ -615,7 +615,7 @@ terminate_block(bal_tier1_compiler_t *compiler,
         return;
     }
 
-    BAL_LOG_DEBUG(&compiler->logger, "Terminating basic block");
+    BAL_LOG_DEBUG(&bal_thread_logger, "Terminating basic block");
 
     if (engine_flags & BAL_ENGINE_FLAG_INSTRUCTION_COUNTING)
     {
@@ -628,18 +628,18 @@ terminate_block(bal_tier1_compiler_t *compiler,
     }
 
     flush_dirty_registers(compiler);
-    BAL_LOG_TRACE(&compiler->logger, "Flushing sliding window");
+    BAL_LOG_TRACE(&bal_thread_logger, "Flushing sliding window");
     bal_sliding_window_flush_all(&compiler->window);
 
     if (false == is_pc_dynamic)
     {
-        BAL_LOG_TRACE(&compiler->logger, "Updating Guest PC");
+        BAL_LOG_TRACE(&bal_thread_logger, "Updating Guest PC");
         bal_x86_emit_mov_r64_imm64(&compiler->assembler, BAL_X86_RAX, next_pc);
         bal_x86_emit_store_r64_rbp_offset(
             &compiler->assembler, BAL_X86_RAX, offsetof(bal_cpu_t, pc));
     }
 
-    BAL_LOG_TRACE(&compiler->logger, "Restoring host frame pointer and emitting RET");
+    BAL_LOG_TRACE(&bal_thread_logger, "Restoring host frame pointer and emitting RET");
     bal_x86_emit_pop_r64(&compiler->assembler, BAL_X86_RBP);
     bal_x86_emit_ret(&compiler->assembler);
 }
@@ -831,7 +831,7 @@ translate_add_sub_reg(bal_tier1_compiler_t *BAL_RESTRICT                     com
 
     if (BAL_UNLIKELY(shift_amount != 0))
     {
-        BAL_LOG_ERROR(&compiler->logger,
+        BAL_LOG_ERROR(&bal_thread_logger,
                       "Aborting function: Tier 1 does not support shift amounts != 0 yet: %s",
                       metadata->name);
         compiler->status = BAL_ERROR_UNKNOWN_INSTRUCTION;
@@ -992,7 +992,7 @@ translate_b_cond(bal_tier1_compiler_t *BAL_RESTRICT compiler,
             bal_x86_emit_ret(assembler);
             return;
         default:
-            BAL_LOG_ERROR(&compiler->logger, "Unsupported B.cond condition: %u", cond);
+            BAL_LOG_ERROR(&bal_thread_logger, "Unsupported B.cond condition: %u", cond);
             compiler->status = BAL_ERROR_UNKNOWN_INSTRUCTION;
             return;
     }
@@ -1053,7 +1053,7 @@ translate_jump(bal_tier1_compiler_t *BAL_RESTRICT                     compiler,
     *target_pc = guest_address + (uint64_t)offset;
 
     BAL_LOG_DEBUG(
-        &compiler->logger, "Translated JUMP to 0x%016llX", (unsigned long long)*target_pc);
+        &bal_thread_logger, "Translated JUMP to 0x%016llX", (unsigned long long)*target_pc);
 
     // WARNING: Prevents unsued local variable compiler warning.
     (void)compiler;

@@ -118,8 +118,7 @@ BAL_COLD bal_error_t
 bal_engine_init(bal_engine_t *BAL_RESTRICT                 engine,
                 bal_cpu_t *BAL_RESTRICT                    cpu,
                 const bal_allocator_t *BAL_RESTRICT        allocator,
-                const bal_memory_interface_t *BAL_RESTRICT memory_interface,
-                const bal_logger_t                         logger)
+                const bal_memory_interface_t *BAL_RESTRICT memory_interface)
 {
     // Check every pointer that will be used in the Engine.
     // This is tedious, but I currently don't give a fuck. Telling the user exactly what's
@@ -133,77 +132,80 @@ bal_engine_init(bal_engine_t *BAL_RESTRICT                 engine,
 
     if (BAL_UNLIKELY(NULL == cpu))
     {
-        BAL_LOG_ERROR(&logger, "Aborting function: CPU is NULL");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: CPU is NULL");
         engine->status = BAL_ERROR_INVALID_ARGUMENT;
         return engine->status;
     }
 
     if (BAL_UNLIKELY(NULL == allocator))
     {
-        BAL_LOG_ERROR(&logger, "Aborting function: Allocator is NULL");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: Allocator is NULL");
         engine->status = BAL_ERROR_INVALID_ARGUMENT;
         return engine->status;
     }
 
     if (BAL_UNLIKELY(NULL == allocator->allocate))
     {
-        BAL_LOG_ERROR(&logger, "Aborting function: Allocator->Allocate() is NULL");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: Allocator->Allocate() is NULL");
         engine->status = BAL_ERROR_INVALID_ARGUMENT;
         return engine->status;
     }
 
     if (BAL_UNLIKELY(NULL == allocator->free))
     {
-        BAL_LOG_ERROR(&logger, "Aborting function: Allocator->Free() is NULL");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: Allocator->Free() is NULL");
         engine->status = BAL_ERROR_INVALID_ARGUMENT;
         return engine->status;
     }
 
     if (BAL_UNLIKELY(NULL == allocator->allocate_executable))
     {
-        BAL_LOG_ERROR(&logger, "Aborting function: Allocator->Allocate_Executable() is NULL");
+        BAL_LOG_ERROR(&bal_thread_logger,
+                      "Aborting function: Allocator->Allocate_Executable() is NULL");
         engine->status = BAL_ERROR_INVALID_ARGUMENT;
         return engine->status;
     }
 
     if (BAL_UNLIKELY(NULL == allocator->protect_rw))
     {
-        BAL_LOG_ERROR(&logger, "Aborting function: Allocator->Protect_RW() is NULL");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: Allocator->Protect_RW() is NULL");
         engine->status = BAL_ERROR_INVALID_ARGUMENT;
         return engine->status;
     }
 
     if (BAL_UNLIKELY(NULL == allocator->protect_rx))
     {
-        BAL_LOG_ERROR(&logger, "Aborting function: Allocator->Protect_RX() is NULL");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: Allocator->Protect_RX() is NULL");
         engine->status = BAL_ERROR_INVALID_ARGUMENT;
         return engine->status;
     }
 
     if (BAL_UNLIKELY(NULL == allocator->free_executable))
     {
-        BAL_LOG_ERROR(&logger, "Aborting function: Allocator->Free_Executable function is NULL");
+        BAL_LOG_ERROR(&bal_thread_logger,
+                      "Aborting function: Allocator->Free_Executable function is NULL");
         engine->status = BAL_ERROR_INVALID_ARGUMENT;
         return engine->status;
     }
 
     if (BAL_UNLIKELY(NULL == memory_interface))
     {
-        BAL_LOG_ERROR(&logger, "Aborting function: Memory_Interface is NULL");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: Memory_Interface is NULL");
         engine->status = BAL_ERROR_INVALID_ARGUMENT;
         return engine->status;
     }
 
     if (BAL_UNLIKELY(NULL == memory_interface->context))
     {
-        BAL_LOG_ERROR(&logger, "Aborting function: Memory_Interface->Context is NULL");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: Memory_Interface->Context is NULL");
         engine->status = BAL_ERROR_INVALID_ARGUMENT;
         return engine->status;
     }
 
     if (BAL_UNLIKELY(NULL == memory_interface->translate))
     {
-        BAL_LOG_ERROR(&logger, "Aborting function: Memory_Interface->Translate function is NULL");
+        BAL_LOG_ERROR(&bal_thread_logger,
+                      "Aborting function: Memory_Interface->Translate function is NULL");
         engine->status = BAL_ERROR_INVALID_ARGUMENT;
         return engine->status;
     }
@@ -214,7 +216,8 @@ bal_engine_init(bal_engine_t *BAL_RESTRICT                 engine,
 
     if (BAL_UNLIKELY(NULL == internal_engine_state))
     {
-        BAL_LOG_ERROR(&logger, "Aborting function: Failed to allocate Internal Engine State");
+        BAL_LOG_ERROR(&bal_thread_logger,
+                      "Aborting function: Failed to allocate Internal Engine State");
         engine->status = BAL_ERROR_ALLOCATION_FAILED;
         return engine->status;
     }
@@ -227,7 +230,8 @@ bal_engine_init(bal_engine_t *BAL_RESTRICT                 engine,
 
     if (NULL == internal_engine_state->tier1_buffer.rw_pointer)
     {
-        BAL_LOG_ERROR(&logger, "Aborting function: Failed to allocate Internal Tier 1 Buffer");
+        BAL_LOG_ERROR(&bal_thread_logger,
+                      "Aborting function: Failed to allocate Internal Tier 1 Buffer");
         engine->status = BAL_ERROR_ALLOCATION_FAILED;
         return engine->status;
     }
@@ -235,7 +239,7 @@ bal_engine_init(bal_engine_t *BAL_RESTRICT                 engine,
 #if BAL_PLATFORM_LINUX || BAL_PLATFORM_WINDOWS
 
     const bal_error_t debug_status
-        = bal_jit_debug_init(allocator, &internal_engine_state->debug_context, logger);
+        = bal_jit_debug_init(allocator, &internal_engine_state->debug_context);
 
     if (BAL_SUCCESS == debug_status)
     {
@@ -246,7 +250,8 @@ bal_engine_init(bal_engine_t *BAL_RESTRICT                 engine,
     }
     else
     {
-        BAL_LOG_WARN(&logger, "Failed to initialize JIT debug context, debugging disabled.");
+        BAL_LOG_WARN(&bal_thread_logger,
+                     "Failed to initialize JIT debug context, debugging disabled.");
         memset(&internal_engine_state->debug_context, 0, sizeof(bal_jit_debug_context_t));
     }
 
@@ -255,12 +260,11 @@ bal_engine_init(bal_engine_t *BAL_RESTRICT                 engine,
     const bal_error_t status = bal_tier1_compiler_init(&internal_engine_state->tier1_compiler,
                                                        internal_engine_state->tier1_buffer,
                                                        internal_engine_state->tier1_buffer_size,
-                                                       logger,
                                                        &internal_engine_state->debug_context);
 
     if (status != BAL_SUCCESS)
     {
-        BAL_LOG_ERROR(&logger, "Aborting function: Failed to initialize Tier1 Compiler");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: Failed to initialize Tier1 Compiler");
         allocator->free(allocator->context,
                         &internal_engine_state->tier1_buffer,
                         sizeof(internal_engine_state_t));
@@ -277,7 +281,6 @@ bal_engine_init(bal_engine_t *BAL_RESTRICT                 engine,
     engine->allocator        = allocator;
     engine->memory_interface = memory_interface;
     engine->engine_state     = internal_engine_state;
-    engine->logger           = logger;
     engine->status           = BAL_SUCCESS;
     engine->flags            = 0;
     return engine->status;
@@ -295,7 +298,7 @@ bal_engine_run_thread(bal_engine_t *engine)
                                                  memory_order_acq_rel,
                                                  memory_order_acquire))
     {
-        BAL_LOG_ERROR(&engine->logger, "Aborting function: Engine is already running");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: Engine is already running");
         return BAL_ERROR_ENGINE_ALREADY_RUNNING;
     }
 
@@ -304,14 +307,14 @@ bal_engine_run_thread(bal_engine_t *engine)
         if (BAL_UNLIKELY(atomic_load_explicit(&internal_engine_state->thread_state.stop_requested,
                                               memory_order_acquire)))
         {
-            BAL_LOG_INFO(&engine->logger, "Engine stop requested. Exiting execution loop.");
+            BAL_LOG_INFO(&bal_thread_logger, "Engine stop requested. Exiting execution loop.");
             break;
         }
 
         if (BAL_UNLIKELY(atomic_load_explicit(
                 &internal_engine_state->thread_state.clear_cache_requested, memory_order_acquire)))
         {
-            BAL_LOG_INFO(&engine->logger,
+            BAL_LOG_INFO(&bal_thread_logger,
                          "Clear cache requested. Resetting JIT layout and block cache.");
             bal_tier1_compiler_reset(&internal_engine_state->tier1_compiler);
             (void)memset(
@@ -323,7 +326,7 @@ bal_engine_run_thread(bal_engine_t *engine)
 
         if (engine->flags & BAL_ENGINE_FLAG_INTERRUPT_PENDING)
         {
-            BAL_LOG_INFO(&engine->logger, "Interrupt pending, yielding to host.");
+            BAL_LOG_INFO(&bal_thread_logger, "Interrupt pending, yielding to host.");
             engine->flags &= ~BAL_ENGINE_FLAG_INTERRUPT_PENDING;
             break;
         }
@@ -333,7 +336,7 @@ bal_engine_run_thread(bal_engine_t *engine)
 
         if (BAL_UNLIKELY(BAL_ENGINE_SENTINEL == pc))
         {
-            BAL_LOG_INFO(&engine->logger, "Safe exit triggered by sentinel PC value.");
+            BAL_LOG_INFO(&bal_thread_logger, "Safe exit triggered by sentinel PC value.");
             break;
         }
 
@@ -349,7 +352,7 @@ bal_engine_run_thread(bal_engine_t *engine)
             if (engine->flags & BAL_ENGINE_FLAG_LOG_BLOCKS)
             {
                 BAL_LOG_INFO(
-                    &engine->logger, "Fetching block at PC 0x%016llX", (unsigned long long)pc);
+                    &bal_thread_logger, "Fetching block at PC 0x%016llX", (unsigned long long)pc);
             }
 
             engine->allocator->protect_rw(engine->allocator->context,
@@ -373,7 +376,7 @@ bal_engine_run_thread(bal_engine_t *engine)
                 if (internal_engine_state->tier1_compiler.assembler.status
                     == BAL_ERROR_INSTRUCTION_OVERFLOW)
                 {
-                    BAL_LOG_INFO(&engine->logger,
+                    BAL_LOG_INFO(&bal_thread_logger,
                                  "Tier 1 executable buffer full. Resetting JIT layout cache");
                     bal_tier1_compiler_reset(&internal_engine_state->tier1_compiler);
 
@@ -388,7 +391,7 @@ bal_engine_run_thread(bal_engine_t *engine)
 
                 if (BAL_UNLIKELY(NULL == entry_point))
                 {
-                    BAL_LOG_ERROR(&engine->logger,
+                    BAL_LOG_ERROR(&bal_thread_logger,
                                   "Aborting function: Failed to compile block at PC 0x%0llx",
                                   // WARNING: C standard guarantees unsigned long long is at least
                                   // 64 bits wide.
@@ -400,7 +403,7 @@ bal_engine_run_thread(bal_engine_t *engine)
 
             if (BAL_UNLIKELY(NULL == entry_point))
             {
-                BAL_LOG_ERROR(&engine->logger,
+                BAL_LOG_ERROR(&bal_thread_logger,
                               "Aborting function: Failed to compile block at PC 0x%0llX",
                               (unsigned long long)pc);
                 engine->status = internal_engine_state->tier1_compiler.status;
@@ -421,7 +424,7 @@ bal_engine_run_thread(bal_engine_t *engine)
 
         if (engine->flags & BAL_ENGINE_FLAG_LOG_BLOCKS)
         {
-            BAL_LOG_INFO(&engine->logger, "Executing JIT Block at %p", entry_point);
+            BAL_LOG_INFO(&bal_thread_logger, "Executing JIT Block at %p", entry_point);
         }
 
         compiled_block(engine->cpu);
@@ -447,7 +450,7 @@ bal_engine_stop_thread(bal_engine_t *BAL_RESTRICT engine)
 
     if (BAL_UNLIKELY(NULL == engine->engine_state))
     {
-        BAL_LOG_ERROR(&engine->logger, "Aborting function: engine state is NULL");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: engine state is NULL");
         engine->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -492,14 +495,13 @@ bal_engine_destroy(bal_engine_t *engine)
         = (internal_engine_state_t *)engine->engine_state;
 
     const bal_allocator_t *BAL_RESTRICT allocator = engine->allocator;
-    const bal_logger_t                  logger    = engine->logger;
 
     if (NULL != allocator)
     {
         if (NULL != allocator->free_executable
             && NULL != internal_engine_state->tier1_buffer.rw_pointer)
         {
-            BAL_LOG_INFO(&logger, "Freeing Tier 1 executable buffer.");
+            BAL_LOG_INFO(&bal_thread_logger, "Freeing Tier 1 executable buffer.");
             allocator->free_executable(allocator->context,
                                        internal_engine_state->tier1_buffer,
                                        internal_engine_state->tier1_buffer_size);
@@ -507,7 +509,7 @@ bal_engine_destroy(bal_engine_t *engine)
 
         if (NULL != allocator->free)
         {
-            BAL_LOG_INFO(&logger, "Freeing internal engine state.");
+            BAL_LOG_INFO(&bal_thread_logger, "Freeing internal engine state.");
 
 #if BAL_PLATFORM_LINUX || BAL_PLATFORM_WINDOWS
 
@@ -522,7 +524,8 @@ bal_engine_destroy(bal_engine_t *engine)
     }
     else
     {
-        BAL_LOG_WARN(&logger, "Allocator is NULL during engine destroy. Internal memory leaked.");
+        BAL_LOG_WARN(&bal_thread_logger,
+                     "Allocator is NULL during engine destroy. Internal memory leaked.");
     }
 
     memset(engine, 0, sizeof(bal_engine_t));
@@ -538,7 +541,7 @@ bal_engine_is_running(bal_engine_t *engine)
 
     if (BAL_UNLIKELY(NULL == engine->engine_state))
     {
-        BAL_LOG_ERROR(&engine->logger, "Aborting function: engine state is NULL");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: engine state is NULL");
         engine->status = BAL_ERROR_INVALID_ARGUMENT;
         return false;
     }
@@ -558,7 +561,7 @@ bal_engine_clear_cache(bal_engine_t *engine)
 
     if (BAL_UNLIKELY(NULL == engine->engine_state))
     {
-        BAL_LOG_ERROR(&engine->logger, "Aborting function: engine state is NULL");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: engine state is NULL");
         engine->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }

@@ -10,9 +10,7 @@ TEST(EngineIntegration, WhileLoop)
     bal_allocator_t allocator = {};
     bal_allocator_default_init(&allocator);
 
-    bal_logger_t logger = {};
-    bal_logger_init_default(&logger);
-
+    bal_logger_init_default();
     const size_t guest_memory_size = 4096;
     uint32_t    *guest_memory
         = (uint32_t *)allocator.allocate(allocator.context, 16, guest_memory_size);
@@ -21,11 +19,11 @@ TEST(EngineIntegration, WhileLoop)
 
     bal_memory_interface_t memory_interface = {};
     bal_error_t            error            = bal_flat_translation_interface_init(
-        &allocator, &memory_interface, guest_memory, guest_memory_size, logger);
+        &allocator, &memory_interface, guest_memory, guest_memory_size);
     ASSERT_EQ(error, BAL_SUCCESS);
 
     bal_engine_t engine = {};
-    error               = bal_engine_init(&engine, &cpu, &allocator, &memory_interface, logger);
+    error               = bal_engine_init(&engine, &cpu, &allocator, &memory_interface);
     ASSERT_EQ(error, BAL_SUCCESS);
 
     guest_memory[0] = 0xD292D000; // MOVZ X0, #0x9680

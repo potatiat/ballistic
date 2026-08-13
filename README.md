@@ -102,9 +102,7 @@ cmake --build --preset release
 #include <string.h>
 
 // Setup logging and default system allocator.
-bal_logger_t logger = {0};
-bal_logger_init_default(&logger);
-
+bal_logger_init_default();
 bal_allocator_t allocator = {0};
 bal_allocator_default_init(&allocator);
 

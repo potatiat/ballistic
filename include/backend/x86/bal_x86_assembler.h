@@ -2,7 +2,6 @@
 #define BALLISTIC_BAL_X86_ASSEMBLER_H
 
 #include "bal_errors.h"
-#include "bal_log.h"
 #include "bal_memory.h"
 #include <assert.h>
 #include <stddef.h>
@@ -108,14 +107,13 @@ extern "C"
         /// Current byte index in the buffer.
         size_t offset;
 
-        /// Logger instance.
-        bal_logger_t logger;
-
         /// Current error state. If this is not [`BAL_SUCCESS`], all emit calls will fail.
         bal_error_t status;
 
         uint32_t pad;
     } bal_x86_assembler_t;
+
+    static_assert(40 == sizeof(bal_x86_assembler_t), "Struct size mismatch");
 
     /// Initializes the x86-64 assembler with `executable_buffer`.
     ///
@@ -132,8 +130,7 @@ extern "C"
     /// `size` is 0.
     bal_error_t bal_x86_assembler_init(bal_x86_assembler_t    *assembler,
                                        bal_executable_buffer_t executable_buffer,
-                                       size_t                  size,
-                                       bal_logger_t            logger);
+                                       size_t                  size);
 
     /// Resets the assembler back to its initial state.
     ///

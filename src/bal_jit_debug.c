@@ -4,18 +4,17 @@
 
 bal_error_t
 bal_jit_debug_init(const bal_allocator_t *BAL_RESTRICT   allocator,
-                   bal_jit_debug_context_t *BAL_RESTRICT context,
-                   const bal_logger_t                    logger)
+                   bal_jit_debug_context_t *BAL_RESTRICT context)
 {
     if (BAL_UNLIKELY(NULL == context))
     {
-        BAL_LOG_ERROR(&logger, "Aborting function: context is NULL");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: context is NULL");
         return BAL_ERROR_INVALID_ARGUMENT;
     }
 
     if (BAL_UNLIKELY(NULL == allocator))
     {
-        BAL_LOG_ERROR(&logger, "Aborting function: allocator is NULL.");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: allocator is NULL.");
         context->status = BAL_ERROR_INVALID_ARGUMENT;
         return BAL_ERROR_INVALID_ARGUMENT;
     }
@@ -29,7 +28,8 @@ bal_jit_debug_init(const bal_allocator_t *BAL_RESTRICT   allocator,
 
     if (BAL_UNLIKELY(NULL == c.entries))
     {
-        BAL_LOG_ERROR(&logger, "Aborting function: failed to allocate JIT debug block entries");
+        BAL_LOG_ERROR(&bal_thread_logger,
+                      "Aborting function: failed to allocate JIT debug block entries");
         context->status = BAL_ERROR_ALLOCATION_FAILED;
         return BAL_ERROR_ALLOCATION_FAILED;
     }
@@ -40,7 +40,7 @@ bal_jit_debug_init(const bal_allocator_t *BAL_RESTRICT   allocator,
 
     if (BAL_UNLIKELY(NULL == c.metadata_arena))
     {
-        BAL_LOG_ERROR(&logger, "Failed to allocate JIT debug metadata arena.");
+        BAL_LOG_ERROR(&bal_thread_logger, "Failed to allocate JIT debug metadata arena.");
         allocator->free(allocator->context, c.entries, total_entries_size);
         context->status = BAL_ERROR_ALLOCATION_FAILED;
         return BAL_ERROR_ALLOCATION_FAILED;
@@ -51,10 +51,9 @@ bal_jit_debug_init(const bal_allocator_t *BAL_RESTRICT   allocator,
     context->metadata_arena = c.metadata_arena;
     context->entry_capacity = c.entry_capacity;
     context->arena_capacity = c.arena_capacity;
-    context->logger         = logger;
     context->magic          = BAL_JIT_DEBUG_MAGIC_ALIVE;
 
-    BAL_LOG_INFO(&logger,
+    BAL_LOG_INFO(&bal_thread_logger,
                  "JIT Debug Context initialized. Entries Capacity: %zu, Arena: %zu bytes.",
                  context->entry_capacity,
                  context->arena_capacity);
@@ -72,7 +71,7 @@ bal_jit_debug_destroy(const bal_allocator_t *BAL_RESTRICT   allocator,
 
     if (BAL_UNLIKELY(NULL == allocator))
     {
-        BAL_LOG_ERROR(&context->logger, "Aborting function: allocator is NULL.");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: allocator is NULL.");
         return;
     }
 
@@ -111,7 +110,7 @@ bal_jit_debug_add_block(bal_jit_debug_context_t *BAL_RESTRICT         context,
 
     if (BAL_UNLIKELY(context->status != BAL_SUCCESS))
     {
-        BAL_LOG_ERROR(&context->logger, "Aborting function: context->status != BAL_SUCCESS");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: context->status != BAL_SUCCESS");
         return context->status;
     }
 
@@ -119,25 +118,25 @@ bal_jit_debug_add_block(bal_jit_debug_context_t *BAL_RESTRICT         context,
 
     if (BAL_UNLIKELY(NULL == rx_start))
     {
-        BAL_LOG_ERROR(&context->logger, "Aborting function: rx_start is NULL.");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: rx_start is NULL.");
         return invalid_argument;
     }
 
     if (BAL_UNLIKELY(NULL == mapping))
     {
-        BAL_LOG_ERROR(&context->logger, "Aborting function: mapping is NULL.");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: mapping is NULL.");
         return invalid_argument;
     }
 
     if (BAL_UNLIKELY(0 == instruction_count))
     {
-        BAL_LOG_ERROR(&context->logger, "Aborting function: instruction_count == 0");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: instruction_count == 0");
         return invalid_argument;
     }
 
     if (BAL_UNLIKELY(context->entry_count >= context->entry_capacity))
     {
-        BAL_LOG_WARN(&context->logger,
+        BAL_LOG_WARN(&bal_thread_logger,
                      "Aborting function: JIT debug entries full, block tracking skipped.");
         context->status = BAL_ERROR_BUFFER_OVERFLOW;
         return BAL_ERROR_BUFFER_OVERFLOW;
@@ -147,14 +146,14 @@ bal_jit_debug_add_block(bal_jit_debug_context_t *BAL_RESTRICT         context,
                     BAL_JIT_DEBUG_MAGIC_ALIVE,
                     BAL_JIT_DEBUG_MAGIC_DEAD,
                     "bal_jit_debug_context_t",
-                    context->logger);
+                    bal_thread_logger);
 
     const size_t total_mapping_size    = instruction_count * sizeof(bal_jit_instruction_map_t);
     const size_t total_memory_required = total_mapping_size + sizeof(bal_jit_block_metadata_t);
 
     if (BAL_UNLIKELY(context->arena_offset + total_memory_required > context->arena_capacity))
     {
-        BAL_LOG_WARN(&context->logger,
+        BAL_LOG_WARN(&bal_thread_logger,
                      "Aborting function: JIT debug arena full, block tracking skipped.");
         context->status = BAL_ERROR_BUFFER_OVERFLOW;
         return BAL_ERROR_BUFFER_OVERFLOW;
