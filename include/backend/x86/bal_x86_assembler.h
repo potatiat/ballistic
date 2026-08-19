@@ -346,6 +346,70 @@ extern "C"
                                  bal_x86_register_t   destination,
                                  bal_x86_register_t   source);
 
+    /// Emits a 64-bit rotate-right by an 8-bit immediate.
+    ///
+    /// Assembly equivalent: `ror destination, immediate`
+    ///
+    /// # Warning
+    ///
+    /// This function fails if:
+    ///
+    /// - `assembler` is `NULL`.
+    /// - `assembler->status` != [`BAL_SUCCESS`]
+    /// - `assembler->buffer` is full.
+    /// - `immediate` is greater than 63.
+    void bal_x86_emit_ror_r64_imm8(bal_x86_assembler_t *assembler,
+                                   bal_x86_register_t   destination,
+                                   uint8_t              immediate);
+
+    /// Emits a 64-bit arithmetic shift-right by an 8-bit immediate.
+    ///
+    /// Assembly equivalent: `sar destination, immediate`
+    ///
+    /// # Warning
+    ///
+    /// This function fails if:
+    ///
+    /// - `assembler` is `NULL`.
+    /// - `assembler->status` != [`BAL_SUCCESS`]
+    /// - `assembler->buffer` is full.
+    /// - `immediate` is greater than 63.
+    void bal_x86_emit_sar_r64_imm8(bal_x86_assembler_t *assembler,
+                                   bal_x86_register_t   destination,
+                                   uint8_t              immediate);
+
+    /// Emits a 64-bit logical shift-left by an 8-bit immediate.
+    ///
+    /// Assembly equivalent: `shl destination, immediate`
+    ///
+    /// # Warning
+    ///
+    /// This function fails if:
+    ///
+    /// - `assembler` is `NULL`.
+    /// - `assembler->status` != [`BAL_SUCCESS`]
+    /// - `assembler->buffer` is full.
+    /// - `immediate` is greater than 63.
+    void bal_x86_emit_shl_r64_imm8(bal_x86_assembler_t *assembler,
+                                   bal_x86_register_t   destination,
+                                   uint8_t              immediate);
+
+    /// Emits a 64-bit logical shift-right by an 8-bit immediate.
+    ///
+    /// Assembly equivalent: `shr destination, immediate`
+    ///
+    /// # Warning
+    ///
+    /// This function fails if:
+    ///
+    /// - `assembler` is `NULL`.
+    /// - `assembler->status` != [`BAL_SUCCESS`]
+    /// - `assembler->buffer` is full.
+    /// - `immediate` is greater than 63.
+    void bal_x86_emit_shr_r64_imm8(bal_x86_assembler_t *assembler,
+                                   bal_x86_register_t   destination,
+                                   uint8_t              immediate);
+
     /// Emits a Stack Pop instruction.
     ///
     /// Assembly equivalent: `push reg64`

@@ -43,6 +43,13 @@ BAL_HOT static void emit_modrm_register(uint8_t *buffer, size_t *offset, int reg
 /// Emits the ModR/M byte for Memory Addressing: [RBP + disp32].
 BAL_HOT static void emit_modrm_memory_disp32_rbp(uint8_t *buffer, size_t *offset, int reg);
 
+/// Emits `REX.W C1 /opcode_extension ib` for 64-bit shifts and rotates.
+BAL_HOT static void emit_shift_r64_imm8(bal_x86_assembler_t *assembler,
+                                        bal_x86_register_t   destination,
+                                        uint8_t              immediate,
+                                        uint8_t              opcode_extension,
+                                        const char          *mnemonic);
+
 bal_error_t
 bal_x86_assembler_init(bal_x86_assembler_t          *assembler,
                        const bal_executable_buffer_t executable_buffer,
@@ -695,6 +702,42 @@ bal_x86_emit_or_r64_r64(bal_x86_assembler_t     *assembler,
                    "Bytes emitted %d does not match instruction size %d",
                    bytes_emitted,
                    instruction_size_bytes);
+}
+
+void
+bal_x86_emit_ror_r64_imm8(bal_x86_assembler_t     *assembler,
+                          const bal_x86_register_t destination,
+                          const uint8_t            immediate)
+{
+    const uint8_t opcode_extension = 1;
+    emit_shift_r64_imm8(assembler, destination, immediate, opcode_extension, "ror");
+}
+
+void
+bal_x86_emit_sar_r64_imm8(bal_x86_assembler_t     *assembler,
+                          const bal_x86_register_t destination,
+                          const uint8_t            immediate)
+{
+    const uint8_t opcode_extension = 7;
+    emit_shift_r64_imm8(assembler, destination, immediate, opcode_extension, "sar");
+}
+
+void
+bal_x86_emit_shl_r64_imm8(bal_x86_assembler_t     *assembler,
+                          const bal_x86_register_t destination,
+                          const uint8_t            immediate)
+{
+    const uint8_t opcode_extension = 4;
+    emit_shift_r64_imm8(assembler, destination, immediate, opcode_extension, "shl");
+}
+
+void
+bal_x86_emit_shr_r64_imm8(bal_x86_assembler_t     *assembler,
+                          const bal_x86_register_t destination,
+                          const uint8_t            immediate)
+{
+    const uint8_t opcode_extension = 5;
+    emit_shift_r64_imm8(assembler, destination, immediate, opcode_extension, "shr");
 }
 
 void
@@ -1487,6 +1530,80 @@ emit_rex(uint8_t *BAL_RESTRICT buffer,
     const uint8_t rex = (uint8_t)(0x40U | (unsigned)safe_w << 3U | (unsigned)safe_r << 2U | safe_b);
 
     emit8(buffer, offset, rex);
+}
+
+void
+emit_shift_r64_imm8(bal_x86_assembler_t *BAL_RESTRICT assembler,
+                    const bal_x86_register_t          destination,
+                    const uint8_t                     immediate,
+                    const uint8_t                     opcode_extension,
+                    const char *BAL_RESTRICT          mnemonic)
+{
+    if (BAL_UNLIKELY(NULL == assembler))
+    {
+        return;
+    }
+
+    if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
+    {
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler status != BAL_SUCCESS");
+        return;
+    }
+
+    if (BAL_UNLIKELY(false == is_valid_register(destination)))
+    {
+        BAL_LOG_ERROR(&bal_thread_logger, "Invalid destination register: %d", destination);
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    if (BAL_UNLIKELY(immediate > 63U))
+    {
+        BAL_LOG_ERROR(
+            &bal_thread_logger, "Invalid %s immediate: %u (must be 0-63)", mnemonic, immediate);
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    if (BAL_UNLIKELY(opcode_extension > 7U))
+    {
+        BAL_LOG_ERROR(&bal_thread_logger,
+                      "Invalid %s opcode extension: %u (must be 0-7)",
+                      mnemonic,
+                      opcode_extension);
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    const size_t instruction_size_bytes = 4;
+    const bool   can_emit_status        = can_emit(assembler, instruction_size_bytes);
+
+    if (BAL_UNLIKELY(false == can_emit_status))
+    {
+        return;
+    }
+
+    BAL_LOG_DEBUG(&bal_thread_logger,
+                  "[+0x%04zx] %s r%d, %u",
+                  assembler->offset,
+                  mnemonic,
+                  destination,
+                  immediate);
+
+    const uint8_t w          = 1;
+    const uint8_t r          = 0;
+    const uint8_t b          = (uint8_t)destination >> 3;
+    const size_t  old_offset = assembler->offset;
+    emit_rex(assembler->buffer, &assembler->offset, w, r, b);
+    emit8(assembler->buffer, &assembler->offset, 0xC1);
+    emit_modrm_register(assembler->buffer, &assembler->offset, (int)opcode_extension, destination);
+    emit8(assembler->buffer, &assembler->offset, immediate);
+
+    const size_t bytes_emitted = assembler->offset - old_offset;
+    BAL_ASSERT_MSG(bytes_emitted == instruction_size_bytes,
+                   "Bytes emitted %d does not match instruction size %d",
+                   bytes_emitted,
+                   instruction_size_bytes);
 }
 
 void

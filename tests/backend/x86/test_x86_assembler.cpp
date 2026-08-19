@@ -166,6 +166,10 @@ TEST_F(Backendx86Assembler, Public_NullContext_NoCrash)
     bal_x86_emit_mov_r64_r64(nullptr, BAL_X86_RAX, BAL_X86_RAX);
     bal_x86_emit_mov_r64_imm64(nullptr, BAL_X86_RAX, 0);
     bal_x86_emit_or_r64_r64(nullptr, BAL_X86_RAX, BAL_X86_RAX);
+    bal_x86_emit_ror_r64_imm8(nullptr, BAL_X86_RAX, 0);
+    bal_x86_emit_sar_r64_imm8(nullptr, BAL_X86_RAX, 0);
+    bal_x86_emit_shl_r64_imm8(nullptr, BAL_X86_RAX, 0);
+    bal_x86_emit_shr_r64_imm8(nullptr, BAL_X86_RAX, 0);
     bal_x86_emit_ret(nullptr);
     bal_x86_emit_setcc_mem8_rbp_offset(nullptr, BAL_X86_COND_E, 0);
     bal_x86_emit_store_r64_rbp_offset(nullptr, BAL_X86_RAX, 0);
@@ -216,6 +220,18 @@ TEST_F(Backendx86Assembler, Public_BadStatus_NoEmit)
     EXPECT_EQ(assembler.offset, 0);
 
     bal_x86_emit_or_r64_r64(&assembler, BAL_X86_RAX, BAL_X86_RBX);
+    EXPECT_EQ(assembler.offset, 0);
+
+    bal_x86_emit_ror_r64_imm8(&assembler, BAL_X86_RAX, 0);
+    EXPECT_EQ(assembler.offset, 0);
+
+    bal_x86_emit_sar_r64_imm8(&assembler, BAL_X86_RAX, 0);
+    EXPECT_EQ(assembler.offset, 0);
+
+    bal_x86_emit_shl_r64_imm8(&assembler, BAL_X86_RAX, 0);
+    EXPECT_EQ(assembler.offset, 0);
+
+    bal_x86_emit_shr_r64_imm8(&assembler, BAL_X86_RAX, 0);
     EXPECT_EQ(assembler.offset, 0);
 
     bal_x86_emit_pop_r64(&assembler, BAL_X86_RAX);
@@ -316,6 +332,22 @@ TEST_F(Backendx86Assembler, Public_InvalidRegister_NoEmit)
     EXPECT_EQ(assembler.status, BAL_ERROR_INVALID_ARGUMENT);
 
     assembler.status = BAL_SUCCESS;
+    bal_x86_emit_ror_r64_imm8(&assembler, bad_register, 0);
+    EXPECT_EQ(assembler.status, BAL_ERROR_INVALID_ARGUMENT);
+
+    assembler.status = BAL_SUCCESS;
+    bal_x86_emit_sar_r64_imm8(&assembler, bad_register, 0);
+    EXPECT_EQ(assembler.status, BAL_ERROR_INVALID_ARGUMENT);
+
+    assembler.status = BAL_SUCCESS;
+    bal_x86_emit_shl_r64_imm8(&assembler, bad_register, 0);
+    EXPECT_EQ(assembler.status, BAL_ERROR_INVALID_ARGUMENT);
+
+    assembler.status = BAL_SUCCESS;
+    bal_x86_emit_shr_r64_imm8(&assembler, bad_register, 0);
+    EXPECT_EQ(assembler.status, BAL_ERROR_INVALID_ARGUMENT);
+
+    assembler.status = BAL_SUCCESS;
     bal_x86_emit_push_r64(&assembler, bad_register);
     EXPECT_EQ(assembler.status, BAL_ERROR_INVALID_ARGUMENT);
 
@@ -404,6 +436,26 @@ TEST_F(Backendx86Assembler, Public_FullBuffer_NoEmit)
 
     assembler.status = BAL_SUCCESS;
     bal_x86_emit_or_r64_r64(&assembler, BAL_X86_RAX, BAL_X86_RBP);
+    EXPECT_EQ(assembler.status, BAL_ERROR_INSTRUCTION_OVERFLOW);
+    EXPECT_EQ(assembler.offset, sizeof(buffer));
+
+    assembler.status = BAL_SUCCESS;
+    bal_x86_emit_ror_r64_imm8(&assembler, BAL_X86_RAX, 1);
+    EXPECT_EQ(assembler.status, BAL_ERROR_INSTRUCTION_OVERFLOW);
+    EXPECT_EQ(assembler.offset, sizeof(buffer));
+
+    assembler.status = BAL_SUCCESS;
+    bal_x86_emit_sar_r64_imm8(&assembler, BAL_X86_RAX, 1);
+    EXPECT_EQ(assembler.status, BAL_ERROR_INSTRUCTION_OVERFLOW);
+    EXPECT_EQ(assembler.offset, sizeof(buffer));
+
+    assembler.status = BAL_SUCCESS;
+    bal_x86_emit_shl_r64_imm8(&assembler, BAL_X86_RAX, 1);
+    EXPECT_EQ(assembler.status, BAL_ERROR_INSTRUCTION_OVERFLOW);
+    EXPECT_EQ(assembler.offset, sizeof(buffer));
+
+    assembler.status = BAL_SUCCESS;
+    bal_x86_emit_shr_r64_imm8(&assembler, BAL_X86_RAX, 1);
     EXPECT_EQ(assembler.status, BAL_ERROR_INSTRUCTION_OVERFLOW);
     EXPECT_EQ(assembler.offset, sizeof(buffer));
 
@@ -976,5 +1028,102 @@ TEST_F(Backendx86Assembler, Encode_Ud2)
     EXPECT_EQ(assembler.offset, 2);
     EXPECT_EQ(assembler.buffer[0], 0x0F);
     EXPECT_EQ(assembler.buffer[1], 0x0B);
+}
+
+TEST_F(Backendx86Assembler, Encode_ShlR64Imm8_LowReg)
+{
+    bal_x86_emit_shl_r64_imm8(&assembler, BAL_X86_RAX, 4);
+    EXPECT_EQ(assembler.status, BAL_SUCCESS);
+    EXPECT_EQ(assembler.offset, 4);
+    EXPECT_EQ(assembler.buffer[0], 0x48); // REX.W
+    EXPECT_EQ(assembler.buffer[1], 0xC1);
+    EXPECT_EQ(assembler.buffer[2], 0xE0); // /4, rax
+    EXPECT_EQ(assembler.buffer[3], 0x04);
+}
+
+TEST_F(Backendx86Assembler, Encode_ShlR64Imm8_HighReg)
+{
+    bal_x86_emit_shl_r64_imm8(&assembler, BAL_X86_R15, 1);
+    EXPECT_EQ(assembler.status, BAL_SUCCESS);
+    EXPECT_EQ(assembler.offset, 4);
+    EXPECT_EQ(assembler.buffer[0], 0x49); // REX.W | REX.B
+    EXPECT_EQ(assembler.buffer[1], 0xC1);
+    EXPECT_EQ(assembler.buffer[2], 0xE7); // /4, r15
+    EXPECT_EQ(assembler.buffer[3], 0x01);
+}
+
+TEST_F(Backendx86Assembler, Encode_ShrR64Imm8_LowReg)
+{
+    bal_x86_emit_shr_r64_imm8(&assembler, BAL_X86_RAX, 4);
+    EXPECT_EQ(assembler.status, BAL_SUCCESS);
+    EXPECT_EQ(assembler.offset, 4);
+    EXPECT_EQ(assembler.buffer[0], 0x48); // REX.W
+    EXPECT_EQ(assembler.buffer[1], 0xC1);
+    EXPECT_EQ(assembler.buffer[2], 0xE8); // /5, rax
+    EXPECT_EQ(assembler.buffer[3], 0x04);
+}
+
+TEST_F(Backendx86Assembler, Encode_ShrR64Imm8_HighReg)
+{
+    bal_x86_emit_shr_r64_imm8(&assembler, BAL_X86_R15, 1);
+    EXPECT_EQ(assembler.status, BAL_SUCCESS);
+    EXPECT_EQ(assembler.offset, 4);
+    EXPECT_EQ(assembler.buffer[0], 0x49); // REX.W | REX.B
+    EXPECT_EQ(assembler.buffer[1], 0xC1);
+    EXPECT_EQ(assembler.buffer[2], 0xEF); // /5, r15
+    EXPECT_EQ(assembler.buffer[3], 0x01);
+}
+
+TEST_F(Backendx86Assembler, Encode_SarR64Imm8_LowReg)
+{
+    bal_x86_emit_sar_r64_imm8(&assembler, BAL_X86_RAX, 4);
+    EXPECT_EQ(assembler.status, BAL_SUCCESS);
+    EXPECT_EQ(assembler.offset, 4);
+    EXPECT_EQ(assembler.buffer[0], 0x48); // REX.W
+    EXPECT_EQ(assembler.buffer[1], 0xC1);
+    EXPECT_EQ(assembler.buffer[2], 0xF8); // /7, rax
+    EXPECT_EQ(assembler.buffer[3], 0x04);
+}
+
+TEST_F(Backendx86Assembler, Encode_SarR64Imm8_HighReg)
+{
+    bal_x86_emit_sar_r64_imm8(&assembler, BAL_X86_R15, 1);
+    EXPECT_EQ(assembler.status, BAL_SUCCESS);
+    EXPECT_EQ(assembler.offset, 4);
+    EXPECT_EQ(assembler.buffer[0], 0x49); // REX.W | REX.B
+    EXPECT_EQ(assembler.buffer[1], 0xC1);
+    EXPECT_EQ(assembler.buffer[2], 0xFF); // /7, r15
+    EXPECT_EQ(assembler.buffer[3], 0x01);
+}
+
+TEST_F(Backendx86Assembler, Encode_RorR64Imm8_LowReg)
+{
+    bal_x86_emit_ror_r64_imm8(&assembler, BAL_X86_RAX, 4);
+    EXPECT_EQ(assembler.status, BAL_SUCCESS);
+    EXPECT_EQ(assembler.offset, 4);
+    EXPECT_EQ(assembler.buffer[0], 0x48); // REX.W
+    EXPECT_EQ(assembler.buffer[1], 0xC1);
+    EXPECT_EQ(assembler.buffer[2], 0xC8); // /1, rax
+    EXPECT_EQ(assembler.buffer[3], 0x04);
+}
+
+TEST_F(Backendx86Assembler, Encode_RorR64Imm8_HighReg)
+{
+    bal_x86_emit_ror_r64_imm8(&assembler, BAL_X86_R15, 1);
+    EXPECT_EQ(assembler.status, BAL_SUCCESS);
+    EXPECT_EQ(assembler.offset, 4);
+    EXPECT_EQ(assembler.buffer[0], 0x49); // REX.W | REX.B
+    EXPECT_EQ(assembler.buffer[1], 0xC1);
+    EXPECT_EQ(assembler.buffer[2], 0xCF); // /1, r15
+    EXPECT_EQ(assembler.buffer[3], 0x01);
+}
+
+TEST_F(Backendx86Assembler, Encode_ShlR64Imm8_ImmediateOutOfRange)
+{
+    assembler.buffer[0] = 0xCC;
+    bal_x86_emit_shl_r64_imm8(&assembler, BAL_X86_RAX, 64);
+    EXPECT_EQ(assembler.status, BAL_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(assembler.offset, 0);
+    EXPECT_EQ(assembler.buffer[0], 0xCC);
 }
 /*** end of file ***/
