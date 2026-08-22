@@ -110,4 +110,4 @@ If I review your PR and ask for changes, do not add a new commit that says "fix 
 # Code Style and Standard
 
 I chose BARR-C 2018 as the code standard to reduce as much bugs as possible. This will be enforce by our CI. If you push
-code that is not formatted correctly, the CI will fail to build your commit. Use `clang-format` to format your files.
+code that is not formatted correctly, the CI will fail to build your commit. Use `clang-format` version 18 to format your files.
