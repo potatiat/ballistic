@@ -78,9 +78,9 @@ static void translate_jump(const bal_tier1_compiler_t               *compiler,
                            const bal_guest_address_t                 guest_address,
                            bal_guest_address_t                      *target_pc);
 
-static void translate_mov(bal_tier1_compiler_t                     *compiler,
-                          const bal_decoder_instruction_metadata_t *metadata,
-                          uint32_t                                  instruction);
+static void translate_mov_immediate(bal_tier1_compiler_t                     *compiler,
+                                    const bal_decoder_instruction_metadata_t *metadata,
+                                    uint32_t                                  instruction);
 
 bal_error_t
 bal_tier1_compiler_init(bal_tier1_compiler_t         *compiler,
@@ -320,7 +320,7 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                     if (BAL_LIKELY(variant == 'N') || BAL_LIKELY(variant == 'K')
                         || BAL_LIKELY(variant == 'Z'))
                     {
-                        translate_mov(compiler, metadata, instruction);
+                        translate_mov_immediate(compiler, metadata, instruction);
                         break;
                     }
 
@@ -1061,9 +1061,9 @@ translate_jump(const bal_tier1_compiler_t *BAL_RESTRICT               compiler,
 }
 
 void
-translate_mov(bal_tier1_compiler_t                     *compiler,
-              const bal_decoder_instruction_metadata_t *metadata,
-              const uint32_t                            instruction)
+translate_mov_immediate(bal_tier1_compiler_t                     *compiler,
+                        const bal_decoder_instruction_metadata_t *metadata,
+                        const uint32_t                            instruction)
 {
     const uint8_t  rd      = (uint8_t)extract_operand_value(instruction, &metadata->operands[0]);
     const uint64_t imm16   = extract_operand_value(instruction, &metadata->operands[1]);
