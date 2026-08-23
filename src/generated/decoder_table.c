@@ -24938,7 +24938,7 @@ const bal_decoder_instruction_metadata_t
         { "MOVN",
           0xFF800000,
           0x92800000,
-          OPCODE_CONST,
+          OPCODE_MOV,
           {
               { BAL_OPERAND_TYPE_REGISTER_64, 0, 5 },
               { BAL_OPERAND_TYPE_IMMEDIATE, 5, 16 },
@@ -24950,7 +24950,7 @@ const bal_decoder_instruction_metadata_t
         { "MOVN",
           0xFFC00000,
           0x12800000,
-          OPCODE_CONST,
+          OPCODE_MOV,
           {
               { BAL_OPERAND_TYPE_REGISTER_32, 0, 5 },
               { BAL_OPERAND_TYPE_IMMEDIATE, 5, 16 },
@@ -24962,7 +24962,7 @@ const bal_decoder_instruction_metadata_t
         { "MOVZ",
           0xFF800000,
           0xD2800000,
-          OPCODE_CONST,
+          OPCODE_MOV,
           {
               { BAL_OPERAND_TYPE_REGISTER_64, 0, 5 },
               { BAL_OPERAND_TYPE_IMMEDIATE, 5, 16 },
@@ -24974,7 +24974,7 @@ const bal_decoder_instruction_metadata_t
         { "MOVZ",
           0xFFC00000,
           0x52800000,
-          OPCODE_CONST,
+          OPCODE_MOV,
           {
               { BAL_OPERAND_TYPE_REGISTER_32, 0, 5 },
               { BAL_OPERAND_TYPE_IMMEDIATE, 5, 16 },
@@ -25730,7 +25730,7 @@ const bal_decoder_instruction_metadata_t
         { "MOVK",
           0xFF800000,
           0xF2800000,
-          OPCODE_CONST,
+          OPCODE_MOV,
           {
               { BAL_OPERAND_TYPE_REGISTER_64, 0, 5 },
               { BAL_OPERAND_TYPE_IMMEDIATE, 5, 16 },
@@ -25742,7 +25742,7 @@ const bal_decoder_instruction_metadata_t
         { "MOVK",
           0xFFC00000,
           0x72800000,
-          OPCODE_CONST,
+          OPCODE_MOV,
           {
               { BAL_OPERAND_TYPE_REGISTER_32, 0, 5 },
               { BAL_OPERAND_TYPE_IMMEDIATE, 5, 16 },
@@ -25754,7 +25754,7 @@ const bal_decoder_instruction_metadata_t
         { "MOVN",
           0xFF800000,
           0x92800000,
-          OPCODE_CONST,
+          OPCODE_MOV,
           {
               { BAL_OPERAND_TYPE_REGISTER_64, 0, 5 },
               { BAL_OPERAND_TYPE_IMMEDIATE, 5, 16 },
@@ -25766,7 +25766,7 @@ const bal_decoder_instruction_metadata_t
         { "MOVN",
           0xFFC00000,
           0x12800000,
-          OPCODE_CONST,
+          OPCODE_MOV,
           {
               { BAL_OPERAND_TYPE_REGISTER_32, 0, 5 },
               { BAL_OPERAND_TYPE_IMMEDIATE, 5, 16 },
@@ -25850,7 +25850,7 @@ const bal_decoder_instruction_metadata_t
         { "MOVZ",
           0xFF800000,
           0xD2800000,
-          OPCODE_CONST,
+          OPCODE_MOV,
           {
               { BAL_OPERAND_TYPE_REGISTER_64, 0, 5 },
               { BAL_OPERAND_TYPE_IMMEDIATE, 5, 16 },
@@ -25862,7 +25862,7 @@ const bal_decoder_instruction_metadata_t
         { "MOVZ",
           0xFFC00000,
           0x52800000,
-          OPCODE_CONST,
+          OPCODE_MOV,
           {
               { BAL_OPERAND_TYPE_REGISTER_32, 0, 5 },
               { BAL_OPERAND_TYPE_IMMEDIATE, 5, 16 },

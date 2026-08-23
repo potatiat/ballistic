@@ -82,6 +82,10 @@ static void translate_mov_immediate(bal_tier1_compiler_t                     *co
                                     const bal_decoder_instruction_metadata_t *metadata,
                                     uint32_t                                  instruction);
 
+static void translate_mov_register(bal_tier1_compiler_t                     *compiler,
+                                   const bal_decoder_instruction_metadata_t *metadata,
+                                   uint32_t                                  instruction);
+
 bal_error_t
 bal_tier1_compiler_init(bal_tier1_compiler_t         *compiler,
                         const bal_executable_buffer_t executable_buffer,
@@ -314,7 +318,7 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
 
             switch (metadata->ir_opcode)
             {
-                case OPCODE_CONST:;
+                case OPCODE_MOV:;
                     const char variant = metadata->name[3];
 
                     if (BAL_LIKELY(variant == 'N') || BAL_LIKELY(variant == 'K')
@@ -324,8 +328,14 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                         break;
                     }
 
+                    if (BAL_LIKELY(BAL_OPERAND_TYPE_REGISTER_64 == metadata->operands[1].type)
+                        || BAL_LIKELY(BAL_OPERAND_TYPE_REGISTER_32 == metadata->operands[1].type))
+                    {
+                        translate_mov_register(compiler, metadata, instruction);
+                    }
+
                     BAL_LOG_ERROR(&bal_thread_logger,
-                                  "Aborting function: Invalid CONST instruction detected: %s",
+                                  "Aborting function: Invalid MOV instruction detected: %s",
                                   metadata->name);
                     is_block_terminated = true;
                     break;
@@ -1126,5 +1136,47 @@ translate_mov_immediate(bal_tier1_compiler_t                     *compiler,
         bal_sliding_window_push(&compiler->window, or_macro);
     }
 
+    compiler->is_dirty |= 1U << rd;
+}
+
+void
+translate_mov_register(bal_tier1_compiler_t *BAL_RESTRICT                     compiler,
+                       const bal_decoder_instruction_metadata_t *BAL_RESTRICT metadata,
+                       uint32_t                                               instruction)
+{
+    if (BAL_UNLIKELY(NULL == compiler))
+    {
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: compiler is NULL.");
+        return;
+    }
+
+    if (BAL_UNLIKELY(NULL == metadata))
+    {
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: metadata is NULL.");
+        compiler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    if (BAL_UNLIKELY(compiler->status != BAL_SUCCESS))
+    {
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: compiler->status != BAL_SUCCESS.");
+        return;
+    }
+
+    const bal_decoder_operand_t *BAL_RESTRICT operand_cursor = metadata->operands;
+    const uint8_t rd = (uint8_t)extract_operand_value(instruction, &operand_cursor[0]);
+    const uint8_t rm = (uint8_t)extract_operand_value(instruction, &operand_cursor[1]);
+
+    const bool               skip_load_rm = false;
+    const bal_x86_register_t x86_rm       = allocate_x86_register(compiler, rm, skip_load_rm);
+    const bool               skip_load_rd = true;
+    const bal_x86_register_t x86_rd       = allocate_x86_register(compiler, rd, skip_load_rd);
+
+    const bal_x86_macro_t mov_macro = {
+        .opcode      = BAL_X86_MACRO_MOV_REGISTER_REGISTER,
+        .destination = x86_rd,
+        .source      = x86_rm,
+    };
+    bal_sliding_window_push(&compiler->window, mov_macro);
     compiler->is_dirty |= 1U << rd;
 }
