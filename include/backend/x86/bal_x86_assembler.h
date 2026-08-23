@@ -301,6 +301,23 @@ extern "C"
                                           bal_x86_register_t   destination,
                                           int32_t              offset);
 
+    /// Emits a memory load from the address in a 64-bit register.
+    ///
+    /// Assembly equivalent: `mov destination, [base]`
+    ///
+    /// Handles all 16 x86-64 registers including RSP and RBP.
+    ///
+    /// # Warning
+    ///
+    /// This function fails if:
+    ///
+    /// - `assembler` is `NULL`.
+    /// - `assembler->status` != [`BAL_SUCCESS`]
+    /// - `assembler->buffer` is full.
+    void bal_x86_emit_load_r64_from_r64(bal_x86_assembler_t *assembler,
+                                        bal_x86_register_t   destination,
+                                        bal_x86_register_t   base);
+
     /// Emits an instruction to move a 64-bit immediate value into a 64-bit register.
     ///
     /// Assembly equivalent: `mov destination, immediate`

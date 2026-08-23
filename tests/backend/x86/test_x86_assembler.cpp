@@ -833,6 +833,70 @@ TEST_F(Backendx86Assembler, Encode_LoadRdp_NegativeOffset_SignExtension)
     EXPECT_EQ(assembler.buffer[6], 0xFF);
 }
 
+TEST_F(Backendx86Assembler, Encode_LoadFromReg_Normal)
+{
+    bal_x86_emit_load_r64_from_r64(&assembler, BAL_X86_RAX, BAL_X86_RBX);
+    EXPECT_EQ(assembler.status, BAL_SUCCESS);
+    EXPECT_EQ(assembler.offset, 3);
+    EXPECT_EQ(assembler.buffer[0], 0x48); // REX.W
+    EXPECT_EQ(assembler.buffer[1], 0x8B); // MOV
+    EXPECT_EQ(assembler.buffer[2], 0x03); // ModRM
+}
+
+TEST_F(Backendx86Assembler, Encode_LoadFromReg_RSP_NeedsSIB)
+{
+    bal_x86_emit_load_r64_from_r64(&assembler, BAL_X86_RAX, BAL_X86_RSP);
+    EXPECT_EQ(assembler.status, BAL_SUCCESS);
+    EXPECT_EQ(assembler.offset, 4);
+    EXPECT_EQ(assembler.buffer[0], 0x48); // REX.W
+    EXPECT_EQ(assembler.buffer[1], 0x8B); // MOV
+    EXPECT_EQ(assembler.buffer[2], 0x04); // ModRM
+    EXPECT_EQ(assembler.buffer[3], 0x24); // SIB
+}
+
+TEST_F(Backendx86Assembler, Encode_LoadFromReg_RBP_NeedsDisp8)
+{
+    bal_x86_emit_load_r64_from_r64(&assembler, BAL_X86_RAX, BAL_X86_RBP);
+    EXPECT_EQ(assembler.status, BAL_SUCCESS);
+    EXPECT_EQ(assembler.offset, 4);
+    EXPECT_EQ(assembler.buffer[0], 0x48); // REX.W
+    EXPECT_EQ(assembler.buffer[1], 0x8B); // MOV
+    EXPECT_EQ(assembler.buffer[2], 0x45); // ModRM
+    EXPECT_EQ(assembler.buffer[3], 0x00); // disp8
+}
+
+TEST_F(Backendx86Assembler, Encode_LoadFromReg_R12_NeedsSIB)
+{
+    bal_x86_emit_load_r64_from_r64(&assembler, BAL_X86_RAX, BAL_X86_R12);
+    EXPECT_EQ(assembler.status, BAL_SUCCESS);
+    EXPECT_EQ(assembler.offset, 4);
+    EXPECT_EQ(assembler.buffer[0], 0x49); // REX.W | REX.B
+    EXPECT_EQ(assembler.buffer[1], 0x8B); // MOV
+    EXPECT_EQ(assembler.buffer[2], 0x04); // ModRM
+    EXPECT_EQ(assembler.buffer[3], 0x24); // SIB
+}
+
+TEST_F(Backendx86Assembler, Encode_LoadFromReg_R13_NeedsDisp8)
+{
+    bal_x86_emit_load_r64_from_r64(&assembler, BAL_X86_RAX, BAL_X86_R13);
+    EXPECT_EQ(assembler.status, BAL_SUCCESS);
+    EXPECT_EQ(assembler.offset, 4);
+    EXPECT_EQ(assembler.buffer[0], 0x49); // REX.W | REX.B
+    EXPECT_EQ(assembler.buffer[1], 0x8B); // MOV
+    EXPECT_EQ(assembler.buffer[2], 0x45); // ModRM: 01 000 101
+    EXPECT_EQ(assembler.buffer[3], 0x00); // disp8
+}
+
+TEST_F(Backendx86Assembler, Encode_LoadFromReg_HighDestHighBase)
+{
+    bal_x86_emit_load_r64_from_r64(&assembler, BAL_X86_R15, BAL_X86_R14);
+    EXPECT_EQ(assembler.status, BAL_SUCCESS);
+    EXPECT_EQ(assembler.offset, 3);
+    EXPECT_EQ(assembler.buffer[0], 0x4D); // REX.W | REX.R | REX.B
+    EXPECT_EQ(assembler.buffer[1], 0x8B); // MOV
+    EXPECT_EQ(assembler.buffer[2], 0x3E); // ModRM: 00 111 110
+}
+
 TEST_F(Backendx86Assembler, Encode_Setcc_PositiveOffset)
 {
     // Test SETE (Set if Equal / Zero) -> Condition code 0x4.

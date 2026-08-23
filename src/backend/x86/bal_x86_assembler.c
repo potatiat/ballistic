@@ -389,6 +389,108 @@ bal_x86_emit_load_r64_rbp_offset(bal_x86_assembler_t     *assembler,
 }
 
 void
+bal_x86_emit_load_r64_from_r64(bal_x86_assembler_t     *assembler,
+                               const bal_x86_register_t destination,
+                               const bal_x86_register_t base)
+{
+    if (BAL_UNLIKELY(NULL == assembler))
+    {
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler is NULL.");
+        return;
+    }
+
+    if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
+    {
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler status != BAL_SUCCESS");
+        return;
+    }
+
+    bool is_valid_register_result = is_valid_register(destination);
+
+    if (BAL_UNLIKELY(false == is_valid_register_result))
+    {
+        BAL_LOG_ERROR(
+            &bal_thread_logger, "Aborting function: invalid destination register: %d", destination);
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    is_valid_register_result = is_valid_register(base);
+
+    if (BAL_UNLIKELY(false == is_valid_register_result))
+    {
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: invalid base register: %d", base);
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
+    // WARNING: Verified by is_valid_register() to fall within [0, 15].
+    const uint8_t base_low = (uint8_t)base & 7U;
+
+    size_t instruction_size_bytes = 3;
+    bool   needs_sib              = false;
+    bool   needs_disp8            = false;
+
+    if (4U == base_low)
+    {
+        needs_sib              = true;
+        instruction_size_bytes = 4;
+    }
+    else if (5U == base_low)
+    {
+        needs_disp8            = true;
+        instruction_size_bytes = 4;
+    }
+
+    const bool can_emit_result = can_emit(assembler, instruction_size_bytes);
+
+    if (BAL_UNLIKELY(false == can_emit_result))
+    {
+        return;
+    }
+
+    BAL_LOG_DEBUG(
+        &bal_thread_logger, "[0x%04zx] mov r%d, [r%d]", assembler->offset, destination, base);
+
+    const uint8_t w          = 1;
+    const uint8_t r          = (uint8_t)destination >> 3;
+    const uint8_t b          = (uint8_t)base >> 3;
+    const uint8_t opcode     = 0x8BU;
+    const size_t  old_offset = assembler->offset;
+
+    emit_rex(assembler->buffer, &assembler->offset, w, r, b);
+    emit8(assembler->buffer, &assembler->offset, opcode);
+    const uint8_t safe_destination = (uint8_t)destination & 7U;
+
+    if (true == needs_sib)
+    {
+        const uint8_t modrm = (uint8_t)((safe_destination << 3U) | 4);
+        emit8(assembler->buffer, &assembler->offset, modrm);
+        const uint8_t sib = 0x24U;
+        emit8(assembler->buffer, &assembler->offset, sib);
+    }
+    else if (true == needs_disp8)
+    {
+        const uint8_t modrm = (uint8_t)(0x40U | (uint8_t)(safe_destination << 3U) | 5U);
+        emit8(assembler->buffer, &assembler->offset, modrm);
+
+        const uint8_t disp8 = 0x00U;
+        emit8(assembler->buffer, &assembler->offset, disp8);
+    }
+    else
+    {
+        const uint8_t modrm = (uint8_t)((safe_destination << 3U) | base_low);
+        emit8(assembler->buffer, &assembler->offset, modrm);
+    }
+
+    const size_t bytes_emitted = assembler->offset - old_offset;
+    BAL_ASSERT_MSG(bytes_emitted == instruction_size_bytes,
+                   "Bytes emitted %zu does not match instruction size %zu",
+                   bytes_emitted,
+                   instruction_size_bytes);
+}
+
+void
 bal_x86_emit_store_r64_rbp_offset(bal_x86_assembler_t     *assembler,
                                   const bal_x86_register_t source,
                                   const int32_t            offset)
