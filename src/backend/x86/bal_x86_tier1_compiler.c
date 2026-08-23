@@ -72,7 +72,7 @@ static void translate_cbz_cbnz(bal_tier1_compiler_t                     *compile
                                bal_guest_address_t                       guest_address,
                                bool                                      is_cbnz);
 
-static void translate_jump(bal_tier1_compiler_t                     *compiler,
+static void translate_jump(const bal_tier1_compiler_t               *compiler,
                            const bal_decoder_instruction_metadata_t *metadata,
                            const uint32_t                            instruction,
                            const bal_guest_address_t                 guest_address,
@@ -604,11 +604,11 @@ flush_dirty_registers(bal_tier1_compiler_t *compiler)
 }
 
 void
-terminate_block(bal_tier1_compiler_t *compiler,
-                bal_guest_address_t   next_pc,
-                bool                  is_pc_dynamic,
-                size_t                arm_instruction_count,
-                uint32_t              engine_flags)
+terminate_block(bal_tier1_compiler_t     *compiler,
+                const bal_guest_address_t next_pc,
+                const bool                is_pc_dynamic,
+                const size_t              arm_instruction_count,
+                const uint32_t            engine_flags)
 {
     if (BAL_UNLIKELY(NULL == compiler))
     {
@@ -645,10 +645,10 @@ terminate_block(bal_tier1_compiler_t *compiler,
 }
 
 void
-terminate_block_conditional(bal_tier1_compiler_t *compiler,
-                            bal_x86_condition_t   condition,
-                            bal_guest_address_t   fallthrough_pc,
-                            bal_guest_address_t   taken_pc)
+terminate_block_conditional(bal_tier1_compiler_t     *compiler,
+                            const bal_x86_condition_t condition,
+                            const bal_guest_address_t fallthrough_pc,
+                            const bal_guest_address_t taken_pc)
 {
     if (BAL_UNLIKELY(NULL == compiler))
     {
@@ -1007,9 +1007,9 @@ translate_b_cond(bal_tier1_compiler_t *BAL_RESTRICT compiler,
 void
 translate_cbz_cbnz(bal_tier1_compiler_t *BAL_RESTRICT                     compiler,
                    const bal_decoder_instruction_metadata_t *BAL_RESTRICT metadata,
-                   uint32_t                                               instruction,
-                   bal_guest_address_t                                    guest_address,
-                   bool                                                   is_cbnz)
+                   const uint32_t                                         instruction,
+                   const bal_guest_address_t                              guest_address,
+                   const bool                                             is_cbnz)
 {
     const uint8_t  rn        = (uint8_t)extract_operand_value(instruction, &metadata->operands[0]);
     const uint32_t imm19     = extract_operand_value(instruction, &metadata->operands[1]);
@@ -1033,7 +1033,7 @@ translate_cbz_cbnz(bal_tier1_compiler_t *BAL_RESTRICT                     compil
 }
 
 void
-translate_jump(bal_tier1_compiler_t *BAL_RESTRICT                     compiler,
+translate_jump(const bal_tier1_compiler_t *BAL_RESTRICT               compiler,
                const bal_decoder_instruction_metadata_t *BAL_RESTRICT metadata,
                const uint32_t                                         instruction,
                const bal_guest_address_t                              guest_address,
