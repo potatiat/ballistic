@@ -78,6 +78,10 @@ static void translate_jump(const bal_tier1_compiler_t               *compiler,
                            const bal_guest_address_t                 guest_address,
                            bal_guest_address_t                      *target_pc);
 
+static void translate_and(bal_tier1_compiler_t                     *compiler,
+                          const bal_decoder_instruction_metadata_t *metadata,
+                          uint32_t                                  instruction);
+
 static void translate_mov_immediate(bal_tier1_compiler_t                     *compiler,
                                     const bal_decoder_instruction_metadata_t *metadata,
                                     uint32_t                                  instruction);
@@ -415,6 +419,9 @@ bal_tier1_compiler_translate(bal_tier1_compiler_t         *compiler,
                     bal_sliding_window_push(&compiler->window, ud2_macro);
                     compiler->status    = BAL_ERROR_UNKNOWN_INSTRUCTION;
                     is_block_terminated = true;
+                    break;
+                case OPCODE_AND:
+                    translate_and(compiler, metadata, instruction);
                     break;
                 default:
                     BAL_LOG_ERROR(&bal_thread_logger,
@@ -1068,6 +1075,83 @@ translate_jump(const bal_tier1_compiler_t *BAL_RESTRICT               compiler,
 
     // WARNING: Prevents unsued local variable compiler warning.
     (void)compiler;
+}
+
+void
+translate_and(bal_tier1_compiler_t *BAL_RESTRICT                     compiler,
+              const bal_decoder_instruction_metadata_t *BAL_RESTRICT metadata,
+              const uint32_t                                         instruction)
+{
+    const bal_decoder_operand_t *BAL_RESTRICT operands = metadata->operands;
+    const uint8_t  rd           = (uint8_t)extract_operand_value(instruction, &operands[0]);
+    const uint8_t  rn           = (uint8_t)extract_operand_value(instruction, &operands[1]);
+    const uint32_t shift_amount = extract_operand_value(instruction, &operands[2]);
+    const uint8_t  rm           = (uint8_t)extract_operand_value(instruction, &operands[3]);
+
+    if (BAL_UNLIKELY('S' == metadata->name[3]))
+    {
+        BAL_LOG_ERROR(&bal_thread_logger,
+                      "Aborting function: Tier 1 does not support ANDS yet: %s",
+                      metadata->name);
+        compiler->status = BAL_ERROR_UNKNOWN_INSTRUCTION;
+        return;
+    }
+
+    if (BAL_UNLIKELY(shift_amount != 0))
+    {
+        BAL_LOG_ERROR(&bal_thread_logger,
+                      "Aborting function: Tier 1 does not support shift amounts != 0 yet: %s",
+                      metadata->name);
+        compiler->status = BAL_ERROR_UNKNOWN_INSTRUCTION;
+        return;
+    }
+
+    const bool               skip_load_rn = false;
+    const bal_x86_register_t x86_rn       = allocate_x86_register(compiler, rn, skip_load_rn);
+    const bool               skip_load_rm = false;
+    const bal_x86_register_t x86_rm       = allocate_x86_register(compiler, rm, skip_load_rm);
+    const bool               skip_load_rd = true;
+    const bal_x86_register_t x86_rd       = allocate_x86_register(compiler, rd, skip_load_rd);
+
+    if (BAL_UNLIKELY(BAL_X86_INVALID == x86_rd) || BAL_UNLIKELY(BAL_X86_INVALID == x86_rn)
+        || BAL_UNLIKELY(BAL_X86_INVALID == x86_rm))
+    {
+        compiler->status = BAL_ERROR_INCORRECT_REGISTER_TYPE;
+        return;
+    }
+
+    bal_x86_register_t x86_and_source = x86_rm;
+
+    if (31 == rd)
+    {
+        const bal_x86_macro_t mov_macro = {
+            .opcode              = BAL_X86_MACRO_MOV_REGISTER_IMMEDIATE,
+            .destination         = x86_rd,
+            .immediate_or_offset = 0,
+        };
+        bal_sliding_window_push(&compiler->window, mov_macro);
+    }
+    else if (x86_rd == x86_rm)
+    {
+        x86_and_source = x86_rn;
+    }
+    else if (x86_rd != x86_rn)
+    {
+        const bal_x86_macro_t mov_macro = {
+            .opcode      = BAL_X86_MACRO_MOV_REGISTER_REGISTER,
+            .destination = x86_rd,
+            .source      = x86_rn,
+        };
+        bal_sliding_window_push(&compiler->window, mov_macro);
+    }
+
+    const bal_x86_macro_t and_macro = {
+        .opcode      = BAL_X86_MACRO_AND_REGISTER_REGISTER,
+        .destination = x86_rd,
+        .source      = x86_and_source,
+    };
+    bal_sliding_window_push(&compiler->window, and_macro);
+    compiler->is_dirty |= 1U << rd;
 }
 
 void
