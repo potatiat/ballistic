@@ -1419,7 +1419,7 @@ can_emit(bal_x86_assembler_t *assembler, const size_t size)
 
     const size_t assembler_size = assembler->offset + size;
 
-    if (assembler_size > assembler->capacity)
+    if (BAL_UNLIKELY(assembler_size > assembler->capacity))
     {
         BAL_LOG_ERROR(&bal_thread_logger,
                       "x86 Assembler Overflow. Capacity %zu reached",
