@@ -838,6 +838,7 @@ translate_add_sub_reg(bal_tier1_compiler_t *BAL_RESTRICT                     com
         return;
     }
 
+    // Does this instruction set flags?
     const bool is_setting_flags = (OPCODE_CMP == metadata->ir_opcode) || ('S' == metadata->name[3])
                                   || ('N' == metadata->name[2]);
     const bool               is_discarded_result = is_setting_flags && (31 == rd);
