@@ -20,6 +20,10 @@ will blast you for it.
 AI usually leave weird comments in PRs I've seen like `// loop through the array`. It's useless, delete it. Any
 competent programmer would recognize this immediately, but I'm spelling it out for you anyway.
 
+## PR SIZE
+
+If your PR is over +500 lines of added code I will close it and tell you to split it into multiple smaller pieces. This rule will be waived IF AND ONLY IF you are adding a library to `extern/`.
+
 That is it for the AI rules.
 
 # Forking and Branching (Do NOT use `main`)
