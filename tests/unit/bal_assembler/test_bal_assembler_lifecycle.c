@@ -142,6 +142,35 @@ test_BalAssemblerReset_Success(void)
     TEST_ASSERT_EQUAL_UINT32(BAL_ASSEMBLER_MAGIC_ALIVE, assembler.magic);
 }
 
+static void
+test_BalAssemblerDestroy_NoCrash(void)
+{
+    bal_assembler_destroy(NULL);
+    TEST_PASS();
+}
+
+static void
+test_BalAssemblerDestroy_FreedAssemblerSetsDeadMagicNumber(void)
+{
+    (void)init_valid();
+    bal_assembler_destroy(&assembler);
+    bal_assembler_destroy(&assembler);
+    TEST_ASSERT_EQUAL_UINT32(BAL_ASSEMBLER_MAGIC_DEAD, assembler.magic);
+    TEST_ASSERT_EQUAL(BAL_ERROR_STRUCT_CORRUPTED, assembler.status);
+}
+
+static void
+test_BalAssemblerDestroy_Success(void)
+{
+    (void)init_valid();
+    bal_assembler_destroy(&assembler);
+    TEST_ASSERT_NULL(assembler.buffer);
+    TEST_ASSERT_EQUAL_size_t(0, assembler.capacity);
+    TEST_ASSERT_EQUAL_size_t(0, assembler.offset);
+    TEST_ASSERT_EQUAL(BAL_ERROR_STRUCT_CORRUPTED, assembler.status);
+    TEST_ASSERT_EQUAL_UINT32(BAL_ASSEMBLER_MAGIC_DEAD, assembler.magic);
+}
+
 int
 main(void)
 {
@@ -157,5 +186,8 @@ main(void)
     RUN_TEST(test_BalAssemblerReset_ZeroCapacityReturnsErrorInvalidArgument);
     RUN_TEST(test_BalAssemblerReset_FreedAssemblerSetsDeadMagicNumber);
     RUN_TEST(test_BalAssemblerReset_Success);
+    RUN_TEST(test_BalAssemblerDestroy_NoCrash);
+    RUN_TEST(test_BalAssemblerDestroy_FreedAssemblerSetsDeadMagicNumber);
+    RUN_TEST(test_BalAssemblerDestroy_Success);
     return UNITY_END();
 }
