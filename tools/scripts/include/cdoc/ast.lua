@@ -70,7 +70,7 @@ function M.create_module(name, filepath, documentation)
     local column_number = 1
     return
         {
-            kind = "module",
+            kind = M.KIND.MODULE,
             name = name,
             filepath = filepath,
             documentation = documentation,
