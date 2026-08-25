@@ -20,8 +20,11 @@ local function strip_comment_markers(raw)
     end
 
     local lines = {}
+    raw = raw:gsub("\r\n", "\n"):gsub("\r", "\n")
 
-    for line in raw:gmatch("[^\r\n]+") do
+    -- Keep empty lines. gmatch("[^\r\n]+") would drop them, so "# Examples"
+    -- never sees the blank line that ends a summary.
+    for line in (raw .. "\n"):gmatch("(.-)\n") do
         local cleaned = line
 
         -- Strip leading whitespace
