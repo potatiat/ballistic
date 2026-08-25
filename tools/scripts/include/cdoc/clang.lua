@@ -294,10 +294,10 @@ function M.destroy(context)
         return
     end
 
-    if not check_magic(context) then
+    if check_magic(context) then
         log.info("Destroying clang context.")
         context.library = nil
-        context.status = M.ERROR.STRUCT_CORRUPTED
+        context.status = M.ERROR.SUCCESS
         context.magic = M.MAGIC_DEAD
     end
 end
