@@ -146,6 +146,13 @@ bal_emit_add_immediate(bal_assembler_t           *assembler,
         return;
     }
 
+    if (BAL_UNLIKELY(NULL == assembler->buffer))
+    {
+        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->buffer is NULL.");
+        assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
+    }
+
     if (BAL_UNLIKELY((uint32_t)rd > 31U))
     {
         BAL_LOG_ERROR(&assembler->logger, "Rd X%u out of range (0-31).", rd);

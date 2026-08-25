@@ -171,6 +171,7 @@ extern "C"
     /// * `rd` and `rn` must be valid registers (0-31).
     /// * `imm12` must not exceed 12 bits (0-4095).
     /// * `shift` must be the bit value `0` (LSL #0) or `1` (LSL #12).
+    /// * `assembler->buffer` must not be NULL.
     /// * Function does not emit instructions if `assembler->status != BALL_SUCCESS`.
     ///
     /// # Errors
