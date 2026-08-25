@@ -17,6 +17,7 @@ macro(add_ballistic_test test_name test_source)
 endmacro()
 
 add_ballistic_test(test_bal_assembler unit/bal_assembler/test_bal_assembler_lifecycle.c)
+add_test(NAME test_bal_assembler COMMAND test_bal_assembler)
 
 add_ballistic_test(test_engine test_engine.cpp)
 target_compile_options(test_engine PRIVATE -Wno-padded)
