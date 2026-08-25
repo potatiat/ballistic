@@ -12,8 +12,6 @@ macro(add_ballistic_test test_name test_source)
     target_link_libraries(${test_name} PRIVATE ${PROJECT_NAME} gtest gtest_main unity)
     add_strict_compiler_flags(${test_name})
     add_sanitizers(${test_name})
-
-    gtest_discover_tests(${test_name} DISCOVERY_MODE POST_BUILD)
 endmacro()
 
 add_ballistic_test(test_bal_assembler unit/bal_assembler/test_bal_assembler_lifecycle.c)
