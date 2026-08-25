@@ -3,34 +3,24 @@ cmake_minimum_required(VERSION 3.17)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF) # Strict ISO C
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
 
 if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif ()
 
-project(Ballistic LANGUAGES C CXX VERSION 0.7.0)
+project(Ballistic LANGUAGES C VERSION 0.7.0)
 
 # Macro to add external without compiler warnings.
 macro(add_external_subdirectory directory)
     set(_EXTERNAL_OLD_C_FLAGS "${CMAKE_C_FLAGS}")
-    set(_EXTERNAL_OLD_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
     set(_EXTERNAL_OLD_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
-    set(_EXTERNAL_OLD_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
     set(_EXTERNAL_OLD_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO}")
-    set(_EXTERNAL_OLD_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -w")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")
 
     add_subdirectory(${directory} ${ARGN})
     set(CMAKE_C_FLAGS "${_EXTERNAL_OLD_C_FLAGS}")
-    set(CMAKE_CXX_FLAGS "${_EXTERNAL_OLD_CXX_FLAGS}")
     set(CMAKE_C_FLAGS_DEBUG "${_EXTERNAL_OLD_C_FLAGS_DEBUG}")
-    set(CMAKE_CXX_FLAGS_DEBUG "${_EXTERNAL_OLD_CXX_FLAGS_DEBUG}")
     set(CMAKE_C_FLAGS_RELWITHDEBINFO "${_EXTERNAL_OLD_C_FLAGS_RELWITHDEBINFO}")
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${_EXTERNAL_OLD_CXX_FLAGS_RELWITHDEBINFO}")
 endmacro()
 
 # Macro to add strict compiler flags
@@ -239,11 +229,6 @@ if (BALLISTIC_BUILD_TESTS)
     add_definitions(-DBALLISTIC_BUILD_TESTS)
 
     enable_testing()
-    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-    add_external_subdirectory(extern/googletest-1.17.0)
-    add_strict_compiler_flags(gtest)
-    add_strict_compiler_flags(gtest_main)
-    include(GoogleTest)
     add_subdirectory(tests)
 else ()
     message(STATUS "[Ballistic] Test suite is DISABLED.")
