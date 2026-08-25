@@ -2,16 +2,6 @@ local log = require("log")
 
 local M = {}
 
-local SECTIONS = {
-    "Safety", "Errors", "Examples", "Returns", "Warning", "Ownership", "Platform Support",
-}
-
-local section_set = {}
-
-for _, section in ipairs(SECTIONS) do
-    section_set[section] = true
-end
-
 --- Strip comment prefixes (///, //!, /**, *, */) from raw comment text.
 --- Returns clean lines as a table.
 local function strip_comment_markers(raw)
@@ -20,8 +10,11 @@ local function strip_comment_markers(raw)
     end
 
     local lines = {}
+    raw = raw:gsub("\r\n", "\n"):gsub("\r", "\n")
 
-    for line in raw:gmatch("[^\r\n]+") do
+    -- Keep empty lines. gmatch("[^\r\n]+") would drop them, so "# Examples"
+    -- never sees the blank line that ends a summary.
+    for line in (raw .. "\n"):gmatch("(.-)\n") do
         local cleaned = line
 
         -- Strip leading whitespace
@@ -115,10 +108,10 @@ function M.parse(raw)
     end
 
     for _, line in ipairs(lines) do
-    -- Check for section header: "# Word" at start of line
-        local header = line:match("^#%s+(%w+)%s*$")
+        -- "# Safety" or "  # Platform Support" (extra space after ///).
+        local header = line:match("^%s*#+%s+(.-)%s*$")
 
-        if header and section_set[header] then
+        if header and header ~= "" then
             flush_section()
             current_section = header
         elseif current_section then
