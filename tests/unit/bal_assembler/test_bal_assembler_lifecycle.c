@@ -37,7 +37,7 @@ init_valid(void)
 }
 
 static void
-test_BalAssemblerInit_InvalidAssemblerReturnsErrorInvalidArgument(void)
+test_BalAssemblerInit_NullAssemblerReturnsErrorInvalidArgument(void)
 {
     const bal_error_t error
         = bal_assembler_init(NULL, code_buffer, TEST_BUFFER_CAPACITY, silent_logger);
@@ -45,7 +45,7 @@ test_BalAssemblerInit_InvalidAssemblerReturnsErrorInvalidArgument(void)
 }
 
 static void
-test_BalAssemblerInit_InvalidBufferReturnsErrorInvalidArgument(void)
+test_BalAssemblerInit_NullBufferReturnsErrorInvalidArgument(void)
 {
     const bal_error_t error
         = bal_assembler_init(&assembler, NULL, TEST_BUFFER_CAPACITY, silent_logger);
@@ -95,8 +95,8 @@ int
 main(void)
 {
     UNITY_BEGIN();
-    RUN_TEST(test_BalAssemblerInit_InvalidAssemblerReturnsErrorInvalidArgument);
-    RUN_TEST(test_BalAssemblerInit_InvalidBufferReturnsErrorInvalidArgument);
+    RUN_TEST(test_BalAssemblerInit_NullAssemblerReturnsErrorInvalidArgument);
+    RUN_TEST(test_BalAssemblerInit_NullBufferReturnsErrorInvalidArgument);
     RUN_TEST(test_BalAssemblerInit_InvalidBufferSizeReturnsErrorInvalidArgument);
     RUN_TEST(test_BalAssemblerInit_UnalignedBufferReturnsErrorInvalidArgument);
     RUN_TEST(test_BalAssemblerInit_FullBufferReturnsErrorCapacityTooBig);
