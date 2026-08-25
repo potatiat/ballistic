@@ -17,6 +17,7 @@ setUp(void)
     memset(&code_buffer, 0, sizeof(code_buffer));
     memset(&silent_logger, 0, sizeof(silent_logger));
     silent_logger.min_level = BAL_LOG_LEVEL_NONE;
+    unaligned_pointer       = code_buffer;
 
     if (0 == (uintptr_t)unaligned_pointer % 4)
     {
