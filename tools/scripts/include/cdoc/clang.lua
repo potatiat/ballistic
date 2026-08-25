@@ -14,6 +14,9 @@ typedef struct { void *ptr_data[2]; unsigned int_data; } CXSourceLocation;
 typedef struct { int kind; int xdata; void *data[3]; } CXCursor;
 typedef struct { int kind; void *data[2]; } CXType;
 typedef struct { const char *data; unsigned private_flags; } CXString;
+typedef void *CXFile;
+typedef struct { void *ptr_data[2]; unsigned begin_int_data; unsigned end_int_data; } CXSourceRange;
+typedef struct { unsigned int_data[4]; void *ptr_data; } CXToken;
 
 typedef enum { CXChildVisit_Break = 0, CXChildVisit_Continue = 1, CXChildVisit_Recurse = 2 } CXChildVisitResult;
 typedef CXChildVisitResult (*CXCursorVisitor)(CXCursor cursor, CXCursor parent, CXClientData client_data);
@@ -39,6 +42,18 @@ long long clang_getEnumConstantDeclValue(CXCursor);
 CXType clang_getTypedefDeclUnderlyingType(CXCursor);
 CXCursor clang_getTypeDeclaration(CXType);
 unsigned clang_visitChildren(CXCursor parent, CXCursorVisitor visitor, CXClientData client_data);
+
+CXSourceRange clang_getCursorExtent(CXCursor);
+CXFile clang_getFile(CXTranslationUnit, const char *file_name);
+CXSourceLocation clang_getLocationForOffset(CXTranslationUnit, CXFile, unsigned offset);
+CXSourceRange clang_getRange(CXSourceLocation begin, CXSourceLocation end);
+const char *clang_getFileContents(CXTranslationUnit, CXFile, size_t *size);
+void clang_tokenize(CXTranslationUnit TU, CXSourceRange Range, CXToken **Tokens, unsigned *NumTokens);
+void clang_annotateTokens(CXTranslationUnit TU, CXToken *Tokens, unsigned NumTokens, CXCursor *Cursors);
+void clang_disposeTokens(CXTranslationUnit TU, CXToken *Tokens, unsigned NumTokens);
+void clang_getExpansionLocation(CXSourceLocation location, CXFile *file, unsigned *line, unsigned *column, unsigned *offset);
+int clang_equalCursors(CXCursor, CXCursor);
+CXCursor clang_getCursorSemanticParent(CXCursor);
 
 CXString clang_getTypeSpelling(CXType);
 CXType clang_getCanonicalType(CXType);
@@ -384,5 +399,215 @@ function M.resource_directory(context)
     return nil
 end
 
+-- LuaJIT FFI callbacks cannot take CXCursor by value, so clang_visitChildren
+-- cannot be invoked from Lua. clang_tokenize / clang_annotateTokens return
+-- the same cursors without a callback.
+M.CURSOR = {
+    StructDecl = 2,
+    UnionDecl = 3,
+    EnumDecl = 5,
+    FieldDecl = 6,
+    EnumConstantDecl = 7,
+    FunctionDecl = 8,
+    ParmDecl = 10,
+    TypedefDecl = 20,
+    MacroDefinition = 501,
+}
+
+M.TYPE = {
+    Pointer = 101,
+    FunctionProto = 111,
+    Record = 105,
+    Enum = 106,
+}
+
+local MAX_TOKENS = 100000
+
+local function library_of(context)
+    if not check_magic(context) then
+        return nil
+    end
+    if context.library == nil then
+        log.error("Aborting function: libclang not loaded; call init() first.")
+        context.status = M.ERROR.LIBRARY_NOT_LOADED
+        return nil
+    end
+    return context.library
+end
+
+local function copy_cursor(src)
+    local dst = ffi.new("CXCursor")
+    ffi.copy(dst, src, ffi.sizeof("CXCursor"))
+    return dst
+end
+
+local function cstring(library, cxstring)
+    local ptr = library.clang_getCString(cxstring)
+    local text = (ptr ~= nil) and ffi.string(ptr) or ""
+    library.clang_disposeString(cxstring)
+    return text
+end
+
+function M.spelling(context, cursor)
+    local library = library_of(context)
+    if not library then
+        return ""
+    end
+    return cstring(library, library.clang_getCursorSpelling(cursor))
+end
+
+function M.type_spelling(context, cx_type)
+    local library = library_of(context)
+    if not library then
+        return ""
+    end
+    return cstring(library, library.clang_getTypeSpelling(cx_type))
+end
+
+function M.comment(context, cursor)
+    local library = library_of(context)
+    if not library then
+        return nil
+    end
+    local text = cstring(library, library.clang_Cursor_getRawCommentText(cursor))
+    if text == "" then
+        return nil
+    end
+    return text
+end
+
+function M.location(context, cursor)
+    local library = library_of(context)
+    if not library then
+        return { line = 1, column = 1 }
+    end
+    local file = ffi.new("CXFile[1]")
+    local line = ffi.new("unsigned[1]")
+    local column = ffi.new("unsigned[1]")
+    library.clang_getExpansionLocation(library.clang_getCursorLocation(cursor), file, line, column, nil)
+    return { line = tonumber(line[0]) or 1, column = tonumber(column[0]) or 1 }
+end
+
+local function file_range(library, tu, header_path)
+    local file = library.clang_getFile(tu, header_path)
+    if file == nil then
+        return nil
+    end
+    local size = ffi.new("size_t[1]")
+    library.clang_getFileContents(tu, file, size)
+    local last = tonumber(size[0]) or 0
+    if last > 0 then
+        last = last - 1
+    end
+    return library.clang_getRange(
+        library.clang_getLocationForOffset(tu, file, 0),
+        library.clang_getLocationForOffset(tu, file, last)
+    )
+end
+
+local function cursors_in_range(context, tu, range, kind_set)
+    local library = library_of(context)
+    if not library or range == nil then
+        return {}
+    end
+
+    local tokens_ptr = ffi.new("CXToken *[1]")
+    local count_ptr = ffi.new("unsigned[1]")
+    library.clang_tokenize(tu, range, tokens_ptr, count_ptr)
+    local count = tonumber(count_ptr[0]) or 0
+    if count == 0 or tokens_ptr[0] == nil then
+        return {}
+    end
+
+    local walk = count
+    if walk > MAX_TOKENS then
+        log.warn("Token walk capped at %d (file had %d tokens).", MAX_TOKENS, walk)
+        walk = MAX_TOKENS
+    end
+
+    local annotated = ffi.new("CXCursor[?]", walk)
+    library.clang_annotateTokens(tu, tokens_ptr[0], walk, annotated)
+
+    local seen = {}
+    local out = {}
+    for i = 0, walk - 1 do
+        local kind = tonumber(library.clang_getCursorKind(annotated[i]))
+        if not kind_set or kind_set[kind] then
+            local copied = copy_cursor(annotated[i])
+            local key = tostring(ffi.cast("uintptr_t", copied.data[0]))
+                .. ":" .. tostring(copied.xdata) .. ":" .. tostring(kind)
+            if not seen[key] then
+                seen[key] = true
+                out[#out + 1] = copied
+            end
+        end
+    end
+
+    library.clang_disposeTokens(tu, tokens_ptr[0], count)
+    return out
+end
+
+function M.declarations(context, tu, header_path)
+    local library = library_of(context)
+    if not library then
+        return {}
+    end
+    return cursors_in_range(context, tu, file_range(library, tu, header_path), {
+        [M.CURSOR.StructDecl] = true,
+        [M.CURSOR.UnionDecl] = true,
+        [M.CURSOR.EnumDecl] = true,
+        [M.CURSOR.FunctionDecl] = true,
+        [M.CURSOR.TypedefDecl] = true,
+        [M.CURSOR.MacroDefinition] = true,
+    })
+end
+
+function M.fields(context, tu, cursor)
+    local library = library_of(context)
+    if not library then
+        return {}
+    end
+    return cursors_in_range(context, tu, library.clang_getCursorExtent(cursor), {
+        [M.CURSOR.FieldDecl] = true,
+    })
+end
+
+function M.enum_constants(context, tu, cursor)
+    local library = library_of(context)
+    if not library then
+        return {}
+    end
+    return cursors_in_range(context, tu, library.clang_getCursorExtent(cursor), {
+        [M.CURSOR.EnumConstantDecl] = true,
+    })
+end
+
+function M.parameters(context, tu, cursor)
+    local library = library_of(context)
+    if not library then
+        return {}
+    end
+    local n = tonumber(library.clang_Cursor_getNumArguments(cursor)) or 0
+    if n < 0 then
+        n = 0
+    end
+    local out = {}
+    for i = 0, n - 1 do
+        local arg = copy_cursor(library.clang_Cursor_getArgument(cursor, i))
+        out[#out + 1] = {
+            name = M.spelling(context, arg),
+            type = M.type_spelling(context, library.clang_getCursorType(arg)),
+        }
+    end
+    return out
+end
+
+function M.from_main_file(context, cursor)
+    local library = library_of(context)
+    if not library then
+        return false
+    end
+    return library.clang_Location_isFromMainFile(library.clang_getCursorLocation(cursor)) ~= 0
+end
 
 return M
