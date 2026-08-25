@@ -37,7 +37,7 @@ Ballistic is being designed to have an extremely low Cache Footprint:
 - [ ] Trap cache maintanence instructions then invalidate the block cache at that GVA.
 - [ ] Track multiple address spaces with ASIDs.
 - [ ] Handle memory aliasing and cache attributes (CPU: Cached, GPU: Cached/Write-Combining)
-- [ ] Rewrite `tools/cdoc.c`
+- [X] Rewrite `tools/cdoc.c`
 - [X] Rewrite all Python scripts in Lua.
 - [ ] Add code examples on how to use a header file like in `bal_x86_sliding_window.h`.
 - [ ] Reorganize all functions in alphabetical order in `.c` and `.h` files.
