@@ -1,7 +1,7 @@
 local ffi = require("ffi")
 local log = require("log")
-local ast = require("ast")
-local documentation = require("documentation")
+local ast = require("cdoc.ast")
+local documentation = require("cdoc.documentation")
 
 local M = {}
 
