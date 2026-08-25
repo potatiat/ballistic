@@ -9,7 +9,7 @@ macro(add_ballistic_test test_name test_source)
             ${CMAKE_CURRENT_SOURCE_DIR}/src
             extern/googletest-1.17.0/googletest/include
     )
-    target_link_libraries(${test_name} PRIVATE ${PROJECT_NAME} gtest gtest_main)
+    target_link_libraries(${test_name} PRIVATE ${PROJECT_NAME} gtest gtest_main unity)
     add_strict_compiler_flags(${test_name})
     add_sanitizers(${test_name})
 
