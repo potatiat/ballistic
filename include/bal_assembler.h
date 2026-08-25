@@ -9,9 +9,8 @@
 //!
 //! uint32_t code[128];
 //! bal_assembler_t assembler;
-//! bal_logger_t logger = {0};
-//!
-//! bal_error_t error = bal_assembler_init(&assembler, code, 128, logger);
+//! bal_logger_init_default();
+//! bal_error_t error = bal_assembler_init(&assembler, code, 64);
 //! if (error == BAL_SUCCESS)
 //! {
 //!     // MOV X0, #42
@@ -54,9 +53,6 @@ extern "C"
         /// The current write index within the buffer.
         size_t offset;
 
-        /// The logging context used to report details and errors.
-        bal_logger_t logger;
-
         /// The current error state of the assembler.
         ///
         /// Once this is set to anything other than [`BAL_SUCCESS`], all subsequent emit calls will
@@ -87,16 +83,13 @@ extern "C"
     /// // ---
     /// uint32_t code[64];
     /// bal_assembler_t assembler;
-    /// bal_logger_t logger = {0};
-    /// bal_error_t error = bal_assembler_init(&assembler, code, 64, logger);
+    /// bal_logger_init_default();
+    /// bal_error_t error = bal_assembler_init(&assembler, code, 64);
     /// assert(error == BAL_SUCCESS);
     /// assert(assembler.capacity == 64);
     /// assert(assembler.offset == 0);
     /// ```
-    bal_error_t bal_assembler_init(bal_assembler_t *assembler,
-                                   void            *buffer,
-                                   size_t           size,
-                                   bal_logger_t     logger);
+    bal_error_t bal_assembler_init(bal_assembler_t *assembler, void *buffer, size_t size);
 
     /// Resets the assembler back to its initial state.
     ///
@@ -122,8 +115,8 @@ extern "C"
     /// // ---
     /// uint32_t code[64];
     /// bal_assembler_t assembler;
-    /// bal_logger_t logger = {0};
-    /// bal_assembler_init(&assembler, code, 64, logger);
+    /// bal_logger_init_default();
+    /// bal_assembler_init(&assembler, code, 64);
     /// bal_emit_movz(&assembler,BAL_REGISTER_X0, 42, 0);
     /// assert(assembler.offset == 1);
     ///
@@ -151,8 +144,8 @@ extern "C"
     /// // ---
     /// uint32_t code[64];
     /// bal_assembler_t assembler;
-    /// bal_logger_t logger = {0};
-    /// bal_assembler_init(&assembler, code, 64, logger);
+    /// bal_logger_init_default();
+    /// bal_assembler_init(&assembler, code, 64);
     /// bal_assembler_destroy(&assembler);
     ///
     /// // Emitting after a destroy is a no-op. You must call bal_assembler_init() again.
@@ -191,8 +184,8 @@ extern "C"
     /// // ---
     /// uint32_t code[64];
     /// bal_assembler_t assembler;
-    /// bal_logger_t logger = {0};
-    /// bal_assembler_init(&assembler, code, 64, logger);
+    /// bal_logger_init_default();
+    /// bal_assembler_init(&assembler, code, 64);
     ///
     /// bal_emit_add_immediate(&assembler, BAL_REGISTER_X0, BAL_REGISTER_X1, 42, 0);
     /// assert(assembler.offset == 1);
@@ -233,8 +226,8 @@ extern "C"
     /// // ---
     /// uint32_t code[64];
     /// bal_assembler_t assembler;
-    /// bal_logger_t logger = {0};
-    /// bal_assembler_init(&assembler, code, 64, logger);
+    /// bal_logger_init_default();
+    /// bal_assembler_init(&assembler, code, 64);
     ///
     /// bal_emit_add_shifted_register(&assembler, BAL_REGISTER_X0, BAL_REGISTER_X1, BAL_REGISTER_X2,
     ///                               0, 0);
@@ -278,8 +271,8 @@ extern "C"
     /// //---
     /// uint32_t code[64];
     /// bal_assembler_t assembler;
-    /// bal_logger_t logger = {0};
-    /// bal_assembler_init(&assembler, code, 64, logger);
+    /// bal_logger_init_default();
+    /// bal_assembler_init(&assembler, code, 64);
     ///
     /// bal_emit_b(&assembler, 16);
     /// assert(assembler.offset == 1);
@@ -314,8 +307,8 @@ extern "C"
     /// // ---
     /// uint32_t code[64];
     /// bal_assembler_t assembler;
-    /// bal_logger_t logger = {0};
-    /// bal_assembler_init(&assembler, code, 64, logger);
+    /// bal_logger_init_default();
+    /// bal_assembler_init(&assembler, code, 64);
     ///
     /// bal_emit_br(&assembler, BAL_REGISTER_X30);
     /// assert(assembler.offset == 1);
@@ -353,8 +346,8 @@ extern "C"
     /// // ---
     /// uint32_t code[64];
     /// bal_assembler_t assembler;
-    /// bal_logger_t logger = {0};
-    /// bal_assembler_init(&assembler, code, 64, logger);
+    /// bal_logger_init_default();
+    /// bal_assembler_init(&assembler, code, 64);
     ///
     /// bal_emit_sub_immediate(&assembler, BAL_REGISTER_X0, BAL_REGISTER_X1, 10, 0);
     /// assert(assembler.offset == 1);
@@ -394,8 +387,8 @@ extern "C"
     /// // ---
     /// uint32_t code[64];
     /// bal_assembler_t assembler;
-    /// bal_logger_t logger = {0};
-    /// bal_assembler_init(&assembler, code, 64, logger);
+    /// bal_logger_init_default();
+    /// bal_assembler_init(&assembler, code, 64);
     ///
     /// bal_emit_movz(&assembler, BAL_REGISTER_X0, 42, 0);
     /// assert(assembler.offset == 1);
@@ -434,8 +427,8 @@ extern "C"
     /// // ---
     /// uint32_t code[64];
     /// bal_assembler_t assembler;
-    /// bal_logger_t logger = {0};
-    /// bal_assembler_init(&assembler, code, 64, logger);
+    /// bal_logger_init_default();
+    /// bal_assembler_init(&assembler, code, 64);
     /// bal_emit_movk(&assembler, BAL_REGISTER_X0, 0x1234, 16);
     /// assert(assembler.offset == 1);
     /// assert(code[0] == 0xF2A24680);
@@ -473,8 +466,8 @@ extern "C"
     /// // ---
     /// uint32_t code[64];
     /// bal_assembler_t assembler;
-    /// bal_logger_t logger = {0};
-    /// bal_assembler_init(&assembler, code, 64, logger);
+    /// bal_logger_init_default();
+    /// bal_assembler_init(&assembler, code, 64);
     ///
     /// bal_emit_movn(&assembler, BAL_REGISTER_X0, 0xFFFF, 0);
     /// assert(assembler.offset == 1);
@@ -512,8 +505,8 @@ extern "C"
     /// // ---
     /// uint32_t code[64];
     /// bal_assembler_t assembler;
-    /// bal_logger_t logger = {0};
-    /// bal_assembler_init(&assembler, code, 64, logger);
+    /// bal_logger_init_default();
+    /// bal_assembler_init(&assembler, code, 64);
     ///
     /// bal_emit_ret(&assembler, BAL_REGISTER_X30);
     /// assert(assembler.offset == 1);

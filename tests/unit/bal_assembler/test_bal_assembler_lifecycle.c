@@ -7,7 +7,6 @@
 
 static bal_assembler_t assembler;
 static uint32_t        code_buffer[TEST_BUFFER_CAPACITY];
-static bal_logger_t    silent_logger;
 static void           *unaligned_pointer;
 
 void
@@ -15,9 +14,8 @@ setUp(void)
 {
     memset(&assembler, 0, sizeof(assembler));
     memset(&code_buffer, 0, sizeof(code_buffer));
-    memset(&silent_logger, 0, sizeof(silent_logger));
-    silent_logger.min_level = BAL_LOG_LEVEL_NONE;
-    unaligned_pointer       = code_buffer;
+    unaligned_pointer           = code_buffer;
+    bal_thread_logger.min_level = BAL_LOG_LEVEL_NONE;
 
     if (0 == (uintptr_t)unaligned_pointer % 4)
     {
@@ -33,22 +31,20 @@ tearDown(void)
 static inline bal_error_t
 init_valid(void)
 {
-    return bal_assembler_init(&assembler, code_buffer, TEST_BUFFER_CAPACITY, silent_logger);
+    return bal_assembler_init(&assembler, code_buffer, TEST_BUFFER_CAPACITY);
 }
 
 static void
 test_BalAssemblerInit_NullAssemblerReturnsErrorInvalidArgument(void)
 {
-    const bal_error_t error
-        = bal_assembler_init(NULL, code_buffer, TEST_BUFFER_CAPACITY, silent_logger);
+    const bal_error_t error = bal_assembler_init(NULL, code_buffer, TEST_BUFFER_CAPACITY);
     TEST_ASSERT_EQUAL(BAL_ERROR_INVALID_ARGUMENT, error);
 }
 
 static void
 test_BalAssemblerInit_NullBufferReturnsErrorInvalidArgument(void)
 {
-    const bal_error_t error
-        = bal_assembler_init(&assembler, NULL, TEST_BUFFER_CAPACITY, silent_logger);
+    const bal_error_t error = bal_assembler_init(&assembler, NULL, TEST_BUFFER_CAPACITY);
     TEST_ASSERT_EQUAL(BAL_ERROR_INVALID_ARGUMENT, error);
     TEST_ASSERT_NULL(assembler.buffer);
     TEST_ASSERT_EQUAL_UINT32(BAL_MAGIC_UNINITIALIZED, assembler.magic);
@@ -57,7 +53,7 @@ test_BalAssemblerInit_NullBufferReturnsErrorInvalidArgument(void)
 static void
 test_BalAssemblerInit_InvalidBufferSizeReturnsErrorInvalidArgument(void)
 {
-    const bal_error_t error = bal_assembler_init(&assembler, code_buffer, 0, silent_logger);
+    const bal_error_t error = bal_assembler_init(&assembler, code_buffer, 0);
     TEST_ASSERT_EQUAL(BAL_ERROR_INVALID_ARGUMENT, error);
     TEST_ASSERT_NULL(assembler.buffer);
 }
@@ -66,7 +62,7 @@ static void
 test_BalAssemblerInit_UnalignedBufferReturnsErrorInvalidArgument(void)
 {
     const bal_error_t error
-        = bal_assembler_init(&assembler, unaligned_pointer, TEST_BUFFER_CAPACITY, silent_logger);
+        = bal_assembler_init(&assembler, unaligned_pointer, TEST_BUFFER_CAPACITY);
     TEST_ASSERT_EQUAL(BAL_ERROR_MEMORY_ALIGNMENT, error);
     TEST_ASSERT_NULL(assembler.buffer);
 }
@@ -75,7 +71,7 @@ static void
 test_BalAssemblerInit_FullBufferReturnsErrorCapacityTooBig(void)
 {
     const size_t      huge_size = SIZE_MAX / sizeof(uint32_t) + 1;
-    const bal_error_t error = bal_assembler_init(&assembler, code_buffer, huge_size, silent_logger);
+    const bal_error_t error     = bal_assembler_init(&assembler, code_buffer, huge_size);
     TEST_ASSERT_EQUAL(BAL_ERROR_CAPACITY_TOO_BIG, error);
 }
 

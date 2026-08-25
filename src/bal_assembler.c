@@ -8,46 +8,43 @@ static void emit_mov(
     bal_assembler_t *, const char *, bal_register_index_t, uint16_t, uint8_t, uint32_t);
 
 bal_error_t
-bal_assembler_init(bal_assembler_t   *assembler,
-                   void              *buffer,
-                   const size_t       size,
-                   const bal_logger_t logger)
+bal_assembler_init(bal_assembler_t *assembler, void *buffer, const size_t size)
 {
     if (NULL == assembler)
     {
-        BAL_LOG_ERROR(&logger, "Assembler struct is NULL.");
+        BAL_LOG_ERROR(&bal_thread_logger, "Assembler struct is NULL.");
         return BAL_ERROR_INVALID_ARGUMENT;
     }
 
     assembler->buffer   = NULL;
     assembler->capacity = 0;
     assembler->offset   = 0;
-    assembler->logger   = logger;
     assembler->status   = BAL_ERROR_INVALID_ARGUMENT;
     assembler->magic    = 0;
 
     if (NULL == buffer)
     {
-        BAL_LOG_ERROR(&logger, "Aborting function: Buffer is NULL.");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: Buffer is NULL.");
         return assembler->status;
     }
 
     if (0 == size)
     {
-        BAL_LOG_ERROR(&logger, "Aborting function: Buffer capacity is 0.");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: Buffer capacity is 0.");
         return assembler->status;
     }
 
     if ((uintptr_t)buffer % 4 != 0)
     {
-        BAL_LOG_ERROR(&logger, "Aborting function: Buffer %p is not 4-byte aligned.", buffer);
+        BAL_LOG_ERROR(
+            &bal_thread_logger, "Aborting function: Buffer %p is not 4-byte aligned.", buffer);
         assembler->status = BAL_ERROR_MEMORY_ALIGNMENT;
         return assembler->status;
     }
 
     if (size > (SIZE_MAX / sizeof(uint32_t)))
     {
-        BAL_LOG_ERROR(&logger,
+        BAL_LOG_ERROR(&bal_thread_logger,
                       "Aborting function: Buffer capacity %zu is too large and would "
                       "cause integer overflow.",
                       size);
@@ -58,12 +55,13 @@ bal_assembler_init(bal_assembler_t   *assembler,
     assembler->buffer   = (uint32_t *)buffer;
     assembler->capacity = size;
     assembler->offset   = 0;
-    assembler->logger   = logger;
     assembler->status   = BAL_SUCCESS;
     assembler->magic    = BAL_ASSEMBLER_MAGIC_ALIVE;
 
-    BAL_LOG_INFO(
-        &logger, "Assembler initialized. Buffer: %p, Capacity: %zu instructions.", buffer, size);
+    BAL_LOG_INFO(&bal_thread_logger,
+                 "Assembler initialized. Buffer: %p, Capacity: %zu instructions.",
+                 buffer,
+                 size);
     return BAL_SUCCESS;
 }
 
@@ -75,22 +73,19 @@ bal_assembler_reset(bal_assembler_t *assembler)
         return;
     }
 
-    BAL_CHECK_MAGIC_VOID(assembler,
-                         BAL_ASSEMBLER_MAGIC_ALIVE,
-                         BAL_ASSEMBLER_MAGIC_DEAD,
-                         "bal_assembler_t",
-                         assembler->logger);
+    BAL_CHECK_MAGIC_VOID(
+        assembler, BAL_ASSEMBLER_MAGIC_ALIVE, BAL_ASSEMBLER_MAGIC_DEAD, "bal_assembler_t");
 
     if (BAL_UNLIKELY(NULL == assembler->buffer))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->buffer == NULL");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler->buffer == NULL");
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
 
     if (BAL_UNLIKELY(0 == assembler->capacity))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->capacity == 0");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler->capacity == 0");
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -108,13 +103,10 @@ bal_assembler_destroy(bal_assembler_t *assembler)
         return;
     }
 
-    BAL_CHECK_MAGIC_VOID(assembler,
-                         BAL_ASSEMBLER_MAGIC_ALIVE,
-                         BAL_ASSEMBLER_MAGIC_DEAD,
-                         "bal_assembler_t",
-                         assembler->logger);
+    BAL_CHECK_MAGIC_VOID(
+        assembler, BAL_ASSEMBLER_MAGIC_ALIVE, BAL_ASSEMBLER_MAGIC_DEAD, "bal_assembler_t");
 
-    BAL_LOG_INFO(&assembler->logger, "Destroying assembler context. Buffer memory is NOT freed.");
+    BAL_LOG_INFO(&bal_thread_logger, "Destroying assembler context. Buffer memory is NOT freed.");
     assembler->magic    = BAL_ASSEMBLER_MAGIC_DEAD;
     assembler->buffer   = NULL;
     assembler->capacity = 0;
@@ -134,48 +126,45 @@ bal_emit_add_immediate(bal_assembler_t           *assembler,
         return;
     }
 
-    BAL_CHECK_MAGIC_VOID(assembler,
-                         BAL_ASSEMBLER_MAGIC_ALIVE,
-                         BAL_ASSEMBLER_MAGIC_DEAD,
-                         "bal_assembler_t",
-                         assembler->logger);
+    BAL_CHECK_MAGIC_VOID(
+        assembler, BAL_ASSEMBLER_MAGIC_ALIVE, BAL_ASSEMBLER_MAGIC_DEAD, "bal_assembler_t");
 
     if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->status != BAL_SUCCESS.");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler->status != BAL_SUCCESS.");
         return;
     }
 
     if (BAL_UNLIKELY(NULL == assembler->buffer))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->buffer is NULL.");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler->buffer is NULL.");
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
 
     if (BAL_UNLIKELY((uint32_t)rd > 31U))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Rd X%u out of range (0-31).", rd);
+        BAL_LOG_ERROR(&bal_thread_logger, "Rd X%u out of range (0-31).", rd);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
 
     if (BAL_UNLIKELY((uint32_t)rn > 31U))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Rn X%u out of range (0-31).", rd);
+        BAL_LOG_ERROR(&bal_thread_logger, "Rn X%u out of range (0-31).", rd);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
 
     if (BAL_UNLIKELY((imm12 > 0xFFF)))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Immediate 0x%X exceeds 12-bit limit (0xFFF).", imm12);
+        BAL_LOG_ERROR(&bal_thread_logger, "Immediate 0x%X exceeds 12-bit limit (0xFFF).", imm12);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
     }
 
     if (shift != 0 && shift != 1)
     {
-        BAL_LOG_ERROR(&assembler->logger, "%u is not a valid shift amount (0-1).", shift);
+        BAL_LOG_ERROR(&bal_thread_logger, "%u is not a valid shift amount (0-1).", shift);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -198,7 +187,7 @@ bal_emit_add_immediate(bal_assembler_t           *assembler,
     instruction |= (uint32_t)rn << 5;
     instruction |= (uint32_t)rd;
 
-    BAL_LOG_TRACE(&assembler->logger,
+    BAL_LOG_TRACE(&bal_thread_logger,
                   "[+0x%04zx] %08x ADD (Imm) X%u, X%u, #0x%03x, LSL #%u",
                   assembler->offset * sizeof(uint32_t),
                   instruction,
@@ -223,56 +212,53 @@ bal_emit_add_shifted_register(bal_assembler_t           *assembler,
         return;
     }
 
-    BAL_CHECK_MAGIC_VOID(assembler,
-                         BAL_ASSEMBLER_MAGIC_ALIVE,
-                         BAL_ASSEMBLER_MAGIC_DEAD,
-                         "bal_assembler_t",
-                         assembler->logger);
+    BAL_CHECK_MAGIC_VOID(
+        assembler, BAL_ASSEMBLER_MAGIC_ALIVE, BAL_ASSEMBLER_MAGIC_DEAD, "bal_assembler_t");
 
     if (BAL_UNLIKELY(NULL == assembler->buffer))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->buffer is NULL");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler->buffer is NULL");
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
 
     if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->status != BAL_SUCCESS");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler->status != BAL_SUCCESS");
         return;
     }
 
     if (BAL_UNLIKELY((uint32_t)rd > 31U))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Rd X%u out of range (0-31).", rd);
+        BAL_LOG_ERROR(&bal_thread_logger, "Rd X%u out of range (0-31).", rd);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
 
     if (BAL_UNLIKELY((uint32_t)rn > 31U))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Rn X%u out of range (0-31).", rn);
+        BAL_LOG_ERROR(&bal_thread_logger, "Rn X%u out of range (0-31).", rn);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
 
     if (BAL_UNLIKELY((uint32_t)rm > 31U))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Rm X%u out of range (0-31).", rm);
+        BAL_LOG_ERROR(&bal_thread_logger, "Rm X%u out of range (0-31).", rm);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
 
     if (BAL_UNLIKELY(shift > 63U))
     {
-        BAL_LOG_ERROR(&assembler->logger, "%u is not a valid shift amount (0-63).", shift);
+        BAL_LOG_ERROR(&bal_thread_logger, "%u is not a valid shift amount (0-63).", shift);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
 
     if (BAL_UNLIKELY(shift_type > 2U))
     {
-        BAL_LOG_ERROR(&assembler->logger, "%u is not a valid shift type (0-2).", shift_type);
+        BAL_LOG_ERROR(&bal_thread_logger, "%u is not a valid shift type (0-2).", shift_type);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -296,7 +282,7 @@ bal_emit_add_shifted_register(bal_assembler_t           *assembler,
     instruction |= (uint32_t)rn << 5U;
     instruction |= (uint32_t)rd;
 
-    BAL_LOG_TRACE(&assembler->logger,
+    BAL_LOG_TRACE(&bal_thread_logger,
                   "[+0X%04zx] %08x Add (Shifted Register) X%u, X%u, X%u, shift %u",
                   assembler->offset * sizeof(uint32_t),
                   instruction,
@@ -316,22 +302,19 @@ bal_emit_b(bal_assembler_t *assembler, const int32_t offset)
         return;
     }
 
-    BAL_CHECK_MAGIC_VOID(assembler,
-                         BAL_ASSEMBLER_MAGIC_ALIVE,
-                         BAL_ASSEMBLER_MAGIC_DEAD,
-                         "bal_assembler_t",
-                         assembler->logger);
+    BAL_CHECK_MAGIC_VOID(
+        assembler, BAL_ASSEMBLER_MAGIC_ALIVE, BAL_ASSEMBLER_MAGIC_DEAD, "bal_assembler_t");
 
     if (BAL_UNLIKELY(NULL == assembler->buffer))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->buffer is NULL");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler->buffer is NULL");
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
 
     if (BAL_UNLIKELY((offset & 0x3) != 0))
     {
-        BAL_LOG_ERROR(&assembler->logger,
+        BAL_LOG_ERROR(&bal_thread_logger,
                       "Aborting function: Branch offset %d is not 4-byte aligned.",
                       offset);
         assembler->status = BAL_ERROR_PC_ALIGNMENT;
@@ -342,7 +325,7 @@ bal_emit_b(bal_assembler_t *assembler, const int32_t offset)
 
     if (BAL_UNLIKELY(imm26_signed < -33554432 || imm26_signed > 33554431))
     {
-        BAL_LOG_ERROR(&assembler->logger,
+        BAL_LOG_ERROR(&bal_thread_logger,
                       "Aborting function: Branch offset %d (imm26: %d) exceeds signed 26-bit "
                       "displacement limits.",
                       offset,
@@ -360,7 +343,7 @@ bal_emit_b(bal_assembler_t *assembler, const int32_t offset)
 
     if (assembler->status != BAL_SUCCESS)
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->status != BAL_SUCCESS");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler->status != BAL_SUCCESS");
         return;
     }
 
@@ -369,7 +352,7 @@ bal_emit_b(bal_assembler_t *assembler, const int32_t offset)
     const uint32_t imm26       = (uint32_t)imm26_signed & 0x03FFFFFFU;
     const uint32_t instruction = hard_coded_bits | imm26;
 
-    BAL_LOG_TRACE(&assembler->logger,
+    BAL_LOG_TRACE(&bal_thread_logger,
                   "[+0x%04zx] %08x B #%d",
                   assembler->offset * sizeof(uint32_t),
                   instruction,
@@ -386,28 +369,25 @@ bal_emit_br(bal_assembler_t *BAL_RESTRICT assembler, const bal_register_index_t 
         return;
     }
 
-    BAL_CHECK_MAGIC_VOID(assembler,
-                         BAL_ASSEMBLER_MAGIC_ALIVE,
-                         BAL_ASSEMBLER_MAGIC_DEAD,
-                         "bal_assembler_t",
-                         assembler->logger);
+    BAL_CHECK_MAGIC_VOID(
+        assembler, BAL_ASSEMBLER_MAGIC_ALIVE, BAL_ASSEMBLER_MAGIC_DEAD, "bal_assembler_t");
 
     if (BAL_UNLIKELY(NULL == assembler->buffer))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->buffer is NULL");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler->buffer is NULL");
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
 
     if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->status != BAL_SUCCESS");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler->status != BAL_SUCCESS");
         return;
     }
 
     if (BAL_UNLIKELY((uint32_t)rn > 31U))
     {
-        BAL_LOG_ERROR(&assembler->logger, "X%u out of range (0-31)", rn);
+        BAL_LOG_ERROR(&bal_thread_logger, "X%u out of range (0-31)", rn);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -423,7 +403,7 @@ bal_emit_br(bal_assembler_t *BAL_RESTRICT assembler, const bal_register_index_t 
     const uint32_t rn_shift        = 5U;
     const uint32_t instruction     = hard_coded_bits | rn << rn_shift;
 
-    BAL_LOG_TRACE(&assembler->logger,
+    BAL_LOG_TRACE(&bal_thread_logger,
                   "[+0x%04zx] %08x BR X%u",
                   assembler->offset * sizeof(uint32_t),
                   instruction,
@@ -444,42 +424,39 @@ bal_emit_sub_immediate(bal_assembler_t           *assembler,
         return;
     }
 
-    BAL_CHECK_MAGIC_VOID(assembler,
-                         BAL_ASSEMBLER_MAGIC_ALIVE,
-                         BAL_ASSEMBLER_MAGIC_DEAD,
-                         "bal_assembler_t",
-                         assembler->logger);
+    BAL_CHECK_MAGIC_VOID(
+        assembler, BAL_ASSEMBLER_MAGIC_ALIVE, BAL_ASSEMBLER_MAGIC_DEAD, "bal_assembler_t");
 
     if (assembler->status != BAL_SUCCESS)
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->status != BAL_SUCCESS.");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler->status != BAL_SUCCESS.");
         return;
     }
 
     if (BAL_UNLIKELY((uint32_t)rd > 31U))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Rd X%u out of range (0-31).", rd);
+        BAL_LOG_ERROR(&bal_thread_logger, "Rd X%u out of range (0-31).", rd);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
 
     if (BAL_UNLIKELY((uint32_t)rn > 31U))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Rn X%u out of range (0-31).", rn);
+        BAL_LOG_ERROR(&bal_thread_logger, "Rn X%u out of range (0-31).", rn);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
 
     if (BAL_UNLIKELY(imm12 > 0xFFFU))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Immediate 0x%X exceeds 12-bit limit (0xFFF).", imm12);
+        BAL_LOG_ERROR(&bal_thread_logger, "Immediate 0x%X exceeds 12-bit limit (0xFFF).", imm12);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
 
     if (shift != 0U && shift != 1U)
     {
-        BAL_LOG_ERROR(&assembler->logger, "%u is not a valid shift amount (0-1).", shift);
+        BAL_LOG_ERROR(&bal_thread_logger, "%u is not a valid shift amount (0-1).", shift);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -502,7 +479,7 @@ bal_emit_sub_immediate(bal_assembler_t           *assembler,
     instruction |= (uint32_t)rn << 5;
     instruction |= (uint32_t)rd;
 
-    BAL_LOG_TRACE(&assembler->logger,
+    BAL_LOG_TRACE(&bal_thread_logger,
                   "[+0x%04zx] %08x SUB (Imm) X%u, #0x%04x, LSL #%u",
                   assembler->offset * sizeof(uint32_t),
                   instruction,
@@ -548,29 +525,26 @@ bal_emit_ret(bal_assembler_t *assembler, const bal_register_index_t rn)
         return;
     }
 
-    BAL_CHECK_MAGIC_VOID(assembler,
-                         BAL_ASSEMBLER_MAGIC_ALIVE,
-                         BAL_ASSEMBLER_MAGIC_DEAD,
-                         "bal_assembler_t",
-                         assembler->logger);
+    BAL_CHECK_MAGIC_VOID(
+        assembler, BAL_ASSEMBLER_MAGIC_ALIVE, BAL_ASSEMBLER_MAGIC_DEAD, "bal_assembler_t");
 
     if (NULL == assembler->buffer)
     {
-        BAL_LOG_ERROR(&assembler->logger, "assembler->buffer is NULL, aborting emission");
+        BAL_LOG_ERROR(&bal_thread_logger, "assembler->buffer is NULL, aborting emission");
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
 
     if ((uint32_t)rn > 31U)
     {
-        BAL_LOG_ERROR(&assembler->logger, "X%u out of range (0-31).", rn);
+        BAL_LOG_ERROR(&bal_thread_logger, "X%u out of range (0-31).", rn);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
 
     if (assembler->status != BAL_SUCCESS)
     {
-        BAL_LOG_ERROR(&assembler->logger, "assembler->status != BAL_SUCCESS, aborting emission");
+        BAL_LOG_ERROR(&bal_thread_logger, "assembler->status != BAL_SUCCESS, aborting emission");
         return;
     }
 
@@ -585,7 +559,7 @@ bal_emit_ret(bal_assembler_t *assembler, const bal_register_index_t rn)
     const uint32_t rn_shift        = 5U;
     const uint32_t instruction     = hard_coded_bits | (uint32_t)rn << rn_shift;
 
-    BAL_LOG_TRACE(&assembler->logger,
+    BAL_LOG_TRACE(&bal_thread_logger,
                   "[+0x%04zx] %08x RET X%u",
                   assembler->offset * sizeof(uint32_t),
                   instruction,
@@ -599,7 +573,7 @@ can_emit(bal_assembler_t *assembler)
 {
     if (assembler->offset >= assembler->capacity)
     {
-        BAL_LOG_ERROR(&assembler->logger,
+        BAL_LOG_ERROR(&bal_thread_logger,
                       "Aborting function: Assembler Overflow. Capacity %zu reached.",
                       assembler->capacity);
         assembler->status = BAL_ERROR_INSTRUCTION_OVERFLOW;
@@ -622,35 +596,32 @@ emit_mov(bal_assembler_t *BAL_RESTRICT assembler,
         return;
     }
 
-    BAL_CHECK_MAGIC_VOID(assembler,
-                         BAL_ASSEMBLER_MAGIC_ALIVE,
-                         BAL_ASSEMBLER_MAGIC_DEAD,
-                         "bal_assembler_t",
-                         assembler->logger);
+    BAL_CHECK_MAGIC_VOID(
+        assembler, BAL_ASSEMBLER_MAGIC_ALIVE, BAL_ASSEMBLER_MAGIC_DEAD, "bal_assembler_t");
 
     if (BAL_UNLIKELY(NULL == assembler->buffer))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->buffer is NULL");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler->buffer is NULL");
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
 
     if (BAL_UNLIKELY(assembler->status != BAL_SUCCESS))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Aborting function: assembler->status != BAL_SUCCESS");
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler->status != BAL_SUCCESS");
         return;
     }
 
     if (BAL_UNLIKELY((uint32_t)rd > 31U))
     {
-        BAL_LOG_ERROR(&assembler->logger, "Rd X%u out of range (0-31).", rd);
+        BAL_LOG_ERROR(&bal_thread_logger, "Rd X%u out of range (0-31).", rd);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
 
     if (BAL_UNLIKELY(shift != 0U && shift != 16U && shift != 32U && shift != 48U))
     {
-        BAL_LOG_ERROR(&assembler->logger, "%u is not a valid shift amount (0, 16, 32, 48).", shift);
+        BAL_LOG_ERROR(&bal_thread_logger, "%u is not a valid shift amount (0, 16, 32, 48).", shift);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
@@ -673,7 +644,7 @@ emit_mov(bal_assembler_t *BAL_RESTRICT assembler,
     instruction |= imm16 << 5U;
     instruction |= rd;
 
-    BAL_LOG_TRACE(&assembler->logger,
+    BAL_LOG_TRACE(&bal_thread_logger,
                   "[+0x%04zx] %08x %s X%u, #0x%04x, LSL #%u",
                   assembler->offset * sizeof(uint32_t),
                   instruction,

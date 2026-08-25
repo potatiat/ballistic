@@ -52,12 +52,12 @@ extern "C"
         return "Memory corruption or wrong struct type passed.";
     }
 
-#define BAL_CHECK_MAGIC(ptr, alive_magic, dead_magic, struct_name_str, logger)                   \
+#define BAL_CHECK_MAGIC(ptr, alive_magic, dead_magic, struct_name_str)                           \
     do                                                                                           \
     {                                                                                            \
         if (BAL_UNLIKELY((ptr)->magic != (alive_magic)))                                         \
         {                                                                                        \
-            BAL_LOG_ERROR(&logger,                                                               \
+            BAL_LOG_ERROR(&bal_thread_logger,                                                    \
                           "\n================================================================\n" \
                           "%s INTEGRITY CHECK FAILED!\n"                                         \
                           "  Expected : 0x%08X (%s)\n"                                           \
@@ -75,12 +75,12 @@ extern "C"
         }                                                                                        \
     } while (0)
 
-#define BAL_CHECK_MAGIC_VOID(ptr, alive_magic, dead_magic, struct_name_str, logger)              \
+#define BAL_CHECK_MAGIC_VOID(ptr, alive_magic, dead_magic, struct_name_str)                      \
     do                                                                                           \
     {                                                                                            \
         if (BAL_UNLIKELY((ptr)->magic != (alive_magic)))                                         \
         {                                                                                        \
-            BAL_LOG_ERROR(&logger,                                                               \
+            BAL_LOG_ERROR(&bal_thread_logger,                                                    \
                           "\n================================================================\n" \
                           "%s INTEGRITY CHECK FAILED!\n"                                         \
                           "  Expected : 0x%08X (%s)\n"                                           \
