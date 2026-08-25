@@ -16,6 +16,8 @@ macro(add_ballistic_test test_name test_source)
     gtest_discover_tests(${test_name} DISCOVERY_MODE POST_BUILD)
 endmacro()
 
+add_ballistic_test(test_bal_assembler unit/bal_assembler/test_bal_assembler_lifecycle.c)
+
 add_ballistic_test(test_engine test_engine.cpp)
 target_compile_options(test_engine PRIVATE -Wno-padded)
 
