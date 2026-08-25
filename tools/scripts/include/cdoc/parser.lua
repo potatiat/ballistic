@@ -55,6 +55,7 @@ function M.parse_header(clang_context, header_path, clang_args)
         log.error("Aborting function: Failed to open header file %s.", header_path)
         return
     end
+    file:close()
 
     if not clang_context then
         log.error("Aborting function: libclang not initialized.")
