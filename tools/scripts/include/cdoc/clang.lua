@@ -1,10 +1,13 @@
 local script_path = debug.getinfo(1, "S").source:sub(2)
 local script_dir = script_path:match("(.*[/\\])") or "./"
-package.path = package.path .. ";" .. script_dir .. "/?.lua"
+local parent_dir = script_dir:gsub("[^/\\]+[/\\]$", "")
+package.path = package.path .. ";" .. script_dir .. "?.lua;" .. parent_dir .. "?.lua"
 
 local log = require('log')
 local ffi = require('ffi')
 
+-- Layouts must match clang-c/Index.h for the loaded libclang.
+-- CXToken.int_data[4] is version-sensitive.
 ffi.cdef[[
 typedef void* CXIndex;
 typedef void* CXTranslationUnit;
@@ -17,9 +20,6 @@ typedef struct { const char *data; unsigned private_flags; } CXString;
 typedef void *CXFile;
 typedef struct { void *ptr_data[2]; unsigned begin_int_data; unsigned end_int_data; } CXSourceRange;
 typedef struct { unsigned int_data[4]; void *ptr_data; } CXToken;
-
-typedef enum { CXChildVisit_Break = 0, CXChildVisit_Continue = 1, CXChildVisit_Recurse = 2 } CXChildVisitResult;
-typedef CXChildVisitResult (*CXCursorVisitor)(CXCursor cursor, CXCursor parent, CXClientData client_data);
 
 CXIndex clang_createIndex(int excludeDeclarationsFromPCH, int displayDiagnostics);
 void clang_disposeIndex(CXIndex index);
@@ -41,12 +41,13 @@ int clang_Location_isFromMainFile(CXSourceLocation);
 long long clang_getEnumConstantDeclValue(CXCursor);
 CXType clang_getTypedefDeclUnderlyingType(CXCursor);
 CXCursor clang_getTypeDeclaration(CXType);
-unsigned clang_visitChildren(CXCursor parent, CXCursorVisitor visitor, CXClientData client_data);
 
 CXSourceRange clang_getCursorExtent(CXCursor);
 CXFile clang_getFile(CXTranslationUnit, const char *file_name);
 CXSourceLocation clang_getLocationForOffset(CXTranslationUnit, CXFile, unsigned offset);
 CXSourceRange clang_getRange(CXSourceLocation begin, CXSourceLocation end);
+CXSourceLocation clang_getRangeStart(CXSourceRange range);
+CXSourceLocation clang_getRangeEnd(CXSourceRange range);
 const char *clang_getFileContents(CXTranslationUnit, CXFile, size_t *size);
 void clang_tokenize(CXTranslationUnit TU, CXSourceRange Range, CXToken **Tokens, unsigned *NumTokens);
 void clang_annotateTokens(CXTranslationUnit TU, CXToken *Tokens, unsigned NumTokens, CXCursor *Cursors);
@@ -64,6 +65,12 @@ CXType clang_getArgType(CXType T, unsigned i);
 
 const char *clang_getCString(CXString string);
 void clang_disposeString(CXString string);
+
+typedef void *CXDiagnostic;
+unsigned clang_getNumDiagnostics(CXTranslationUnit Unit);
+CXDiagnostic clang_getDiagnostic(CXTranslationUnit Unit, unsigned Index);
+unsigned clang_getDiagnosticSeverity(CXDiagnostic);
+void clang_disposeDiagnostic(CXDiagnostic);
 
 typedef struct DIR DIR;
 struct dirent {
@@ -139,7 +146,31 @@ local function check_magic(context)
     return false
 end
 
-local function scan_directory_for_libraries(directory, prefix, suffix)
+-- C API sonames only. libclang-cpp exports a different ABI and must not win
+-- a prefix scan of /usr/lib.
+local function libclang_c_api_version(name)
+    if name:find("cpp", 1, true) then
+        return nil
+    end
+
+    local dashed = name:match("^libclang%-(%d+)%.so")
+    if dashed then
+        return tonumber(dashed)
+    end
+
+    local so_ver = name:match("^libclang%.so%.(%d+)")
+    if so_ver then
+        return tonumber(so_ver)
+    end
+
+    if name == "libclang.so" or name == "libclang.dylib" or name == "libclang.dll" then
+        return 0
+    end
+
+    return nil
+end
+
+local function scan_directory_for_libraries(directory)
     local results = {}
     local d = ffi.C.opendir(directory)
 
@@ -159,27 +190,17 @@ local function scan_directory_for_libraries(directory, prefix, suffix)
 
         scanned = scanned + 1
         local name = ffi.string(ent.d_name)
-        local matches = name:sub(1, #prefix) == prefix
+        local version_number = libclang_c_api_version(name)
 
-        if #suffix > 0 then
-            matches = matches and name:sub(-#suffix) == suffix
-        end
-
-        if matches then
-            local remainder = name:sub(#prefix + 1)
-            if #suffix > 0 then
-                remainder = remainder:sub(1, -#suffix - 1)
-            end
-
-            local version_string = remainder:match("^%.?([%d%.]+)")
-            local version_number = tonumber((version_string or "0"):match("^(%d+)")) or 0
+        if version_number then
             results[#results + 1] = { path = directory .. "/" .. name, version = version_number }
         end
     end
 
     ffi.C.closedir(d)
     log.debug("Scanned %d entries in '%s', found %d matching candidates.", scanned, directory, #results)
-    table.sort(results, function(a,b) return a.version > b.version
+    table.sort(results, function(a, b)
+        return a.version > b.version
     end)
 
     local paths = {}
@@ -191,15 +212,36 @@ local function scan_directory_for_libraries(directory, prefix, suffix)
     return paths
 end
 
+local function append_windows_llvm_dlls(paths)
+    table.insert(paths, "C:\\Program Files\\LLVM\\bin\\libclang.dll")
+    table.insert(paths, "C:\\Program Files (x86)\\LLVM\\bin\\libclang.dll")
+
+    local visual_studio_years = { "2022", "2019", "2017" }
+    local visual_studio_editions = { "Community", "Professional", "Enterprise", "BuildTools" }
+    local visual_studio_roots = {
+        "C:\\Program Files\\Microsoft Visual Studio",
+        "C:\\Program Files (x86)\\Microsoft Visual Studio",
+    }
+
+    for _, root in ipairs(visual_studio_roots) do
+        for _, year in ipairs(visual_studio_years) do
+            for _, edition in ipairs(visual_studio_editions) do
+                local llvm = root .. "\\" .. year .. "\\" .. edition .. "\\VC\\Tools\\Llvm"
+                table.insert(paths, llvm .. "\\bin\\libclang.dll")
+                table.insert(paths, llvm .. "\\x86\\bin\\libclang.dll")
+                table.insert(paths, llvm .. "\\x64\\bin\\libclang.dll")
+            end
+        end
+    end
+end
+
 local function get_common_paths()
     local os_name = jit and jit.os or "Unknown"
     log.info("Detecting libclang paths for %s.", os_name)
 
-    local paths = {
-        "clang", "libclang", "libclang.so", "libclang.dylib", "libclang.dll",
-        "libclang-20", "libclang-19", "libclang-18", "libclang-17", "libclang-16",
-        "libclang-15", "libclang-14", "libclang-13"
-    }
+    -- Absolute installs first. Bare names go last so Windows LoadLibrary
+    -- cannot pick a planted libclang.dll from CWD before LLVM.
+    local paths = {}
 
     if os_name == "Linux" then
         local directories = {
@@ -217,33 +259,14 @@ local function get_common_paths()
         log.debug("Searching %d directories.", #directories)
 
         for _, directory in ipairs(directories) do
-            local found = scan_directory_for_libraries(directory, "libclang", "")
+            local found = scan_directory_for_libraries(directory)
 
             for _, path in ipairs(found) do
                 table.insert(paths, path)
             end
         end
     elseif os_name == "Windows" then
-        table.insert(paths, "C:\\Program Files\\LLVM\\bin\\libclang.dll")
-        table.insert(paths, "C:\\Program Files (x86)\\LLVM\\bin\\libclang.dll")
-
-        local visual_studio_years = { "2022", "2019", "2017" }
-        local visual_studio_editions = { "Community", "Professional", "Enterprise", "BuildTools" }
-        local visual_studio_roots = {
-            "C:\\Program Files\\Microsoft Visual Studio",
-            "C:\\Program Files (x86)\\Microsoft Visual Studio",
-        }
-
-        for _, root in ipairs(visual_studio_roots) do
-            for _, year in ipairs(visual_studio_years) do
-                for _, edition in ipairs(visual_studio_editions) do
-                    local llvm = root .. "\\" .. year .. "\\" .. edition .. "\\VC\\Tools\\Llvm"
-                    table.insert(paths, llvm .. "\\bin\\libclang.dll")
-                    table.insert(paths, llvm .. "\\x86\\bin\\libclang.dll")
-                    table.insert(paths, llvm .. "\\x64\\bin\\libclang.dll")
-                end
-            end
-        end
+        append_windows_llvm_dlls(paths)
     elseif os_name == "OSX" then
         table.insert(paths, "/opt/homebrew/opt/llvm/lib/libclang.dylib")
         table.insert(paths, "/usr/local/opt/llvm/lib/libclang.dylib")
@@ -251,25 +274,36 @@ local function get_common_paths()
             paths,
             "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/libclang.dylib"
         )
-        local directories = {
-            "/opt/homebrew/opt/llvm/lib",
-            "/usr/local/opt/llvm/lib",
-        }
-        for _, directory in ipairs(directories) do
-            for _, path in ipairs(scan_directory_for_libraries(directory, "libclang", "")) do
-                table.insert(paths, path)
-            end
-        end
+        -- Darwin dirent layout does not match the Linux cdef; hardcoded
+        -- dylib paths above are the search. Do not readdir here.
     else
         log.warn("Unrecognized OS '%s', using base library names only.", os_name)
     end
 
+    table.insert(paths, "libclang.so")
+    table.insert(paths, "libclang.dylib")
+    table.insert(paths, "libclang.dll")
+    table.insert(paths, "libclang")
+
     return paths
+end
+
+local function library_exports_c_api(library)
+    local ok, index = pcall(library.clang_createIndex, 0, 0)
+    if not ok then
+        return false, tostring(index)
+    end
+    if index == nil then
+        return false, "clang_createIndex returned NULL"
+    end
+    library.clang_disposeIndex(index)
+    return true
 end
 
 function M.create_context()
     return {
         library = nil,
+        library_path = nil,
         status = M.ERROR.INVALID_ARGUMENT,
         magic = M.MAGIC_UNINITIALIZED,
     }
@@ -295,11 +329,19 @@ function M.init(context, custom_path)
         log.trace("Attempt %d/%d: ffi.load('%s')", attempt, #paths, path)
         local ok, library = pcall(ffi.load, path)
         if ok then
-            log.info("Successfully loaded libclang from %s (attempt %d/%d).", path, attempt, #paths)
-            context.library = library
-            context.status = M.ERROR.SUCCESS
-            context.magic = M.MAGIC_ALIVE
-            return true
+            local has_c_api, api_error = library_exports_c_api(library)
+            if has_c_api then
+                log.info("Successfully loaded libclang from %s (attempt %d/%d).", path, attempt, #paths)
+                context.library = library
+                context.library_path = path
+                context.status = M.ERROR.SUCCESS
+                context.magic = M.MAGIC_ALIVE
+                return true
+            end
+            local error_message = "loaded '" .. path .. "' but it is not the libclang C API: " .. tostring(api_error)
+            table.insert(errors, error_message)
+            log.trace("Failed: %s", error_message)
+            attempt = attempt + 1
         else
             local error_message = tostring(library)
             table.insert(errors, error_message)
@@ -333,15 +375,135 @@ function M.destroy(context)
     if check_magic(context) then
         log.info("Destroying clang context.")
         context.library = nil
+        context.library_path = nil
         context.status = M.ERROR.SUCCESS
         context.magic = M.MAGIC_DEAD
     end
+end
+
+local function dirname(path)
+    if type(path) ~= "string" then
+        return nil
+    end
+    return path:match("^(.*)[/\\][^/\\]+$")
+end
+
+local function has_stdarg(include_dir)
+    local probe = io.open(include_dir .. "/stdarg.h", "r") or io.open(include_dir .. "\\stdarg.h", "r")
+    if probe then
+        probe:close()
+        return true
+    end
+    return false
+end
+
+local function list_dir_names(directory)
+    local names = {}
+    if jit.os == "Linux" then
+        local opened, d = pcall(function()
+            return ffi.C.opendir(directory)
+        end)
+        if not opened or d == nil then
+            return names
+        end
+        while true do
+            local ent = ffi.C.readdir(d)
+            if ent == nil then
+                break
+            end
+            local name = ffi.string(ent.d_name)
+            if name ~= "." and name ~= ".." then
+                names[#names + 1] = name
+            end
+        end
+        ffi.C.closedir(d)
+        return names
+    end
+
+    local cmd
+    if jit.os == "Windows" then
+        cmd = 'cmd /c dir /b "' .. directory:gsub("/", "\\") .. '" 2>nul'
+    else
+        cmd = "/bin/ls -1 " .. string.format("%q", directory)
+    end
+    local pipe = io.popen(cmd)
+    if not pipe then
+        return names
+    end
+    for line in pipe:lines() do
+        if line ~= "" and line ~= "." and line ~= ".." then
+            names[#names + 1] = line
+        end
+    end
+    pipe:close()
+    return names
+end
+
+local function clang_include_under(clang_versions_dir)
+    local best_ver = -1
+    local best_path = nil
+    for _, name in ipairs(list_dir_names(clang_versions_dir)) do
+        local include_dir = clang_versions_dir .. "/" .. name .. "/include"
+        if has_stdarg(include_dir) then
+            local major = tonumber(name:match("^(%d+)")) or 0
+            if major > best_ver then
+                best_ver = major
+                best_path = include_dir
+            end
+        end
+    end
+    return best_path
+end
+
+local function resource_dir_from_library_path(library_path)
+    if type(library_path) ~= "string" or not library_path:find("[/\\]") then
+        return nil
+    end
+
+    local dir = dirname(library_path)
+    local seen = {}
+    local clang_roots = {}
+    local function add_root(path)
+        if path and not seen[path] then
+            seen[path] = true
+            clang_roots[#clang_roots + 1] = path
+        end
+    end
+
+    local walk = dir
+    for _ = 1, 4 do
+        if not walk then
+            break
+        end
+        add_root(walk .. "/clang")
+        add_root(walk .. "/lib/clang")
+        add_root(walk .. "/lib64/clang")
+        walk = dirname(walk)
+    end
+
+    for _, clang_root in ipairs(clang_roots) do
+        local found = clang_include_under(clang_root)
+        if found then
+            return found
+        end
+        if has_stdarg(clang_root .. "/include") then
+            return clang_root .. "/include"
+        end
+    end
+
+    return nil
 end
 
 function M.resource_directory(context)
     if context == nil then
         log.error("Aborting function: context is NULL.")
         return nil
+    end
+
+    local from_library = resource_dir_from_library_path(context.library_path)
+    if from_library then
+        log.info("Found clang resource dir: %s", from_library)
+        return from_library
     end
 
     local os_name = jit and jit.os or "Unknown"
@@ -354,12 +516,31 @@ function M.resource_directory(context)
             candidates[#candidates + 1] = string.format("/usr/lib/llvm-%d/lib/clang/%d/include", ver, ver)
             candidates[#candidates + 1] = string.format("/usr/local/lib/clang/%d/include", ver)
         end
+        local found = clang_include_under("/usr/lib/clang")
+            or clang_include_under("/usr/lib64/clang")
+            or clang_include_under("/usr/local/lib/clang")
+        if found then
+            log.info("Found clang resource dir: %s", found)
+            return found
+        end
     elseif os_name == "OSX" then
+        local found = clang_include_under("/opt/homebrew/opt/llvm/lib/clang")
+            or clang_include_under("/usr/local/opt/llvm/lib/clang")
+        if found then
+            log.info("Found clang resource dir: %s", found)
+            return found
+        end
         for ver = 22, 10, -1 do
             candidates[#candidates + 1] = string.format("/opt/homebrew/opt/llvm/lib/clang/%d/include", ver)
             candidates[#candidates + 1] = string.format("/usr/local/opt/llvm/lib/clang/%d/include", ver)
         end
     elseif os_name == "Windows" then
+        local found = clang_include_under("C:\\Program Files\\LLVM\\lib\\clang")
+            or clang_include_under("C:\\Program Files (x86)\\LLVM\\lib\\clang")
+        if found then
+            log.info("Found clang resource dir: %s", found)
+            return found
+        end
         for ver = 22, 10, -1 do
             candidates[#candidates + 1] = string.format("C:\\Program Files\\LLVM\\lib\\clang\\%d\\include", ver)
             candidates[#candidates + 1] = string.format("C:\\Program Files (x86)\\LLVM\\lib\\clang\\%d\\include", ver)
@@ -367,32 +548,7 @@ function M.resource_directory(context)
     end
 
     for _, path in ipairs(candidates) do
-        local opened, d = pcall(ffi.C.opendir, path)
-
-        if opened and d ~= nil then
-            while true do
-                local ent = ffi.C.readdir(d)
-
-                if ent == nil then
-                    break
-                end
-
-                if ffi.string(ent.d_name) == "stdarg.h" then
-                    ffi.C.closedir(d)
-                    log.info("Found clang resource dir: %s", path)
-                    return path
-                end
-            end
-
-            ffi.C.closedir(d)
-        end
-    end
-
-    -- opendir is POSIX. On Windows (and as a fallback) probe stdarg.h directly.
-    for _, path in ipairs(candidates) do
-        local probe = io.open(path .. "/stdarg.h", "r") or io.open(path .. "\\stdarg.h", "r")
-        if probe then
-            probe:close()
+        if has_stdarg(path) then
             log.info("Found clang resource dir: %s", path)
             return path
         end
@@ -438,6 +594,8 @@ local function library_of(context)
     return context.library
 end
 
+-- Annotated CXCursor values must be copied before clang_disposeTokens
+-- invalidates the token array.
 local function copy_cursor(src)
     local dst = ffi.new("CXCursor")
     ffi.copy(dst, src, ffi.sizeof("CXCursor"))
@@ -491,6 +649,95 @@ function M.location(context, cursor)
     return { line = tonumber(line[0]) or 1, column = tonumber(column[0]) or 1 }
 end
 
+function M.kind(context, cursor)
+    local library = library_of(context)
+    if not library then
+        return -1
+    end
+    return tonumber(library.clang_getCursorKind(cursor)) or -1
+end
+
+function M.is_anonymous(context, cursor)
+    local library = library_of(context)
+    return library ~= nil and library.clang_Cursor_isAnonymous(cursor) ~= 0
+end
+
+function M.is_definition(context, cursor)
+    local library = library_of(context)
+    return library ~= nil and library.clang_isCursorDefinition(cursor) ~= 0
+end
+
+function M.cursor_type(context, cursor)
+    local library = library_of(context)
+    if not library then
+        return nil
+    end
+    return library.clang_getCursorType(cursor)
+end
+
+function M.result_type(context, cursor)
+    local library = library_of(context)
+    if not library then
+        return nil
+    end
+    return library.clang_getCursorResultType(cursor)
+end
+
+function M.enum_value(context, cursor)
+    local library = library_of(context)
+    if not library then
+        return nil
+    end
+    return tostring(tonumber(library.clang_getEnumConstantDeclValue(cursor)))
+end
+
+function M.typedef_underlying(context, cursor)
+    local library = library_of(context)
+    if not library then
+        return nil
+    end
+    return library.clang_getTypedefDeclUnderlyingType(cursor)
+end
+
+function M.canonical_type(context, cx_type)
+    local library = library_of(context)
+    if not library or cx_type == nil then
+        return nil
+    end
+    return library.clang_getCanonicalType(cx_type)
+end
+
+function M.type_kind(cx_type)
+    if cx_type == nil then
+        return -1
+    end
+    return tonumber(cx_type.kind) or -1
+end
+
+function M.type_declaration(context, cx_type)
+    local library = library_of(context)
+    if not library or cx_type == nil then
+        return nil
+    end
+    return library.clang_getTypeDeclaration(cx_type)
+end
+
+function M.pointee_type(context, cx_type)
+    local library = library_of(context)
+    if not library or cx_type == nil then
+        return nil
+    end
+    return library.clang_getPointeeType(cx_type)
+end
+
+function M.result_type_of(context, cx_type)
+    local library = library_of(context)
+    if not library or cx_type == nil then
+        return nil
+    end
+    return library.clang_getResultType(cx_type)
+end
+
 local function file_range(library, tu, header_path)
     local file = library.clang_getFile(tu, header_path)
     if file == nil then
@@ -498,6 +745,7 @@ local function file_range(library, tu, header_path)
     end
     local size = ffi.new("size_t[1]")
     library.clang_getFileContents(tu, file, size)
+    -- clang_getLocationForOffset is inclusive; size is a byte count.
     local last = tonumber(size[0]) or 0
     if last > 0 then
         last = last - 1
@@ -522,40 +770,127 @@ local function cursors_in_range(context, tu, range, kind_set)
         return {}
     end
 
-    local walk = count
-    if walk > MAX_TOKENS then
-        log.warn("Token walk capped at %d (file had %d tokens).", MAX_TOKENS, walk)
-        walk = MAX_TOKENS
+    if count > MAX_TOKENS then
+        library.clang_disposeTokens(tu, tokens_ptr[0], count)
+        error(string.format("token walk exceeded %d (file had %d tokens)", MAX_TOKENS, count), 0)
     end
 
-    local annotated = ffi.new("CXCursor[?]", walk)
-    library.clang_annotateTokens(tu, tokens_ptr[0], walk, annotated)
-
-    local seen = {}
     local out = {}
-    for i = 0, walk - 1 do
-        local kind = tonumber(library.clang_getCursorKind(annotated[i]))
-        if not kind_set or kind_set[kind] then
-            local copied = copy_cursor(annotated[i])
-            local key = tostring(ffi.cast("uintptr_t", copied.data[0]))
-                .. ":" .. tostring(copied.xdata) .. ":" .. tostring(kind)
-            if not seen[key] then
-                seen[key] = true
-                out[#out + 1] = copied
+    local ok, err = pcall(function()
+        local annotated = ffi.new("CXCursor[?]", count)
+        library.clang_annotateTokens(tu, tokens_ptr[0], count, annotated)
+
+        local seen = {}
+        for i = 0, count - 1 do
+            local kind = tonumber(library.clang_getCursorKind(annotated[i]))
+            if not kind_set or kind_set[kind] then
+                local copied = copy_cursor(annotated[i])
+                local key = tostring(ffi.cast("uintptr_t", copied.data[0]))
+                    .. ":" .. tostring(copied.xdata) .. ":" .. tostring(kind)
+                if not seen[key] then
+                    seen[key] = true
+                    out[#out + 1] = copied
+                end
             end
+        end
+    end)
+
+    library.clang_disposeTokens(tu, tokens_ptr[0], count)
+    if not ok then
+        error(err)
+    end
+    return out
+end
+
+function M.tokenize(context, tu, range, kind_set)
+    return cursors_in_range(context, tu, range, kind_set)
+end
+
+-- DetailedPreprocessingRecord (0x01) + SkipFunctionBodies (0x40).
+local PARSE_OPTIONS = 0x01 + 0x40
+
+function M.parse(context, header_path, clang_args)
+    local library = library_of(context)
+    if not library then
+        return nil, nil, "libclang not initialized"
+    end
+
+    local args = clang_args or {}
+    local argc = #args
+    local argv = nil
+    if argc > 0 then
+        argv = ffi.new("const char*[?]", argc)
+        for i = 1, argc do
+            argv[i - 1] = args[i]
         end
     end
 
-    library.clang_disposeTokens(tu, tokens_ptr[0], count)
-    return out
+    local index = library.clang_createIndex(0, 1)
+    local ok, translation_unit = pcall(
+        library.clang_parseTranslationUnit,
+        index,
+        header_path,
+        argv,
+        argc,
+        nil,
+        0,
+        PARSE_OPTIONS
+    )
+
+    if not ok then
+        library.clang_disposeIndex(index)
+        return nil, nil, tostring(translation_unit)
+    end
+    if translation_unit == nil then
+        library.clang_disposeIndex(index)
+        return nil, nil, "clang_parseTranslationUnit returned NULL"
+    end
+
+    local error_count = 0
+    local diagnostic_count = tonumber(library.clang_getNumDiagnostics(translation_unit)) or 0
+    for i = 0, diagnostic_count - 1 do
+        local diagnostic = library.clang_getDiagnostic(translation_unit, i)
+        if diagnostic ~= nil then
+            -- CXDiagnostic_Error = 3, CXDiagnostic_Fatal = 4
+            if (tonumber(library.clang_getDiagnosticSeverity(diagnostic)) or 0) >= 3 then
+                error_count = error_count + 1
+            end
+            library.clang_disposeDiagnostic(diagnostic)
+        end
+    end
+    if error_count > 0 then
+        library.clang_disposeTranslationUnit(translation_unit)
+        library.clang_disposeIndex(index)
+        return nil, nil, string.format("%d clang error(s)", error_count)
+    end
+
+    return translation_unit, index
+end
+
+function M.dispose_parse(context, translation_unit, index)
+    local library = library_of(context)
+    if not library then
+        return
+    end
+    if translation_unit ~= nil then
+        library.clang_disposeTranslationUnit(translation_unit)
+    end
+    if index ~= nil then
+        library.clang_disposeIndex(index)
+    end
 end
 
 function M.declarations(context, tu, header_path)
     local library = library_of(context)
     if not library then
-        return {}
+        return nil
     end
-    return cursors_in_range(context, tu, file_range(library, tu, header_path), {
+    local range = file_range(library, tu, header_path)
+    if range == nil then
+        log.error("clang_getFile returned nil for '%s'.", header_path)
+        return nil
+    end
+    return cursors_in_range(context, tu, range, {
         [M.CURSOR.StructDecl] = true,
         [M.CURSOR.UnionDecl] = true,
         [M.CURSOR.EnumDecl] = true,
@@ -565,14 +900,34 @@ function M.declarations(context, tu, header_path)
     })
 end
 
+local function field_is_member_of(library, field, record)
+    local parent = copy_cursor(library.clang_getCursorSemanticParent(field))
+    for _ = 1, 8 do
+        if library.clang_equalCursors(parent, record) ~= 0 then
+            return true
+        end
+        if library.clang_Cursor_isAnonymous(parent) == 0 then
+            return false
+        end
+        parent = copy_cursor(library.clang_getCursorSemanticParent(parent))
+    end
+    return false
+end
+
 function M.fields(context, tu, cursor)
     local library = library_of(context)
     if not library then
         return {}
     end
-    return cursors_in_range(context, tu, library.clang_getCursorExtent(cursor), {
+    local found = {}
+    for _, field in ipairs(cursors_in_range(context, tu, library.clang_getCursorExtent(cursor), {
         [M.CURSOR.FieldDecl] = true,
-    })
+    })) do
+        if field_is_member_of(library, field, cursor) then
+            found[#found + 1] = field
+        end
+    end
+    return found
 end
 
 function M.enum_constants(context, tu, cursor)
@@ -623,6 +978,52 @@ function M.prototype_parameters(context, proto_type)
     end
     return out
 end
+
+function M.macro_replacement(context, tu, cursor)
+    local library = library_of(context)
+    if not library then
+        return nil
+    end
+
+    local name = M.spelling(context, cursor)
+    local extent = library.clang_getCursorExtent(cursor)
+    local file = ffi.new("CXFile[1]")
+    local begin_off = ffi.new("unsigned[1]")
+    local end_off = ffi.new("unsigned[1]")
+    library.clang_getExpansionLocation(library.clang_getRangeStart(extent), file, nil, nil, begin_off)
+    library.clang_getExpansionLocation(library.clang_getRangeEnd(extent), nil, nil, nil, end_off)
+
+    if file[0] == nil then
+        return nil
+    end
+
+    local size = ffi.new("size_t[1]")
+    local buf = library.clang_getFileContents(tu, file[0], size)
+    if buf == nil then
+        return nil
+    end
+
+    local first = tonumber(begin_off[0]) or 0
+    local last = tonumber(end_off[0]) or 0
+    local nbytes = tonumber(size[0]) or 0
+    if last <= first or first >= nbytes then
+        return nil
+    end
+    if last > nbytes then
+        last = nbytes
+    end
+
+    local slice = ffi.string(buf + first, last - first)
+    if name ~= "" and slice:sub(1, #name) == name then
+        slice = slice:sub(#name + 1)
+    end
+    slice = slice:match("^%s*(.-)%s*$") or ""
+    if slice == "" then
+        return nil
+    end
+    return slice
+end
+
 function M.from_main_file(context, cursor)
     local library = library_of(context)
     if not library then
