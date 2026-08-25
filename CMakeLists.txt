@@ -233,7 +233,7 @@ add_sanitizers(${DECODER_CLI_NAME})
 # Compile Tests
 # -----------------------------------------------------------------------------
 if (BALLISTIC_BUILD_TESTS)
-    message(STATUS "[Ballistic] Test suite ENABLED, configuring GoogleTest and LuaJIT...")
+    message(STATUS "[Ballistic-Tests] Test suite ENABLED, configuring GoogleTest and LuaJIT...")
 
     # Needed to test certain private functions.
     add_definitions(-DBALLISTIC_BUILD_TESTS)

@@ -1,3 +1,7 @@
+message(STATUS "[Ballistic-Tests] Configuring Unity unit framework...")
+add_library(unity STATIC unity/unity.c)
+target_include_directories(unity PUBLIC unity/)
+add_strict_compiler_flags(unity)
 
 macro(add_ballistic_test test_name test_source)
     add_executable(${test_name} ${test_source})
@@ -44,24 +48,24 @@ add_test(
         WORKING_DIRECTORY ${BALLISTIC_LIBRARIES_DIRECTORY}
 )
 
-message(STATUS "[Ballistic] Configuring library search paths for doctest...")
+message(STATUS "[Ballistic-Tests] Configuring library search paths for doctest...")
 
 if (NOT WIN32)
     set(LUA_LD_PATH "${BALLISTIC_LIBRARIES_DIRECTORY}")
     set(LUA_DYLD_PATH "${BALLISTIC_LIBRARIES_DIRECTORY}")
 
     if (DEFINED ENV{LD_LIBRARY_PATH})
-        message(STATUS "[Ballistic] Detected $LD_LIBRARY_PATH, appending compiled libraries to it...")
+        message(STATUS "[Ballistic-Tests] Detected $LD_LIBRARY_PATH, appending compiled libraries to it...")
         set(LUA_LD_PATH "${BALLISTIC_LIBRARIES_DIRECTORY}:$ENV{LD_LIBRARY_PATH}")
     endif ()
 
     if (DEFINED ENV{DYLD_LIBRARY_PATH})
-        message(STATUS "[Ballistic] Detected $DYLD_LIBRARY_PATH, appending compiled libraries to it...")
+        message(STATUS "[Ballistic-Tests] Detected $DYLD_LIBRARY_PATH, appending compiled libraries to it...")
         set(LUA_DYLD_PATH "${BALLISTIC_LIBRARIES_DIRECTORY}:$ENV{DYLD_LIBRARY_PATH}")
     endif ()
 endif ()
 
-message(STATUS "[Ballistic] Propagating active compiler and compiler flags to doctest...")
+message(STATUS "[Ballistic-Tests] Propagating active compiler and compiler flags to doctest...")
 set(DOCTEST_CC "${CMAKE_C_COMPILER}")
 string(TOUPPER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_UPPER)
 set(DOCTEST_CFLAGS ${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_${CMAKE_BUILD_TYPE_UPPER}} ${BALLISTIC_STRICT_FLAGS} ${BALLISTIC_SANITIZERS})
