@@ -367,7 +367,9 @@ function M.resource_directory(context)
     end
 
     for _, path in ipairs(candidates) do
-        local opened, d = pcall(ffi.C.opendir, path)
+        local opened, d = pcall(function()
+            return ffi.C.opendir(path)
+        end)
 
         if opened and d ~= nil then
             while true do
