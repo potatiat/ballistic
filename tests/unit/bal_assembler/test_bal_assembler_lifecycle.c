@@ -139,6 +139,7 @@ test_BalAssemblerReset_Success(void)
     TEST_ASSERT_EQUAL_size_t(0, assembler.offset);
     TEST_ASSERT_EQUAL(BAL_SUCCESS, assembler.status);
     TEST_ASSERT_EQUAL_UINT32(0, code_buffer[0]);
+    TEST_ASSERT_EQUAL_UINT32(BAL_ASSEMBLER_MAGIC_ALIVE, assembler.magic);
 }
 
 int
