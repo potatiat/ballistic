@@ -117,7 +117,7 @@ test_BalAssemblerReset_ZeroCapacityReturnsErrorInvalidArgument(void)
 }
 
 static void
-test_BalAssemblerReset_FreedAssemblerSetsCorruptedMagicNumber(void)
+test_BalAssemblerReset_FreedAssemblerSetsDeadMagicNumber(void)
 {
     (void)init_valid();
     bal_assembler_destroy(&assembler);
@@ -154,7 +154,7 @@ main(void)
     RUN_TEST(test_BalAssemblerReset_NullAssemblerNoCrash);
     RUN_TEST(test_BalAssemblerReset_NullBufferReturnsErrorInvalidArgument);
     RUN_TEST(test_BalAssemblerReset_ZeroCapacityReturnsErrorInvalidArgument);
-    RUN_TEST(test_BalAssemblerReset_FreedAssemblerSetsCorruptedMagicNumber);
+    RUN_TEST(test_BalAssemblerReset_FreedAssemblerSetsDeadMagicNumber);
     RUN_TEST(test_BalAssemblerReset_Success);
     return UNITY_END();
 }
