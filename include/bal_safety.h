@@ -20,7 +20,7 @@ extern "C"
 #define BAL_JIT_DEBUG_MAGIC_ALIVE 0x717DE801U // JITDEBUG
 #define BAL_JIT_DEBUG_MAGIC_DEAD  0xDEAD717DU // DEADJIT
 
-    static const char *bal_decode_magic(uint32_t magic)
+    __attribute__((unused)) static const char *bal_decode_magic(uint32_t magic)
     {
         switch (magic)
         {
