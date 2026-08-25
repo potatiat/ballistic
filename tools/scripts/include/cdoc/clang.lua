@@ -10,7 +10,7 @@ typedef void* CXIndex;
 typedef void* CXTranslationUnit;
 typedef void* CXClientData;
 
-typedef struct { void *data; unsigned private_flags; } CXSourceLocation;
+typedef struct { void *ptr_data[2]; unsigned int_data; } CXSourceLocation;
 typedef struct { int kind; int xdata; void *data[3]; } CXCursor;
 typedef struct { int kind; void *data[2]; } CXType;
 typedef struct { const char *data; unsigned private_flags; } CXString;
