@@ -199,7 +199,7 @@ local function get_common_paths()
         log.debug("Searching %d directories.", #directories)
 
         for _, directory in ipairs(directories) do
-            local found = scan_directory_for_libraries(directory, "libclang.so", "")
+            local found = scan_directory_for_libraries(directory, "libclang", "")
 
             for _, path in ipairs(found) do
                 table.insert(paths, path)
@@ -219,9 +219,27 @@ local function get_common_paths()
         for _, root in ipairs(visual_studio_roots) do
             for _, year in ipairs(visual_studio_years) do
                 for _, edition in ipairs(visual_studio_editions) do
-                    local base = root .. "\\" .. year .. "\\" .. edition .. "\\VC\\Tools\\Llvm" .. "\\x86"
-                    table.insert(paths, base .. "\\bin\\libclang.dll")
+                    local llvm = root .. "\\" .. year .. "\\" .. edition .. "\\VC\\Tools\\Llvm"
+                    table.insert(paths, llvm .. "\\bin\\libclang.dll")
+                    table.insert(paths, llvm .. "\\x86\\bin\\libclang.dll")
+                    table.insert(paths, llvm .. "\\x64\\bin\\libclang.dll")
                 end
+            end
+        end
+    elseif os_name == "OSX" then
+        table.insert(paths, "/opt/homebrew/opt/llvm/lib/libclang.dylib")
+        table.insert(paths, "/usr/local/opt/llvm/lib/libclang.dylib")
+        table.insert(
+            paths,
+            "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/libclang.dylib"
+        )
+        local directories = {
+            "/opt/homebrew/opt/llvm/lib",
+            "/usr/local/opt/llvm/lib",
+        }
+        for _, directory in ipairs(directories) do
+            for _, path in ipairs(scan_directory_for_libraries(directory, "libclang", "")) do
+                table.insert(paths, path)
             end
         end
     else
@@ -318,12 +336,22 @@ function M.resource_directory(context)
             candidates[#candidates + 1] = string.format("/usr/lib/llvm-%d/lib/clang/%d/include", ver, ver)
             candidates[#candidates + 1] = string.format("/usr/local/lib/clang/%d/include", ver)
         end
+    elseif os_name == "OSX" then
+        for ver = 22, 10, -1 do
+            candidates[#candidates + 1] = string.format("/opt/homebrew/opt/llvm/lib/clang/%d/include", ver)
+            candidates[#candidates + 1] = string.format("/usr/local/opt/llvm/lib/clang/%d/include", ver)
+        end
+    elseif os_name == "Windows" then
+        for ver = 22, 10, -1 do
+            candidates[#candidates + 1] = string.format("C:\\Program Files\\LLVM\\lib\\clang\\%d\\include", ver)
+            candidates[#candidates + 1] = string.format("C:\\Program Files (x86)\\LLVM\\lib\\clang\\%d\\include", ver)
+        end
     end
 
     for _, path in ipairs(candidates) do
-        local d = ffi.C.opendir(path)
+        local opened, d = pcall(ffi.C.opendir, path)
 
-        if d ~= nil then
+        if opened and d ~= nil then
             while true do
                 local ent = ffi.C.readdir(d)
 
@@ -339,6 +367,16 @@ function M.resource_directory(context)
             end
 
             ffi.C.closedir(d)
+        end
+    end
+
+    -- opendir is POSIX. On Windows (and as a fallback) probe stdarg.h directly.
+    for _, path in ipairs(candidates) do
+        local probe = io.open(path .. "/stdarg.h", "r") or io.open(path .. "\\stdarg.h", "r")
+        if probe then
+            probe:close()
+            log.info("Found clang resource dir: %s", path)
+            return path
         end
     end
 
