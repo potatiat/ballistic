@@ -91,6 +91,56 @@ test_BalAssemblerInit_Success(void)
     TEST_ASSERT_EQUAL_UINT32(BAL_ASSEMBLER_MAGIC_ALIVE, assembler.magic);
 }
 
+static void
+test_BalAssemblerReset_NullAssemblerNoCrash(void)
+{
+    bal_assembler_reset(NULL);
+    TEST_PASS();
+}
+
+static void
+test_BalAssemblerReset_NullBufferReturnsErrorInvalidArgument(void)
+{
+    (void)init_valid();
+    assembler.buffer = NULL;
+    bal_assembler_reset(&assembler);
+    TEST_ASSERT_EQUAL(BAL_ERROR_INVALID_ARGUMENT, assembler.status);
+}
+
+static void
+test_BalAssemblerReset_ZeroCapacityReturnsErrorInvalidArgument(void)
+{
+    (void)init_valid();
+    assembler.capacity = 0;
+    bal_assembler_reset(&assembler);
+    TEST_ASSERT_EQUAL(BAL_ERROR_INVALID_ARGUMENT, assembler.status);
+}
+
+static void
+test_BalAssemblerReset_FreedAssemblerSetsCorruptedMagicNumber(void)
+{
+    (void)init_valid();
+    bal_assembler_destroy(&assembler);
+    TEST_ASSERT_EQUAL_UINT32(BAL_ASSEMBLER_MAGIC_DEAD, assembler.magic);
+
+    bal_assembler_reset(&assembler);
+    TEST_ASSERT_EQUAL(BAL_ERROR_STRUCT_CORRUPTED, assembler.status);
+}
+
+static void
+test_BalAssemblerReset_Success(void)
+{
+    (void)init_valid();
+    bal_emit_ret(&assembler, BAL_REGISTER_X30);
+    TEST_ASSERT_EQUAL_size_t(1, assembler.offset);
+    TEST_ASSERT_NOT_EQUAL(0, code_buffer[0]);
+
+    bal_assembler_reset(&assembler);
+    TEST_ASSERT_EQUAL_size_t(0, assembler.offset);
+    TEST_ASSERT_EQUAL(BAL_SUCCESS, assembler.status);
+    TEST_ASSERT_EQUAL_UINT32(0, code_buffer[0]);
+}
+
 int
 main(void)
 {
@@ -101,5 +151,10 @@ main(void)
     RUN_TEST(test_BalAssemblerInit_UnalignedBufferReturnsErrorInvalidArgument);
     RUN_TEST(test_BalAssemblerInit_FullBufferReturnsErrorCapacityTooBig);
     RUN_TEST(test_BalAssemblerInit_Success);
+    RUN_TEST(test_BalAssemblerReset_NullAssemblerNoCrash);
+    RUN_TEST(test_BalAssemblerReset_NullBufferReturnsErrorInvalidArgument);
+    RUN_TEST(test_BalAssemblerReset_ZeroCapacityReturnsErrorInvalidArgument);
+    RUN_TEST(test_BalAssemblerReset_FreedAssemblerSetsCorruptedMagicNumber);
+    RUN_TEST(test_BalAssemblerReset_Success);
     return UNITY_END();
 }
