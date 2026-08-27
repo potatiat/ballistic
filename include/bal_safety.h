@@ -13,6 +13,8 @@ extern "C"
 {
 #endif // __cplusplus
 
+#include <stdint.h>
+
 #define BAL_MAGIC_UNINITIALIZED 0x00000000U
 
 #define BAL_ASSEMBLER_MAGIC_ALIVE 0xBA11A550U // BALLISTO
