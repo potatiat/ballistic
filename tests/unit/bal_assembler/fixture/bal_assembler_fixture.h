@@ -5,9 +5,9 @@
 
 #define TEST_BUFFER_CAPACITY 128
 
-extern bal_assembler_t assembler;
-extern uint32_t        code_buffer[TEST_BUFFER_CAPACITY];
-extern void           *unaligned_pointer;
+extern bal_assembler_t bal_test_assembler;
+extern uint32_t        bal_test_code_buffer[TEST_BUFFER_CAPACITY];
+extern void           *bal_test_unaligned_pointer;
 
 #endif // BALLISTIC_BAL_ASSEMBLER_FIXTURE_H
 
