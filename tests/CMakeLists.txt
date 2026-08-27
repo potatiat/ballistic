@@ -18,7 +18,7 @@ macro(add_ballistic_test test_name test_source)
 endmacro()
 
 add_ballistic_test(test_bal_assembler unit/bal_assembler/test_bal_assembler_lifecycle.c)
-target_link_libraries(test_bal_assembler PRIVATE BallisticTestAssemblerFixture)
+target_link_libraries(test_bal_assembler PUBLIC BallisticTestAssemblerFixture)
 
 add_test(
         NAME doctest

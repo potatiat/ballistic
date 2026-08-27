@@ -1,4 +1,3 @@
-#include "bal_assembler.h"
 #include "bal_safety.h"
 #include "fixture/bal_assembler_fixture.h"
 #include "unity.h"
