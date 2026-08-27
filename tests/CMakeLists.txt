@@ -14,12 +14,12 @@ macro(add_ballistic_test test_name test_source)
     target_link_libraries(${test_name} PRIVATE ${PROJECT_NAME} unity)
     add_strict_compiler_flags(${test_name})
     add_sanitizers(${test_name})
+    add_test(NAME ${test_name} COMMAND ${test_name})
 endmacro()
 
 add_ballistic_test(test_bal_assembler unit/bal_assembler/test_bal_assembler_lifecycle.c)
 target_link_libraries(test_bal_assembler PRIVATE BallisticTestAssemblerFixture)
 
-add_test(NAME test_bal_assembler COMMAND test_bal_assembler)
 add_test(
         NAME doctest
         COMMAND $<TARGET_FILE:luajit_exe> ${CMAKE_SOURCE_DIR}/tools/scripts/doctest.lua
