@@ -3,12 +3,6 @@
 #include "fixture/bal_assembler_fixture.h"
 #include "unity.h"
 
-static inline bal_error_t
-init_valid(void)
-{
-    return bal_assembler_init(&bal_test_assembler, bal_test_code_buffer, TEST_BUFFER_CAPACITY);
-}
-
 static void
 test_BalAssemblerInit_NullAssemblerReturnsErrorInvalidArgument(void)
 {
@@ -54,7 +48,7 @@ test_BalAssemblerInit_FullBufferReturnsErrorCapacityTooBig(void)
 static void
 test_BalAssemblerInit_Success(void)
 {
-    const bal_error_t error = init_valid();
+    const bal_error_t error = bal_test_assembler_init_valid();
     TEST_ASSERT_EQUAL(BAL_SUCCESS, error);
     TEST_ASSERT_EQUAL_PTR(bal_test_code_buffer, bal_test_assembler.buffer);
     TEST_ASSERT_EQUAL_size_t(TEST_BUFFER_CAPACITY, bal_test_assembler.capacity);
@@ -73,7 +67,7 @@ test_BalAssemblerReset_NullAssemblerNoCrash(void)
 static void
 test_BalAssemblerReset_NullBufferReturnsErrorInvalidArgument(void)
 {
-    (void)init_valid();
+    (void)bal_test_assembler_init_valid();
     bal_test_assembler.buffer = NULL;
     bal_assembler_reset(&bal_test_assembler);
     TEST_ASSERT_EQUAL(BAL_ERROR_INVALID_ARGUMENT, bal_test_assembler.status);
@@ -82,7 +76,7 @@ test_BalAssemblerReset_NullBufferReturnsErrorInvalidArgument(void)
 static void
 test_BalAssemblerReset_ZeroCapacityReturnsErrorInvalidArgument(void)
 {
-    (void)init_valid();
+    (void)bal_test_assembler_init_valid();
     bal_test_assembler.capacity = 0;
     bal_assembler_reset(&bal_test_assembler);
     TEST_ASSERT_EQUAL(BAL_ERROR_INVALID_ARGUMENT, bal_test_assembler.status);
@@ -91,7 +85,7 @@ test_BalAssemblerReset_ZeroCapacityReturnsErrorInvalidArgument(void)
 static void
 test_BalAssemblerReset_FreedAssemblerSetsDeadMagicNumber(void)
 {
-    (void)init_valid();
+    (void)bal_test_assembler_init_valid();
     bal_assembler_destroy(&bal_test_assembler);
     TEST_ASSERT_EQUAL_UINT32(BAL_ASSEMBLER_MAGIC_DEAD, bal_test_assembler.magic);
 
@@ -102,7 +96,7 @@ test_BalAssemblerReset_FreedAssemblerSetsDeadMagicNumber(void)
 static void
 test_BalAssemblerReset_Success(void)
 {
-    (void)init_valid();
+    (void)bal_test_assembler_init_valid();
     bal_emit_ret(&bal_test_assembler, BAL_REGISTER_X30);
     TEST_ASSERT_EQUAL_size_t(1, bal_test_assembler.offset);
     TEST_ASSERT_NOT_EQUAL(0, bal_test_code_buffer[0]);
@@ -124,7 +118,7 @@ test_BalAssemblerDestroy_NoCrash(void)
 static void
 test_BalAssemblerDestroy_FreedAssemblerSetsDeadMagicNumber(void)
 {
-    (void)init_valid();
+    (void)bal_test_assembler_init_valid();
     bal_assembler_destroy(&bal_test_assembler);
     bal_assembler_destroy(&bal_test_assembler);
     TEST_ASSERT_EQUAL_UINT32(BAL_ASSEMBLER_MAGIC_DEAD, bal_test_assembler.magic);
@@ -134,7 +128,7 @@ test_BalAssemblerDestroy_FreedAssemblerSetsDeadMagicNumber(void)
 static void
 test_BalAssemblerDestroy_Success(void)
 {
-    (void)init_valid();
+    (void)bal_test_assembler_init_valid();
     bal_assembler_destroy(&bal_test_assembler);
     TEST_ASSERT_NULL(bal_test_assembler.buffer);
     TEST_ASSERT_EQUAL_size_t(0, bal_test_assembler.capacity);

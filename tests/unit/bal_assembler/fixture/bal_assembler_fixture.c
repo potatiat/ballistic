@@ -25,4 +25,10 @@ tearDown(void)
 {
 }
 
+bal_error_t
+bal_test_assembler_init_valid(void)
+{
+    return bal_assembler_init(&bal_test_assembler, bal_test_code_buffer, TEST_BUFFER_CAPACITY);
+}
+
 /*** end of file ***/
