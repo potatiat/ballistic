@@ -3,6 +3,12 @@ add_library(unity STATIC unity/unity.c)
 target_include_directories(unity PUBLIC unity/)
 add_strict_compiler_flags(unity)
 
+add_library(BallisticTestAssemblerFixture STATIC unit/bal_assembler/fixture/bal_assembler_fixture.c)
+target_include_directories(BallisticTestAssemblerFixture PUBLIC unit/bal_assembler/fixture/)
+target_link_libraries(BallisticTestAssemblerFixture PUBLIC ${PROJECT_NAME} unity)
+add_strict_compiler_flags(BallisticTestAssemblerFixture)
+add_sanitizers(BallisticTestAssemblerFixture)
+
 macro(add_ballistic_test test_name test_source)
     add_executable(${test_name} ${test_source})
     target_link_libraries(${test_name} PRIVATE ${PROJECT_NAME} unity)
@@ -11,6 +17,8 @@ macro(add_ballistic_test test_name test_source)
 endmacro()
 
 add_ballistic_test(test_bal_assembler unit/bal_assembler/test_bal_assembler_lifecycle.c)
+target_link_libraries(test_bal_assembler PRIVATE BallisticTestAssemblerFixture)
+
 add_test(NAME test_bal_assembler COMMAND test_bal_assembler)
 add_test(
         NAME doctest
