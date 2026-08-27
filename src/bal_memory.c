@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200112
+
 #include "bal_memory.h"
 #include "bal_platform.h"
 #include <assert.h>
@@ -5,24 +7,24 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-BAL_WEAK void                   *bal_default_allocate(bal_allocator_handle_t, size_t, size_t);
+BAL_WEAK void *                  bal_default_allocate(bal_allocator_handle_t, size_t, size_t);
 BAL_WEAK void                    bal_default_free(bal_allocator_handle_t, void *, size_t);
 BAL_WEAK bal_executable_buffer_t bal_default_allocate_executable(bal_allocator_handle_t handle,
                                                                  size_t                 alignment,
                                                                  size_t                 size);
-BAL_WEAK void                    bal_default_free_executable(bal_allocator_handle_t  handle,
-                                                             bal_executable_buffer_t buffer,
-                                                             size_t                  size);
-BAL_WEAK void                    bal_default_protect_rw(bal_allocator_handle_t  handle,
-                                                        bal_executable_buffer_t buffer,
-                                                        size_t                  size);
-BAL_WEAK void                    bal_default_protect_rx(bal_allocator_handle_t  handle,
-                                                        bal_executable_buffer_t buffer,
-                                                        size_t                  size);
+BAL_WEAK void bal_default_free_executable(bal_allocator_handle_t  handle,
+                                          bal_executable_buffer_t buffer,
+                                          size_t                  size);
+BAL_WEAK void bal_default_protect_rw(bal_allocator_handle_t  handle,
+                                     bal_executable_buffer_t buffer,
+                                     size_t                  size);
+BAL_WEAK void bal_default_protect_rx(bal_allocator_handle_t  handle,
+                                     bal_executable_buffer_t buffer,
+                                     size_t                  size);
 
 BAL_WEAK BAL_HOT const uint8_t *bal_flat_translation_interface_translate(void *,
-                                                                         bal_guest_address_t,
-                                                                         size_t *);
+    bal_guest_address_t,
+    size_t *);
 
 typedef struct
 {
@@ -81,7 +83,9 @@ bal_flat_translation_interface_init(bal_allocator_t *BAL_RESTRICT        allocat
 
     const size_t                  memory_alignment_bytes = 16U;
     flat_translation_interface_t *flat_interface         = allocator->allocate(
-        allocator->context, memory_alignment_bytes, sizeof(flat_translation_interface_t));
+        allocator->context,
+        memory_alignment_bytes,
+        sizeof(flat_translation_interface_t));
 
     if (NULL == flat_interface)
     {
@@ -97,13 +101,15 @@ bal_flat_translation_interface_init(bal_allocator_t *BAL_RESTRICT        allocat
     interface->translate = bal_flat_translation_interface_translate;
 
     BAL_LOG_INFO(
-        &bal_thread_logger, "Flat interface created successfully at %p.", (void *)flat_interface);
+        &bal_thread_logger,
+        "Flat interface created successfully at %p.",
+        (void *)flat_interface);
 
     return BAL_SUCCESS;
 }
 
 bal_error_t
-bal_flat_translation_interface_destroy(bal_allocator_t        *allocator,
+bal_flat_translation_interface_destroy(bal_allocator_t *       allocator,
                                        bal_memory_interface_t *interface)
 {
     if (NULL == allocator || NULL == interface)
@@ -113,12 +119,12 @@ bal_flat_translation_interface_destroy(bal_allocator_t        *allocator,
 
     if (NULL == interface->context)
     {
-        *interface = (bal_memory_interface_t) {};
+        *interface = (bal_memory_interface_t){};
         return BAL_SUCCESS;
     }
 
     allocator->free(allocator->context, interface->context, sizeof(flat_translation_interface_t));
-    *interface = (bal_memory_interface_t) {};
+    *interface = (bal_memory_interface_t){};
     return BAL_SUCCESS;
 }
 
@@ -136,7 +142,8 @@ bal_default_allocate(bal_allocator_handle_t handle, size_t alignment, size_t siz
         return NULL;
     }
 
-    void *memory = aligned_alloc(alignment, size);
+    void *memory = NULL;
+    posix_memalign(&memory, alignment, size);
     return memory;
 }
 
@@ -167,7 +174,7 @@ bal_default_allocate_executable(bal_allocator_handle_t handle, size_t alignment,
 
     if (0 == size)
     {
-        return (bal_executable_buffer_t) { NULL, NULL };
+        return (bal_executable_buffer_t){ NULL, NULL };
     }
 
     void *memory = mmap(NULL,
@@ -179,10 +186,10 @@ bal_default_allocate_executable(bal_allocator_handle_t handle, size_t alignment,
 
     if (memory == MAP_FAILED)
     {
-        return (bal_executable_buffer_t) { NULL, NULL };
+        return (bal_executable_buffer_t){ NULL, NULL };
     }
 
-    return (bal_executable_buffer_t) { memory, memory };
+    return (bal_executable_buffer_t){ memory, memory };
 }
 
 void
@@ -227,7 +234,6 @@ bal_default_protect_rx(bal_allocator_handle_t handle, bal_executable_buffer_t bu
 #endif /* BAL_PLATFORM_APPLE */
 
 #if BAL_PLATFORM_LINUX
-#define __USE_POSIX199309
 #include <fcntl.h>
 #include <limits.h>
 #include <unistd.h>
@@ -240,7 +246,7 @@ bal_default_allocate_executable(bal_allocator_handle_t handle, size_t alignment,
 
     if (0 == size)
     {
-        return (bal_executable_buffer_t) { NULL, NULL };
+        return (bal_executable_buffer_t){ NULL, NULL };
     }
 
     const bal_executable_buffer_t invalid_buffer = { NULL, NULL };
@@ -279,7 +285,7 @@ bal_default_allocate_executable(bal_allocator_handle_t handle, size_t alignment,
         return invalid_buffer;
     }
 
-    return (bal_executable_buffer_t) { rw_ptr, rx_ptr };
+    return (bal_executable_buffer_t){ rw_ptr, rx_ptr };
 }
 
 void
@@ -368,7 +374,12 @@ bal_default_allocate_executable(bal_allocator_handle_t handle, size_t alignment,
     }
 
     HANDLE mapping = CreateFileMapping(
-        INVALID_HANDLE_VALUE, NULL, PAGE_EXECUTE_READWRITE, 0, (DWORD)size, NULL);
+        INVALID_HANDLE_VALUE,
+        NULL,
+        PAGE_EXECUTE_READWRITE,
+        0,
+        (DWORD)size,
+        NULL);
 
     if (!mapping)
     {
@@ -391,7 +402,7 @@ bal_default_allocate_executable(bal_allocator_handle_t handle, size_t alignment,
         return invalid_buffer;
     }
 
-    return (bal_executable_buffer_t) { rw_ptr, rx_ptr };
+    return (bal_executable_buffer_t){ rw_ptr, rx_ptr };
 }
 
 void

@@ -6,6 +6,9 @@
 #ifdef __cplusplus
 extern "C"
 {
+
+
+
 #endif // __cplusplus
 
 /// BAL_HOT()/BAL_COLD()
@@ -57,6 +60,14 @@ extern "C"
 ///
 /// Usage: BAL_NOINLINE void my_function();
 #define BAL_NOINLINE __attribute__((noinline))
+
+// Allows static_assert() on C99.
+#if defined(__STDC_VERSION__) && (__STDC_VERSION__ < 201112L)
+#define BAL_SA_CONCAT_IMPL_(a, b) a##b
+#define BAL_SA_CONCAT_(a, b) BAL_SA_CONCAT_IMPL_(a, b)
+#define static_assert(expr, msg) \
+    typedef char BAL_SA_CONCAT_(bal_static_assert_, __COUNTER__)[(expr) ? 1 : -1]
+#endif
 
 #ifdef __cplusplus
 }
