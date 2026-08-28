@@ -434,6 +434,7 @@ bal_emit_sub_immediate(bal_assembler_t           *assembler,
 {
     if (BAL_UNLIKELY(NULL == assembler))
     {
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler is NULL.");
         return;
     }
 
