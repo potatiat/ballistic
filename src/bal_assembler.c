@@ -168,6 +168,7 @@ bal_emit_add_immediate(bal_assembler_t           *assembler,
     {
         BAL_LOG_ERROR(&bal_thread_logger, "Immediate 0x%X exceeds 12-bit limit (0xFFF).", imm12);
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
+        return;
     }
 
     if (shift != 0 && shift != 1)
