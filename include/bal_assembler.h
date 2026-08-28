@@ -514,6 +514,17 @@ extern "C"
     /// ```
     void bal_emit_ret(bal_assembler_t *assembler, bal_register_index_t rn);
 
+#ifdef BALLISTIC_BUILD_TESTS
+
+    void emit_mov(bal_assembler_t *BAL_RESTRICT assembler,
+                  const char *BAL_RESTRICT      mnemonic,
+                  bal_register_index_t          rd,
+                  uint16_t                      imm,
+                  uint8_t                       shift,
+                  uint32_t                      opcode);
+
+#endif // BALLISTIC_BUILD_TESTS
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

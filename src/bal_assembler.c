@@ -5,12 +5,16 @@
 
 static bool can_emit(bal_assembler_t *assembler);
 
-static void emit_mov(bal_assembler_t *BAL_RESTRICT assembler,
-                     const char *BAL_RESTRICT      mnemonic,
-                     bal_register_index_t          rd,
-                     uint16_t                      imm,
-                     uint8_t                       shift,
-                     uint32_t                      opcode);
+#ifndef BALLISTIC_BUILD_TESTS
+
+void emit_mov(bal_assembler_t *BAL_RESTRICT assembler,
+              const char *BAL_RESTRICT      mnemonic,
+              bal_register_index_t          rd,
+              uint16_t                      imm,
+              uint8_t                       shift,
+              uint32_t                      opcode);
+
+#endif // BALLISTIC_BUILD_TESTS
 
 bal_error_t
 bal_assembler_init(bal_assembler_t *assembler, void *buffer, const size_t size)
@@ -606,7 +610,7 @@ can_emit(bal_assembler_t *assembler)
     return true;
 }
 
-static void
+void
 emit_mov(bal_assembler_t *BAL_RESTRICT assembler,
          const char *BAL_RESTRICT      mnemonic,
          const bal_register_index_t    rd,
