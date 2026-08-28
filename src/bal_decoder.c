@@ -13,9 +13,10 @@ bal_decode_arm64(const uint32_t instruction)
         = &g_decoder_hash_candidates[bucket->index];
     const uint8_t count = bucket->count;
 
-    for (size_t i = 0; i < count; ++i)
+    for (size_t i = 0U; i < count; ++i)
     {
-        const bal_decoder_instruction_metadata_t *metadata = *candidate++;
+        const bal_decoder_instruction_metadata_t *metadata = *candidate;
+        ++candidate;
 
         if ((instruction & metadata->mask) == metadata->expected)
         {
