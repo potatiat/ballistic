@@ -21,7 +21,7 @@ test_BalAssemblerInit_NullBufferReturnsErrorInvalidArgument(void)
 static void
 test_BalAssemblerInit_InvalidBufferSizeReturnsErrorInvalidArgument(void)
 {
-    const bal_error_t error = bal_assembler_init(&bal_test_assembler, bal_test_code_buffer, 0);
+    const bal_error_t error = bal_assembler_init(&bal_test_assembler, bal_test_code_buffer, 0U);
     TEST_ASSERT_EQUAL(BAL_ERROR_INVALID_ARGUMENT, error);
     TEST_ASSERT_NULL(bal_test_assembler.buffer);
 }
@@ -38,7 +38,7 @@ test_BalAssemblerInit_UnalignedBufferReturnsErrorInvalidArgument(void)
 static void
 test_BalAssemblerInit_FullBufferReturnsErrorCapacityTooBig(void)
 {
-    const size_t      huge_size = SIZE_MAX / sizeof(uint32_t) + 1;
+    const size_t      huge_size = SIZE_MAX / sizeof(uint32_t) + 1U;
     const bal_error_t error
         = bal_assembler_init(&bal_test_assembler, bal_test_code_buffer, huge_size);
     TEST_ASSERT_EQUAL(BAL_ERROR_CAPACITY_TOO_BIG, error);
@@ -76,7 +76,7 @@ static void
 test_BalAssemblerReset_ZeroCapacityReturnsErrorInvalidArgument(void)
 {
     (void)bal_test_assembler_init_valid();
-    bal_test_assembler.capacity = 0;
+    bal_test_assembler.capacity = 0U;
     bal_assembler_reset(&bal_test_assembler);
     TEST_ASSERT_EQUAL(BAL_ERROR_INVALID_ARGUMENT, bal_test_assembler.status);
 }
