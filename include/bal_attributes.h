@@ -24,8 +24,8 @@ extern "C"
 /// Hints to the CPU branch predictor. Should only be used in hot functions.
 ///
 /// Usage: if (BAL_UNLIKELY(ptr == NULL)) { ... }
-#define BAL_LIKELY(x)   __builtin_expect(!!(x), 1)
-#define BAL_UNLIKELY(x) __builtin_expect(!!(x), 0)
+#define BAL_LIKELY(x)   (__builtin_expect(!!(x), 1) != 0)
+#define BAL_UNLIKELY(x) (__builtin_expect(!!(x), 0) != 0)
 
 /// BAL_ALIGNED(x)
 /// Aligns a variable or a structure to x bytes.

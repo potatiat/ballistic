@@ -4,8 +4,13 @@
 #include <string.h>
 
 static bool can_emit(bal_assembler_t *assembler);
-static void emit_mov(
-    bal_assembler_t *, const char *, bal_register_index_t, uint16_t, uint8_t, uint32_t);
+
+static void emit_mov(bal_assembler_t *BAL_RESTRICT assembler,
+                     const char *BAL_RESTRICT      mnemonic,
+                     bal_register_index_t          rd,
+                     uint16_t                      imm,
+                     uint8_t                       shift,
+                     uint32_t                      opcode);
 
 bal_error_t
 bal_assembler_init(bal_assembler_t *assembler, void *buffer, const size_t size)
@@ -17,10 +22,10 @@ bal_assembler_init(bal_assembler_t *assembler, void *buffer, const size_t size)
     }
 
     assembler->buffer   = NULL;
-    assembler->capacity = 0;
-    assembler->offset   = 0;
+    assembler->capacity = 0U;
+    assembler->offset   = 0U;
     assembler->status   = BAL_ERROR_INVALID_ARGUMENT;
-    assembler->magic    = 0;
+    assembler->magic    = 0U;
 
     if (NULL == buffer)
     {
@@ -28,13 +33,13 @@ bal_assembler_init(bal_assembler_t *assembler, void *buffer, const size_t size)
         return assembler->status;
     }
 
-    if (0 == size)
+    if (0U == size)
     {
         BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: Buffer capacity is 0.");
         return assembler->status;
     }
 
-    if ((uintptr_t)buffer % 4 != 0)
+    if (false == bal_pointer_is_aligned(buffer, 4U))
     {
         BAL_LOG_ERROR(
             &bal_thread_logger, "Aborting function: Buffer %p is not 4-byte aligned.", buffer);
@@ -52,9 +57,11 @@ bal_assembler_init(bal_assembler_t *assembler, void *buffer, const size_t size)
         return assembler->status;
     }
 
-    assembler->buffer   = (uint32_t *)buffer;
+    uint32_t *typed_buffer = NULL;
+    (void)memcpy(&typed_buffer, &buffer, sizeof(buffer));
+    assembler->buffer   = typed_buffer;
     assembler->capacity = size;
-    assembler->offset   = 0;
+    assembler->offset   = 0U;
     assembler->status   = BAL_SUCCESS;
     assembler->magic    = BAL_ASSEMBLER_MAGIC_ALIVE;
 
@@ -70,6 +77,7 @@ bal_assembler_reset(bal_assembler_t *assembler)
 {
     if (BAL_UNLIKELY(NULL == assembler))
     {
+        BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler is NULL");
         return;
     }
 
@@ -90,7 +98,7 @@ bal_assembler_reset(bal_assembler_t *assembler)
         return;
     }
 
-    assembler->offset = 0;
+    assembler->offset = 0U;
     assembler->status = BAL_SUCCESS;
     (void)memset(assembler->buffer, 0, assembler->capacity * sizeof(uint32_t));
 }
@@ -109,8 +117,8 @@ bal_assembler_destroy(bal_assembler_t *assembler)
     BAL_LOG_INFO(&bal_thread_logger, "Destroying assembler context. Buffer memory is NOT freed.");
     assembler->magic    = BAL_ASSEMBLER_MAGIC_DEAD;
     assembler->buffer   = NULL;
-    assembler->capacity = 0;
-    assembler->offset   = 0;
+    assembler->capacity = 0U;
+    assembler->offset   = 0U;
     assembler->status   = BAL_ERROR_STRUCT_CORRUPTED;
 }
 
@@ -179,7 +187,7 @@ bal_emit_add_immediate(bal_assembler_t           *assembler,
     const uint32_t hard_coded_bits = 0x22U;
     const uint32_t sf              = 1U;
 
-    uint32_t instruction = 0;
+    uint32_t instruction = 0U;
     instruction |= sf << 31;
     instruction |= hard_coded_bits << 23;
     instruction |= (uint32_t)shift << 22;
@@ -196,7 +204,8 @@ bal_emit_add_immediate(bal_assembler_t           *assembler,
                   imm12,
                   shift * 12);
 
-    assembler->buffer[assembler->offset++] = instruction;
+    assembler->buffer[assembler->offset] = instruction;
+    ++assembler->offset;
 }
 
 void
@@ -291,7 +300,8 @@ bal_emit_add_shifted_register(bal_assembler_t           *assembler,
                   rm,
                   shift);
 
-    assembler->buffer[assembler->offset++] = instruction;
+    assembler->buffer[assembler->offset] = instruction;
+    ++assembler->offset;
 }
 
 void
@@ -312,7 +322,7 @@ bal_emit_b(bal_assembler_t *assembler, const int32_t offset)
         return;
     }
 
-    if (BAL_UNLIKELY((offset & 0x3) != 0))
+    if (BAL_UNLIKELY(((uint32_t)offset & 0x3U) != 0U))
     {
         BAL_LOG_ERROR(&bal_thread_logger,
                       "Aborting function: Branch offset %d is not 4-byte aligned.",
@@ -358,7 +368,8 @@ bal_emit_b(bal_assembler_t *assembler, const int32_t offset)
                   instruction,
                   offset);
 
-    assembler->buffer[assembler->offset++] = instruction;
+    assembler->buffer[assembler->offset] = instruction;
+    ++assembler->offset;
 }
 
 void
@@ -401,7 +412,7 @@ bal_emit_br(bal_assembler_t *BAL_RESTRICT assembler, const bal_register_index_t 
 
     const uint32_t hard_coded_bits = 0xD61F0000U;
     const uint32_t rn_shift        = 5U;
-    const uint32_t instruction     = hard_coded_bits | rn << rn_shift;
+    const uint32_t instruction     = hard_coded_bits | (uint32_t)rn << rn_shift;
 
     BAL_LOG_TRACE(&bal_thread_logger,
                   "[+0x%04zx] %08x BR X%u",
@@ -409,7 +420,8 @@ bal_emit_br(bal_assembler_t *BAL_RESTRICT assembler, const bal_register_index_t 
                   instruction,
                   rn);
 
-    assembler->buffer[assembler->offset++] = instruction;
+    assembler->buffer[assembler->offset] = instruction;
+    ++assembler->offset;
 }
 
 void
@@ -471,7 +483,7 @@ bal_emit_sub_immediate(bal_assembler_t           *assembler,
     const uint32_t hard_coded_bits = 0xA2U;
     const uint32_t sf              = 1U;
 
-    uint32_t instruction = 0;
+    uint32_t instruction = 0U;
     instruction |= sf << 31;
     instruction |= hard_coded_bits << 23;
     instruction |= (uint32_t)shift << 22;
@@ -487,7 +499,8 @@ bal_emit_sub_immediate(bal_assembler_t           *assembler,
                   imm12,
                   shift);
 
-    assembler->buffer[assembler->offset++] = instruction;
+    assembler->buffer[assembler->offset] = instruction;
+    ++assembler->offset;
 }
 
 void
@@ -496,7 +509,7 @@ bal_emit_movz(bal_assembler_t           *assembler,
               const uint16_t             imm,
               const uint8_t              shift)
 {
-    emit_mov(assembler, "MOVZ", rd, imm, shift, 0x2);
+    emit_mov(assembler, "MOVZ", rd, imm, shift, 0x2U);
 }
 
 void
@@ -505,7 +518,7 @@ bal_emit_movk(bal_assembler_t           *assembler,
               const uint16_t             imm,
               const uint8_t              shift)
 {
-    emit_mov(assembler, "MOVK", rd, imm, shift, 0x3);
+    emit_mov(assembler, "MOVK", rd, imm, shift, 0x3U);
 }
 
 void
@@ -514,7 +527,7 @@ bal_emit_movn(bal_assembler_t           *assembler,
               const uint16_t             imm,
               const uint8_t              shift)
 {
-    emit_mov(assembler, "MOVN", rd, imm, shift, 0x0);
+    emit_mov(assembler, "MOVN", rd, imm, shift, 0x0U);
 }
 
 void
@@ -565,7 +578,8 @@ bal_emit_ret(bal_assembler_t *assembler, const bal_register_index_t rn)
                   instruction,
                   rn);
 
-    assembler->buffer[assembler->offset++] = instruction;
+    assembler->buffer[assembler->offset] = instruction;
+    ++assembler->offset;
 }
 
 static bool
@@ -639,10 +653,10 @@ emit_mov(bal_assembler_t *BAL_RESTRICT assembler,
     const uint32_t imm16       = imm;
     instruction |= sf << 31U;
     instruction |= (opcode & 0x7U) << 29U;
-    instruction |= 0x25 << 23U; // 0b100101
+    instruction |= (uint32_t)0x25U << 23U; // 0b100101
     instruction |= hw << 21U;
     instruction |= imm16 << 5U;
-    instruction |= rd;
+    instruction |= (uint32_t)rd;
 
     BAL_LOG_TRACE(&bal_thread_logger,
                   "[+0x%04zx] %08x %s X%u, #0x%04x, LSL #%u",
@@ -657,7 +671,8 @@ emit_mov(bal_assembler_t *BAL_RESTRICT assembler,
     // trace is optimized out, making the compiler mark this variable as unused.
     (void)mnemonic;
 
-    assembler->buffer[assembler->offset++] = instruction;
+    assembler->buffer[assembler->offset] = instruction;
+    ++assembler->offset;
 }
 
 /*** end of file ***/
