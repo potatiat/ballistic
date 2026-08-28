@@ -438,15 +438,15 @@ bal_emit_sub_immediate(bal_assembler_t           *assembler,
         return;
     }
 
+    BAL_CHECK_MAGIC_VOID(
+        assembler, BAL_ASSEMBLER_MAGIC_ALIVE, BAL_ASSEMBLER_MAGIC_DEAD, "bal_assembler_t");
+
     if (BAL_UNLIKELY(NULL == assembler->buffer))
     {
         BAL_LOG_ERROR(&bal_thread_logger, "Aborting function: assembler->buffer is NULL.");
         assembler->status = BAL_ERROR_INVALID_ARGUMENT;
         return;
     }
-
-    BAL_CHECK_MAGIC_VOID(
-        assembler, BAL_ASSEMBLER_MAGIC_ALIVE, BAL_ASSEMBLER_MAGIC_DEAD, "bal_assembler_t");
 
     if (assembler->status != BAL_SUCCESS)
     {
