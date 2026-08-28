@@ -77,10 +77,10 @@ static void
 test_BalAssemblerEmitAddImmediate_FullBufferReturnsErrorInstructionOverflow(void)
 {
     (void)bal_assembler_init(&bal_test_assembler, bal_test_code_buffer, 1U);
-    bal_emit_add_immediate(&bal_test_assembler, BAL_REGISTER_X31, BAL_REGISTER_X0, 42U, 0U);
+    bal_emit_add_immediate(&bal_test_assembler, BAL_REGISTER_X31, BAL_REGISTER_X0, 42U, 1U);
     TEST_ASSERT_EQUAL(1, bal_test_assembler.offset);
 
-    bal_emit_add_immediate(&bal_test_assembler, BAL_REGISTER_X0, BAL_REGISTER_X1, 42U, 0U);
+    bal_emit_add_immediate(&bal_test_assembler, BAL_REGISTER_X0, BAL_REGISTER_X1, 42U, 1U);
     TEST_ASSERT_EQUAL(BAL_ERROR_INSTRUCTION_OVERFLOW, bal_test_assembler.status);
     TEST_ASSERT_EQUAL_size_t(1, bal_test_assembler.offset);
 }
