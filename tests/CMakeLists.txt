@@ -29,6 +29,9 @@ target_link_libraries(test_bal_assembler_b PUBLIC BallisticTestAssemblerFixture)
 add_ballistic_test(test_bal_assembler_br unit/bal_assembler/test_bal_assembler_br.c)
 target_link_libraries(test_bal_assembler_br PUBLIC BallisticTestAssemblerFixture)
 
+add_ballistic_test(test_bal_assembler_sub unit/bal_assembler/test_bal_assembler_sub.c)
+target_link_libraries(test_bal_assembler_sub PUBLIC BallisticTestAssemblerFixture)
+
 add_test(
         NAME doctest
         COMMAND $<TARGET_FILE:luajit_exe> ${CMAKE_SOURCE_DIR}/tools/scripts/doctest.lua
