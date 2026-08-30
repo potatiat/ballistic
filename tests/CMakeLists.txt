@@ -82,4 +82,8 @@ set_tests_properties(doctest PROPERTIES
 )
 
 message(STATUS "[Ballistic-Tests] Configuring Fuzzer...")
-add_subdirectory(fuzzer)
+
+# TODO (GloriousTaco): Support IPC on Windows.
+if (UNIX)
+    add_subdirectory(fuzzer)
+endif ()
