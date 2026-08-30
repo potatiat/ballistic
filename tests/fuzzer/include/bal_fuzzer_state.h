@@ -36,10 +36,17 @@ typedef struct
 
 typedef struct
 {
-    bool                    match;
     bal_fuzzer_divergence_t divergences[BAL_FUZZER_MAX_DIVERGENCES];
     uint32_t                divergence_count;
+    bool                    match;
+    char                    pad[3];
 } bal_fuzzer_comparison_result_t;
+
+/// Returns a [bal_fuzzer_comparison_result_t] stating whether the states match match and,
+/// if not, where the first divergence occurred.
+bal_fuzzer_comparison_result_t bal_fuzzer_state_compare(
+    const bal_fuzzer_cpu_snapshot_t *BAL_RESTRICT expected,
+    const bal_fuzzer_cpu_snapshot_t *BAL_RESTRICT actual);
 
 void bal_fuzzer_state_capture(bal_fuzzer_cpu_snapshot_t *BAL_RESTRICT snapshot,
                               const bal_cpu_t *BAL_RESTRICT           cpu);
