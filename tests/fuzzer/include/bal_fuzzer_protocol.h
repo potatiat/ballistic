@@ -23,6 +23,34 @@ BAL_ALIGNED(64) typedef struct
 
 static_assert(sizeof(bal_fuzzer_cpu_snapshot_t) == sizeof(bal_cpu_t), "Struct size mismatch");
 
+typedef enum
+{
+    BAL_FUZZER_WORKER_OK = 0,
+    BAL_FUZZER_WORKER_ERROR_COMPILE_FAILED,
+    BAL_FUZZER_WORKER_ERROR_EXECUTION_FAILED,
+    BAL_FUZZER_WORKER_ERROR_TIMEOUT,
+    BAl_FUZZER_WORKER_ERROR_CRASHED,
+} bal_fuzzer_worker_status_t;
+
+/// Fuzz input sent to the worker.
+BAL_ALIGNED(64) typedef struct
+{
+    uint64_t                  message_id;
+    uint32_t                  instruction_count;
+    uint32_t                  pad;
+    uint8_t                   instructions[BAL_FUZZER_INSTRUCTION_BUFFER_SIZE];
+    bal_fuzzer_cpu_snapshot_t initial_state;
+} bal_fuzzer_input_t;
+
+/// Response sent from the worker.
+BAL_ALIGNED(64) typedef struct
+{
+    uint64_t                   message_id; // Must match the input message_id.
+    bal_fuzzer_worker_status_t status;
+    char                       pad[52];
+    bal_fuzzer_cpu_snapshot_t  final_state;
+} bal_fuzzer_response_t;
+
 #endif // BALLISTIC_BAL_FUZZER_PROTOCOL_H
 
 /*** end of file ***/
