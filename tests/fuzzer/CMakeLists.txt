@@ -1,0 +1,6 @@
+add_library(BallisticTestFuzzerCore STATIC src/bal_fuzzer_state.c)
+
+target_include_directories(BallisticTestFuzzerCore PUBLIC include)
+target_link_libraries(BallisticTestFuzzerCore PUBLIC Ballistic)
+add_strict_compiler_flags(BallisticTestFuzzerCore)
+add_sanitizers(BallisticTestFuzzerCore)
