@@ -79,3 +79,37 @@ bal_fuzzer_ipc_destroy(bal_fuzzer_worker_handle_t *handle)
     handle->output_file_descriptor = -1;
     handle->child_pid              = 0;
 }
+
+bal_error_t
+bal_fuzzer_ipc_send(const int input_file_descriptor, const bal_fuzzer_input_t *input)
+{
+    if (input_file_descriptor < 0 || NULL == input)
+    {
+        return BAL_ERROR_INVALID_ARGUMENT;
+    }
+
+    const uint8_t *BAL_RESTRICT input_cursor = (const uint8_t *)input;
+    size_t                      remaining    = sizeof(*input);
+    uint64_t                    loop_count   = 0U;
+
+    while (remaining > 0U || loop_count < UINT64_MAX)
+    {
+        const ssize_t written = write(input_file_descriptor, input_cursor, remaining);
+
+        if (written < 0)
+        {
+            if (EINTR == errno)
+            {
+                continue;
+            }
+
+            return BAL_ERROR_THREAD_CLEANUP;
+        }
+
+        input_cursor += (size_t)written;
+        remaining -= (size_t)written;
+        ++loop_count;
+    }
+
+    return BAL_SUCCESS;
+}
