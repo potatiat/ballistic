@@ -5,8 +5,7 @@
 #include "bal_attributes.h"
 #include <stdint.h>
 
-#define BAL_FUZZER_MAX_INSTRUCTIONS        60U
-#define BAL_FUZZER_INSTRUCTION_BUFFER_SIZE (BAL_FUZZER_MAX_INSTRUCTIONS * 4U)
+#define BAL_FUZZER_MAX_INSTRUCTIONS 60U
 
 BAL_ALIGNED(64) typedef struct
 {
@@ -38,7 +37,7 @@ BAL_ALIGNED(64) typedef struct
     uint64_t                  message_id;
     uint32_t                  instruction_count;
     uint32_t                  pad;
-    uint8_t                   instructions[BAL_FUZZER_INSTRUCTION_BUFFER_SIZE];
+    uint32_t                  instructions[BAL_FUZZER_MAX_INSTRUCTIONS];
     bal_fuzzer_cpu_snapshot_t initial_state;
 } bal_fuzzer_input_t;
 
