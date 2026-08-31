@@ -1,7 +1,10 @@
+#define _POSIX_C_SOURCE 200809L
 #include "bal_fuzzer_ipc.h"
 #include <errno.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <string.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #define PIPE_READ_END  0
@@ -46,4 +49,33 @@ bal_fuzzer_ipc_spawn(bal_fuzzer_worker_handle_t *handle, const char *worker_path
     handle->input_file_descriptor  = to_child[PIPE_WRITE_END];
     handle->output_file_descriptor = from_child[PIPE_READ_END];
     return BAL_SUCCESS;
+}
+
+void
+bal_fuzzer_ipc_destroy(bal_fuzzer_worker_handle_t *handle)
+{
+    if (NULL == handle)
+    {
+        return;
+    }
+
+    if (handle->input_file_descriptor >= 0)
+    {
+        (void)close(handle->input_file_descriptor);
+    }
+
+    if (handle->output_file_descriptor >= 0)
+    {
+        (void)close(handle->output_file_descriptor);
+    }
+
+    if (handle->child_pid > 0)
+    {
+        (void)kill(handle->child_pid, SIGKILL);
+        (void)waitpid(handle->child_pid, NULL, 0);
+    }
+
+    handle->input_file_descriptor  = -1;
+    handle->output_file_descriptor = -1;
+    handle->child_pid              = 0;
 }
