@@ -1,4 +1,4 @@
-add_library(BallisticTestFuzzerCore STATIC src/bal_fuzzer_state.c)
+add_library(BallisticTestFuzzerCore STATIC src/bal_fuzzer_state.c src/bal_fuzzer_ipc.c)
 
 target_include_directories(BallisticTestFuzzerCore PUBLIC include)
 target_link_libraries(BallisticTestFuzzerCore PUBLIC Ballistic)
