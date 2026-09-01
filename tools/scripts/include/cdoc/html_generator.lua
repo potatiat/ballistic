@@ -277,6 +277,19 @@ local function type_span(html)
     return "<span class=\"type\">" .. html .. "</span>"
 end
 
+local function card_blurb(doc)
+    local summary = doc and doc.summary
+    if type(summary) ~= "string" or summary == "" then
+        return ""
+    end
+    local text = summary:gsub("%s+", " "):match("^%s*(.-)%s*$") or ""
+    local stop = text:find("[.!?]")
+    if stop then
+        text = text:sub(1, stop)
+    end
+    return text
+end
+
 local function doc_to_markdown(doc, heading)
     if not doc then
         return ""
@@ -549,6 +562,7 @@ function M.generate(project, out_directory, options)
     local theme = options.theme or colors.named("dark")
     local paint = options.syntax or require("cdoc.syntax_picker").new(nil, markdown)
     local crate_name = options.crate_name or "ballistic"
+    local crate_intro = options.crate_intro
     local theme_css = options.theme_css or colors.css(theme)
 
     if not require_chrome(chrome) then
@@ -566,6 +580,11 @@ function M.generate(project, out_directory, options)
         chrome.breadcrumbs({ { name = crate_name } }, markdown.escape),
         "<h1>" .. markdown.escape(crate_name) .. "</h1>",
     }
+    if type(crate_intro) == "string" and crate_intro ~= "" then
+        index_body[#index_body + 1] = "<div class=\"crate-intro docblock\"><p>"
+            .. markdown.escape(crate_intro) .. "</p></div>"
+    end
+    index_body[#index_body + 1] = "<h2>Modules</h2>"
 
     table.sort(project.modules, function(a, b)
         return a.name < b.name
@@ -590,7 +609,13 @@ function M.generate(project, out_directory, options)
                 markdown.escape(dest),
                 markdown.escape(module.name)
             )
-            index_body[#index_body + 1] = render_doc(project.symbols, module.documentation, nil)
+            local blurb = card_blurb(module.documentation)
+            if blurb ~= "" then
+                index_body[#index_body + 1] = "<p class=\"module-card-desc\">"
+                    .. markdown.escape(blurb) .. "</p>"
+            else
+                index_body[#index_body + 1] = "<p class=\"module-card-desc empty\">No documentation.</p>"
+            end
             index_body[#index_body + 1] = "</div>"
 
             for _, item in ipairs(module.items) do
