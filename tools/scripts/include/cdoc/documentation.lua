@@ -2,16 +2,6 @@ local log = require("log")
 
 local M = {}
 
-local SECTIONS = {
-    "Safety", "Errors", "Examples", "Returns", "Warning", "Ownership", "Platform Support",
-}
-
-local section_set = {}
-
-for _, section in ipairs(SECTIONS) do
-    section_set[section] = true
-end
-
 --- Strip comment prefixes (///, //!, /**, *, */) from raw comment text.
 --- Returns clean lines as a table.
 local function strip_comment_markers(raw)
@@ -20,44 +10,27 @@ local function strip_comment_markers(raw)
     end
 
     local lines = {}
+    raw = raw:gsub("\r\n", "\n"):gsub("\r", "\n")
 
-    for line in raw:gmatch("[^\r\n]+") do
-        local cleaned = line
+    -- Keep empty lines. gmatch("[^\r\n]+") would drop them, so "# Examples"
+    -- never sees the blank line that ends a summary.
+    for line in (raw .. "\n"):gmatch("(.-)\n") do
+        if not line:match("^%s*%*/") then
+            local cleaned = line:match("^%s*//! ?(.*)$")
+                or line:match("^%s*/// ?(.*)$")
+                or line:match("^%s*/%*%* ?(.*)$")
+                or line:match("^%s*/%*! ?(.*)$")
+                or line:match("^%s*%* ?(.*)$")
+                or line
 
-        -- Strip leading whitespace
-        cleaned = cleaned:match("^%s*(.*)$") or ""
-
-        -- Strip /// or //!
-        if cleaned:sub(1, 3) == "///" or cleaned:sub(1, 3) == "//!" then
-            cleaned = cleaned:sub(4)
-
-        -- Strip /** or /*!
-        elseif cleaned:sub(1, 3) == "/**" or cleaned:sub(1, 3) == "/*!" then
-            cleaned = cleaned:sub(4)
-
-        -- Strip */
-        elseif cleaned:sub(1, 2) == "*/" then
-            goto continue
-
-        -- Strip leading *
-        elseif cleaned:sub(1, 1) == "*" then
-            cleaned = cleaned:sub(2)
+            lines[#lines + 1] = cleaned
         end
-
-        -- Strip one leading space after marker
-        if cleaned:sub(1, 1) == " " then
-            cleaned = cleaned:sub(2)
-        end
-
-        lines[#lines + 1] = cleaned
-
-        ::continue::
     end
 
     return lines
 end
 
---- Extract [`SYMBOL`] links from text. Returns list of symbol names.
+--- Extract [SYMBOL] links from text. Returns list of symbol names.
 local function extract_links(text)
     local links = {}
 
@@ -75,7 +48,7 @@ end
 ---     sections = {             -- ordered list of { name, content }
 ---         { name = "Safety", content = "..." },
 ---     },
----     links = { "SYM1", ... }, -- all [`SYM`] references found
+---     links = { "SYM1", ... }, -- all [SYM] references found
 ---     raw = string,            -- original text
 --- }
 function M.parse(raw)
@@ -115,10 +88,11 @@ function M.parse(raw)
     end
 
     for _, line in ipairs(lines) do
-    -- Check for section header: "# Word" at start of line
-        local header = line:match("^#%s+(%w+)%s*$")
+        -- "# Safety" and "  # Platform Support" are section titles.
+        -- "## Default Initialization" is markdown, not a section boundary.
+        local header = line:match("^%s*#%s+(.-)%s*$")
 
-        if header and section_set[header] then
+        if header and header ~= "" then
             flush_section()
             current_section = header
         elseif current_section then
