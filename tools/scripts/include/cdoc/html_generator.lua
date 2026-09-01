@@ -44,6 +44,7 @@ local function mkdir_one(path)
         return true
     end
     local err = ffi.errno()
+    -- POSIX EEXIST is 17; Windows _mkdir may also set ERROR_ALREADY_EXISTS (183).
     return err == EEXIST or err == 183
 end
 
@@ -290,9 +291,27 @@ local function render_decl(item, registry, current_file, paint)
     elseif item.kind == ast.KIND.TYPEDEF then
         parts[#parts + 1] = paint.keyword("typedef")
         parts[#parts + 1] = " "
-        parts[#parts + 1] = type_span(linkify_type(registry, item.underlying_type, current_file))
-        parts[#parts + 1] = " "
-        parts[#parts + 1] = paint.type_name(item.name)
+        if item.return_type then
+            parts[#parts + 1] = type_span(linkify_type(registry, item.return_type, current_file))
+            parts[#parts + 1] = " (*"
+            parts[#parts + 1] = paint.type_name(item.name)
+            parts[#parts + 1] = ")("
+            for i, param in ipairs(item.parameters or {}) do
+                if i > 1 then
+                    parts[#parts + 1] = ", "
+                end
+                parts[#parts + 1] = type_span(linkify_type(registry, param.type, current_file))
+                if param.name and param.name ~= "" then
+                    parts[#parts + 1] = " "
+                    parts[#parts + 1] = markdown.escape(param.name)
+                end
+            end
+            parts[#parts + 1] = ")"
+        else
+            parts[#parts + 1] = type_span(linkify_type(registry, item.underlying_type, current_file))
+            parts[#parts + 1] = " "
+            parts[#parts + 1] = paint.type_name(item.name)
+        end
     elseif item.kind == ast.KIND.CONSTANT then
         parts[#parts + 1] = paint.keyword("#define")
         parts[#parts + 1] = " "
@@ -403,6 +422,16 @@ local function render_module(project, module, theme_css, paint, crate_name, chro
                 body[#body + 1] = "<code class=\"field-name\">" .. markdown.escape(field.name) .. "</code>"
                 body[#body + 1] = "<div class=\"field-doc\">"
                     .. render_doc(project.symbols, field.documentation, module.name, "### ")
+                    .. "</div></div>"
+            end
+        end
+        if item.variants and #item.variants > 0 then
+            body[#body + 1] = "<h3>Variants</h3>"
+            for _, variant in ipairs(item.variants) do
+                body[#body + 1] = "<div class=\"field-item\" id=\"" .. markdown.escape(variant.anchor or (item.anchor .. "." .. variant.name)) .. "\">"
+                body[#body + 1] = "<code class=\"field-name\">" .. markdown.escape(variant.name) .. "</code>"
+                body[#body + 1] = "<div class=\"field-doc\">"
+                    .. render_doc(project.symbols, variant.documentation, module.name, "### ")
                     .. "</div></div>"
             end
         end
