@@ -1,0 +1,468 @@
+local markdown = require("cdoc.markdown")
+local ast = require("cdoc.ast")
+local log = require("log")
+local ffi = require("ffi")
+
+local M = {}
+
+if jit.os == "Windows" then
+    ffi.cdef[[ int _mkdir(const char *pathname); ]]
+else
+    ffi.cdef[[ int mkdir(const char *pathname, int mode); ]]
+end
+
+local KIND_LABEL = {
+    [ast.KIND.STRUCT] = "Struct",
+    [ast.KIND.UNION] = "Union",
+    [ast.KIND.ENUM] = "Enum",
+    [ast.KIND.FUNCTION] = "Function",
+    [ast.KIND.TYPEDEF] = "Type Alias",
+    [ast.KIND.CONSTANT] = "Constant",
+}
+
+local SIDEBAR_SECTIONS = {
+    { kind = ast.KIND.STRUCT, title = "Structs" },
+    { kind = ast.KIND.UNION, title = "Unions" },
+    { kind = ast.KIND.ENUM, title = "Enums" },
+    { kind = ast.KIND.FUNCTION, title = "Functions" },
+    { kind = ast.KIND.TYPEDEF, title = "Type Aliases" },
+    { kind = ast.KIND.CONSTANT, title = "Constants" },
+}
+
+local CHROME_HELPERS = { "page", "module_sidebar", "index_sidebar" }
+
+local EEXIST = 17
+
+local function mkdir_one(path)
+    local rc
+    if jit.os == "Windows" then
+        rc = ffi.C._mkdir(path)
+    else
+        rc = ffi.C.mkdir(path, tonumber("755", 8))
+    end
+    if rc == 0 then
+        return true
+    end
+    local err = ffi.errno()
+    return err == EEXIST or err == 183
+end
+
+local function ensure_directory(path)
+    path = (path or ""):gsub("\\", "/"):gsub("/+$", "")
+    if path == "" or path == "." then
+        return true
+    end
+
+    local prefix = ""
+    local rest = path
+    local drive = rest:match("^(%a:)(.*)$")
+    if drive then
+        prefix = rest:sub(1, 2)
+        rest = rest:sub(3):gsub("^/+", "")
+        if rest == "" then
+            return true
+        end
+        prefix = prefix .. "/"
+    elseif rest:sub(1, 1) == "/" then
+        prefix = "/"
+        rest = rest:sub(2)
+    end
+
+    local acc = prefix
+    for part in rest:gmatch("[^/]+") do
+        if acc == "" or acc == "/" then
+            acc = acc .. part
+        else
+            acc = acc .. "/" .. part
+        end
+        if not mkdir_one(acc) then
+            log.error("mkdir '%s' failed (errno %d).", acc, ffi.errno())
+            return false
+        end
+    end
+    return true
+end
+
+local function page_href(name, anchor)
+    if type(name) ~= "string" or not name:match("^[%w._-]+%.h$") then
+        return nil
+    end
+    if anchor and anchor ~= "" then
+        if not anchor:match("^[%w._-]+$") then
+            return nil
+        end
+        return name .. ".html#" .. anchor
+    end
+    return name .. ".html"
+end
+
+local function require_chrome(chrome)
+    for _, name in ipairs(CHROME_HELPERS) do
+        if type(chrome[name]) ~= "function" then
+            log.error("Page chrome is missing %s().", name)
+            return false
+        end
+    end
+    return true
+end
+
+local function href(target, current_file)
+    if not target then
+        return nil
+    end
+    local source = target.source_file
+    if target.kind == ast.KIND.MODULE then
+        return page_href(source)
+    end
+    if target.anchor and target.anchor ~= "" then
+        if current_file and source == current_file then
+            if target.anchor:match("^[%w._-]+$") then
+                return "#" .. target.anchor
+            end
+            return nil
+        end
+        return page_href(source, target.anchor)
+    end
+    return page_href(source)
+end
+
+local function resolve_markdown(registry, text, current_file)
+    if not text then
+        return ""
+    end
+    return text:gsub("%[`([^`]+)`%]", function(name)
+        local target = registry[name]
+        local dest = target and href(target, current_file)
+        if not dest then
+            return "[`" .. name .. "`]"
+        end
+        return string.format("[`%s`](%s)", name, dest)
+    end)
+end
+
+local function linkify_type(registry, raw_type, current_file)
+    if not raw_type then
+        return ""
+    end
+    local out = {}
+    local i = 1
+    while i <= #raw_type do
+        local first, last = raw_type:find("[%a_][%w_]*", i)
+        if not first then
+            out[#out + 1] = markdown.escape(raw_type:sub(i))
+            break
+        end
+        if first > i then
+            out[#out + 1] = markdown.escape(raw_type:sub(i, first - 1))
+        end
+        local word = raw_type:sub(first, last)
+        local target = registry[word]
+        local dest = target and target.kind ~= ast.KIND.MODULE and href(target, current_file)
+        if dest then
+            out[#out + 1] = string.format(
+                "<a class=\"type\" href=\"%s\">%s</a>",
+                markdown.escape(dest),
+                markdown.escape(word)
+            )
+        else
+            out[#out + 1] = markdown.escape(word)
+        end
+        i = last + 1
+    end
+    return table.concat(out)
+end
+
+local function type_span(html)
+    return "<span class=\"type\">" .. html .. "</span>"
+end
+
+local function doc_to_markdown(doc, heading)
+    if not doc then
+        return ""
+    end
+    heading = heading or "## "
+    local parts = {}
+    if doc.summary and doc.summary ~= "" then
+        parts[#parts + 1] = doc.summary
+    end
+    for _, section in ipairs(doc.sections or {}) do
+        parts[#parts + 1] = heading .. section.name
+        parts[#parts + 1] = section.content or ""
+    end
+    return table.concat(parts, "\n\n")
+end
+
+local function render_doc(registry, doc, current_file, heading)
+    local md = doc_to_markdown(doc, heading)
+    if md == "" then
+        return ""
+    end
+    return "<div class=\"docblock\">"
+        .. markdown.render(resolve_markdown(registry, md, current_file))
+        .. "</div>"
+end
+
+local function sorted_items(items, kind)
+    local matched = {}
+    for _, item in ipairs(items) do
+        if item.kind == kind then
+            matched[#matched + 1] = item
+        end
+    end
+    table.sort(matched, function(a, b)
+        return a.name < b.name
+    end)
+    return matched
+end
+
+local function render_decl(item, registry, current_file, paint)
+    local parts = {}
+    if item.kind == ast.KIND.FUNCTION then
+        parts[#parts + 1] = type_span(linkify_type(registry, item.return_type, current_file))
+        parts[#parts + 1] = " "
+        parts[#parts + 1] = paint.function_name(item.name)
+        parts[#parts + 1] = "("
+        for i, param in ipairs(item.parameters or {}) do
+            parts[#parts + 1] = "\n    "
+            parts[#parts + 1] = type_span(linkify_type(registry, param.type, current_file))
+            parts[#parts + 1] = " "
+            parts[#parts + 1] = markdown.escape(param.name)
+            if i < #item.parameters then
+                parts[#parts + 1] = ","
+            end
+        end
+        if #(item.parameters or {}) > 0 then
+            parts[#parts + 1] = "\n"
+        end
+        parts[#parts + 1] = ")"
+    elseif item.kind == ast.KIND.STRUCT or item.kind == ast.KIND.UNION then
+        parts[#parts + 1] = paint.keyword(item.kind == ast.KIND.UNION and "union" or "struct")
+        parts[#parts + 1] = " "
+        parts[#parts + 1] = paint.type_name(item.name)
+        parts[#parts + 1] = " {"
+        for _, field in ipairs(item.fields or {}) do
+            parts[#parts + 1] = "\n    "
+            parts[#parts + 1] = type_span(linkify_type(registry, field.type, current_file))
+            parts[#parts + 1] = " "
+            parts[#parts + 1] = markdown.escape(field.name)
+            if type(field.bit_width) == "number" then
+                parts[#parts + 1] = " : " .. tostring(field.bit_width)
+            end
+            parts[#parts + 1] = ";"
+        end
+        parts[#parts + 1] = "\n}"
+    elseif item.kind == ast.KIND.ENUM then
+        parts[#parts + 1] = paint.keyword("enum")
+        parts[#parts + 1] = " "
+        parts[#parts + 1] = paint.type_name(item.name)
+        parts[#parts + 1] = " {"
+        for _, variant in ipairs(item.variants or {}) do
+            parts[#parts + 1] = "\n    "
+            parts[#parts + 1] = markdown.escape(variant.name)
+            if variant.value then
+                parts[#parts + 1] = " = "
+                parts[#parts + 1] = paint.literal(tostring(variant.value))
+            end
+            parts[#parts + 1] = ","
+        end
+        parts[#parts + 1] = "\n}"
+    elseif item.kind == ast.KIND.TYPEDEF then
+        parts[#parts + 1] = paint.keyword("typedef")
+        parts[#parts + 1] = " "
+        parts[#parts + 1] = type_span(linkify_type(registry, item.underlying_type, current_file))
+        parts[#parts + 1] = " "
+        parts[#parts + 1] = paint.type_name(item.name)
+    elseif item.kind == ast.KIND.CONSTANT then
+        parts[#parts + 1] = paint.keyword("#define")
+        parts[#parts + 1] = " "
+        parts[#parts + 1] = paint.function_name(item.name)
+        if item.value and item.value ~= "" then
+            parts[#parts + 1] = " "
+            parts[#parts + 1] = markdown.escape(item.value)
+        end
+    end
+    return "<div class=\"item-decl\">" .. table.concat(parts) .. "</div>"
+end
+
+local function sidebar_entries(matched)
+    local entries = {}
+    for _, item in ipairs(matched) do
+        local anchor = item.anchor
+        if type(anchor) == "string" and anchor:match("^[%w._-]+$") then
+            entries[#entries + 1] = { href = "#" .. anchor, name = item.name }
+        end
+    end
+    return entries
+end
+
+local function add_sidebar_section(sections, title, matched)
+    if #matched == 0 then
+        return
+    end
+    local entries = sidebar_entries(matched)
+    if #entries > 0 then
+        sections[#sections + 1] = { title = title, items = entries }
+    end
+end
+
+local function module_sidebar_sections(items)
+    local sections = {}
+    for _, spec in ipairs(SIDEBAR_SECTIONS) do
+        add_sidebar_section(sections, spec.title, sorted_items(items, spec.kind))
+    end
+    return sections
+end
+
+local function write_file(path, contents)
+    local file, err = io.open(path, "w")
+    if not file then
+        log.error("Cannot write '%s': %s", path, tostring(err))
+        return false
+    end
+    local written, write_err = file:write(contents)
+    local closed, close_err = file:close()
+    if not written then
+        log.error("Cannot write '%s': %s", path, tostring(write_err))
+        return false
+    end
+    if not closed then
+        log.error("Cannot close '%s': %s", path, tostring(close_err))
+        return false
+    end
+    return true
+end
+
+local function render_module(project, module, theme_css, paint, crate_name, chrome)
+    local body = {
+        "<h1>Header <span class=\"fn\">" .. markdown.escape(module.name) .. "</span></h1>",
+        render_doc(project.symbols, module.documentation, module.name),
+    }
+
+    for _, item in ipairs(module.items) do
+        local label = KIND_LABEL[item.kind] or "Item"
+        local anchor = markdown.escape(item.anchor or item.name)
+        local hclass = (item.kind == ast.KIND.FUNCTION and "fn") or (item.kind == ast.KIND.CONSTANT and "constant") or "type"
+        body[#body + 1] = string.format(
+            "<h2 id=\"%s\"><span class=\"item-kind\">%s</span> <a class=\"%s\" href=\"#%s\">%s</a></h2>",
+            anchor,
+            markdown.escape(label),
+            hclass,
+            anchor,
+            markdown.escape(item.name)
+        )
+        body[#body + 1] = render_decl(item, project.symbols, module.name, paint)
+        body[#body + 1] = render_doc(project.symbols, item.documentation, module.name, "### ")
+        if item.fields and #item.fields > 0 then
+            body[#body + 1] = "<h3>Fields</h3>"
+            for _, field in ipairs(item.fields) do
+                body[#body + 1] = "<div class=\"field-item\" id=\"" .. markdown.escape(field.anchor or (item.anchor .. "." .. field.name)) .. "\">"
+                body[#body + 1] = "<code class=\"field-name\">" .. markdown.escape(field.name) .. "</code>"
+                body[#body + 1] = "<div class=\"field-doc\">"
+                    .. render_doc(project.symbols, field.documentation, module.name, "### ")
+                    .. "</div></div>"
+            end
+        end
+    end
+
+    return chrome.page(
+        module.name,
+        theme_css,
+        chrome.module_sidebar(module.name, module_sidebar_sections(module.items), markdown.escape, crate_name),
+        table.concat(body),
+        crate_name,
+        markdown.escape
+    )
+end
+
+function M.generate(project, out_directory, options)
+    options = options or {}
+    local saved_markdown = markdown
+    markdown = options.markdown or markdown
+    local colors = options.colors or require("cdoc.color_picker")
+    local chrome = options.page or require("cdoc.page_structure")
+    local theme = options.theme or colors.named("dark")
+    local paint = options.syntax or require("cdoc.syntax_picker").new(nil, markdown)
+    local crate_name = options.crate_name or "ballistic"
+    local theme_css = options.theme_css or colors.css(theme)
+
+    if not require_chrome(chrome) then
+        markdown = saved_markdown
+        return false
+    end
+
+    local ok = true
+    local seen = {}
+    local accepted = {}
+    local index_modules = {}
+    local index_body = {
+        "<h1>" .. markdown.escape(crate_name) .. "</h1>",
+    }
+
+    table.sort(project.modules, function(a, b)
+        return a.name < b.name
+    end)
+
+    for _, module in ipairs(project.modules) do
+        local dest = page_href(module.name)
+        if not dest then
+            log.error("Skipping module '%s': name is not a safe header basename.", tostring(module.name))
+            ok = false
+        elseif seen[dest] then
+            log.error("Duplicate module name '%s'.", module.name)
+            ok = false
+        else
+            seen[dest] = true
+            accepted[#accepted + 1] = { module = module, dest = dest }
+            index_modules[#index_modules + 1] = { href = dest, name = module.name }
+            index_body[#index_body + 1] = "<div class=\"module-card\">"
+            index_body[#index_body + 1] = string.format(
+                "<a href=\"%s\"><strong>%s</strong></a>",
+                markdown.escape(dest),
+                markdown.escape(module.name)
+            )
+            index_body[#index_body + 1] = render_doc(project.symbols, module.documentation, nil)
+            index_body[#index_body + 1] = "</div>"
+        end
+    end
+
+    if not ok then
+        markdown = saved_markdown
+        return false
+    end
+
+    if not ensure_directory(out_directory) then
+        markdown = saved_markdown
+        return false
+    end
+
+    local pending = {}
+    for _, entry in ipairs(accepted) do
+        pending[#pending + 1] = {
+            path = out_directory .. "/" .. entry.dest,
+            contents = render_module(project, entry.module, theme_css, paint, crate_name, chrome),
+        }
+    end
+    pending[#pending + 1] = {
+        path = out_directory .. "/index.html",
+        contents = chrome.page(
+            crate_name,
+            theme_css,
+            chrome.index_sidebar(index_modules, markdown.escape, crate_name),
+            table.concat(index_body),
+            crate_name,
+            markdown.escape
+        ),
+    }
+
+    for _, item in ipairs(pending) do
+        if not write_file(item.path, item.contents) then
+            ok = false
+            break
+        end
+    end
+
+    markdown = saved_markdown
+    return ok
+end
+
+return M
