@@ -79,4 +79,214 @@ function M.create_module(name, filepath, documentation)
         }
 end
 
+--- Single member of a struct or union.
+--- Returns:
+--- {
+---     kind = ast.Kind.FIELD,
+---     name = string,
+---     type = string,                          -- clang type spelling
+---     documentation = table|nil,
+---     location = { filepath = string, line_number = number, column_number = number },
+--- }
+function M.create_field(name, type_name, documentation, location)
+    log.trace("Creating field node '%s'.", name)
+    return
+        {
+            kind = M.KIND.FIELD,
+            name = name,
+            type = type_name,
+            documentation = documentation,
+            location = location,
+        }
+end
+
+--- Single named constant inside an enum.
+--- Returns:
+--- {
+---     kind = ast.Kind.VARIANT,
+---     name = string,
+---     value = string,                         -- enumerator value as text
+---     documentation = table|nil,
+---     location = { filepath = string, line_number = number, column_number = number },
+--- }
+function M.create_variant(name, value, documentation, location)
+    log.trace("Creating variant node '%s'.", name)
+    return
+        {
+            kind = M.KIND.VARIANT,
+            name = name,
+            value = value,
+            documentation = documentation,
+            location = location,
+        }
+end
+
+--- Single parameter of a function.
+--- Returns:
+--- {
+---     kind = ast.Kind.PARAMETER,
+---     name = string,
+---     type = string,
+--- }
+function M.create_parameter(name, type_name)
+    log.trace("Creating parameter node '%s'.", name)
+    return
+        {
+            kind = M.KIND.PARAMETER,
+            name = name,
+            type = type_name,
+        }
+end
+
+--- Struct declaration with fields and static asserts.
+--- Returns:
+--- {
+---     kind = ast.Kind.STRUCT,
+---     name = string,
+---     fields = { { kind = ast.Kind.FIELD, ... }, ... },
+---     documentation = table|nil,
+---     location = { filepath = string, line_number = number, column_number = number },
+--- }
+function M.create_struct(name, fields, documentation, location)
+    log.trace("Creating struct node '%s'.", name)
+    return
+        {
+            kind = M.KIND.STRUCT,
+            name = name,
+            fields = fields or {},
+            documentation = documentation,
+            location = location,
+        }
+end
+
+--- Union declaration with fields.
+--- Returns:
+--- {
+---     kind = ast.Kind.UNION,
+---     name = string,
+---     fields = { { kind = ast.Kind.FIELD, ... }, ... },
+---     documentation = table|nil,
+---     location = { filepath = string, line_number = number, column_number = number },
+--- }
+function M.create_union(name, fields, documentation, location)
+    log.trace("Creating union node '%s'.", name)
+    return
+        {
+            kind = M.KIND.UNION,
+            name = name,
+            fields = fields or {},
+            documentation = documentation,
+            location = location,
+        }
+end
+
+--- Enum declaration with variants.
+--- Returns:
+--- {
+---     kind = ast.Kind.ENUM,
+---     name = string,
+---     variants = { { kind = ast.Kind.VARIANT, ... }, ... },
+---     documentation = table|nil,
+---     location = { filepath = string, line_number = number, column_number = number },
+--- }
+function M.create_enum(name, variants, documentation, location)
+    log.trace("Creating enum node '%s'.", name)
+    return
+        {
+            kind = M.KIND.ENUM,
+            name = name,
+            variants = variants or {},
+            documentation = documentation,
+            location = location,
+        }
+end
+
+--- Function declaration with parameters and return type.
+--- Returns:
+--- {
+---     kind = ast.Kind.FUNCTION,
+---     name = string,
+---     return_type = string,
+---     parameters = { { kind = ast.Kind.PARAMETER, ... }, ... },
+---     documentation = table|nil,
+---     location = { filepath = string, line_number = number, column_number = number },
+--- }
+function M.create_function(name, return_type, parameters, documentation, location)
+    log.trace("Creating function node '%s'.", name)
+    return
+        {
+            kind = M.KIND.FUNCTION,
+            name = name,
+            return_type = return_type,
+            parameters = parameters or {},
+            documentation = documentation,
+            location = location,
+        }
+end
+
+--- Typedef alias, optionally a function pointer.
+--- Returns:
+--- {
+---     kind = ast.Kind.TYPEDEF,
+---     name = string,
+---     underlying_type = string,
+---     return_type = string|nil,               -- set when the alias is a function pointer
+---     parameters = { { kind = ast.Kind.PARAMETER, ... }, ... },
+---     documentation = table|nil,
+---     location = { filepath = string, line_number = number, column_number = number },
+--- }
+function M.create_typedef(name, underlying_type, return_type, parameters, documentation, location)
+    log.trace("Creating typedef node '%s'.", name)
+    return
+        {
+            kind = M.KIND.TYPEDEF,
+            name = name,
+            underlying_type = underlying_type,
+            return_type = return_type,
+            parameters = parameters or {},
+            documentation = documentation,
+            location = location,
+        }
+end
+
+--- #define numeric constant.
+--- Returns:
+--- {
+---     kind = ast.Kind.CONSTANT,
+---     name = string,
+---     value = string,
+---     documentation = table|nil,
+---     location = { filepath = string, line_number = number, column_number = number },
+--- }
+function M.create_constant(name, value, documentation, location)
+    log.trace("Creating constant node '%s'.", name)
+    return
+        {
+            kind = M.KIND.CONSTANT,
+            name = name,
+            value = value,
+            documentation = documentation,
+            location = location,
+        }
+end
+
+--- static_assert verifying struct size of invariants.
+--- Returns:
+--- {
+---     kind = ast.Kind.STATIC_ASSERT,
+---     message = string,
+---     documentation = table|nil,
+---     location = { filepath = string, line_number = number, column_number = number },
+--- }
+function M.create_static_assert(message, documentation, location)
+    log.trace("Creating static_assert node.")
+    return
+        {
+            kind = M.KIND.STATIC_ASSERT,
+            message = message,
+            documentation = documentation,
+            location = location,
+        }
+end
+
 return M
