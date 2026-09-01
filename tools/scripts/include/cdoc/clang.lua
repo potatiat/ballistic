@@ -626,4 +626,472 @@ function M.resource_directory(context)
     log.warn("Could not locate clang resource directory.")
     return nil
 end
+
+-- LuaJIT cannot pass CXCursor by value.
+M.CURSOR = {
+    StructDecl = 2,
+    UnionDecl = 3,
+    EnumDecl = 5,
+    FieldDecl = 6,
+    EnumConstantDecl = 7,
+    FunctionDecl = 8,
+    ParmDecl = 10,
+    TypedefDecl = 20,
+    MacroDefinition = 501,
+}
+
+M.TYPE = {
+    Pointer = 101,
+    FunctionProto = 111,
+    Record = 105,
+    Enum = 106,
+}
+
+local MAX_TOKENS = 100000
+
+local function library_of(context)
+    if not check_magic(context) then
+        return nil
+    end
+    if context.library == nil then
+        log.error("Aborting function: libclang not loaded; call init() first.")
+        context.status = M.ERROR.LIBRARY_NOT_LOADED
+        return nil
+    end
+    return context.library
+end
+
+-- clang_disposeTokens frees the token array. Copy because annotated[i]
+-- aliases the Lua VLA; the cursor AST pointers remain valid.
+local function copy_cursor(src)
+    local dst = ffi.new("CXCursor")
+    ffi.copy(dst, src, ffi.sizeof("CXCursor"))
+    return dst
+end
+
+local function cstring(library, cxstring)
+    local ptr = library.clang_getCString(cxstring)
+    local text = (ptr ~= nil) and ffi.string(ptr) or ""
+    library.clang_disposeString(cxstring)
+    return text
+end
+
+function M.spelling(context, cursor)
+    local library = library_of(context)
+    if not library then
+        return ""
+    end
+    return cstring(library, library.clang_getCursorSpelling(cursor))
+end
+
+function M.type_spelling(context, cx_type)
+    local library = library_of(context)
+    if not library then
+        return ""
+    end
+    return cstring(library, library.clang_getTypeSpelling(cx_type))
+end
+
+function M.comment(context, cursor)
+    local library = library_of(context)
+    if not library then
+        return nil
+    end
+    local text = cstring(library, library.clang_Cursor_getRawCommentText(cursor))
+    if text == "" then
+        return nil
+    end
+    return text
+end
+
+function M.location(context, cursor)
+    local library = library_of(context)
+    if not library then
+        return { line = 1, column = 1 }
+    end
+    local file = ffi.new("CXFile[1]")
+    local line = ffi.new("unsigned[1]")
+    local column = ffi.new("unsigned[1]")
+    library.clang_getExpansionLocation(library.clang_getCursorLocation(cursor), file, line, column, nil)
+    return { line = tonumber(line[0]) or 1, column = tonumber(column[0]) or 1 }
+end
+
+function M.kind(context, cursor)
+    local library = library_of(context)
+    if not library then
+        return -1
+    end
+    return tonumber(library.clang_getCursorKind(cursor)) or -1
+end
+
+function M.is_anonymous(context, cursor)
+    local library = library_of(context)
+    return library ~= nil and library.clang_Cursor_isAnonymous(cursor) ~= 0
+end
+
+function M.is_definition(context, cursor)
+    local library = library_of(context)
+    return library ~= nil and library.clang_isCursorDefinition(cursor) ~= 0
+end
+
+function M.cursor_type(context, cursor)
+    local library = library_of(context)
+    if not library then
+        return nil
+    end
+    return library.clang_getCursorType(cursor)
+end
+
+function M.result_type(context, cursor)
+    local library = library_of(context)
+    if not library then
+        return nil
+    end
+    return library.clang_getCursorResultType(cursor)
+end
+
+function M.enum_value(context, cursor)
+    local library = library_of(context)
+    if not library then
+        return nil
+    end
+    return tostring(tonumber(library.clang_getEnumConstantDeclValue(cursor)))
+end
+
+function M.typedef_underlying(context, cursor)
+    local library = library_of(context)
+    if not library then
+        return nil
+    end
+    return library.clang_getTypedefDeclUnderlyingType(cursor)
+end
+
+function M.canonical_type(context, cx_type)
+    local library = library_of(context)
+    if not library or cx_type == nil then
+        return nil
+    end
+    return library.clang_getCanonicalType(cx_type)
+end
+
+function M.type_kind(cx_type)
+    if cx_type == nil then
+        return -1
+    end
+    return tonumber(cx_type.kind) or -1
+end
+
+function M.type_declaration(context, cx_type)
+    local library = library_of(context)
+    if not library or cx_type == nil then
+        return nil
+    end
+    return library.clang_getTypeDeclaration(cx_type)
+end
+
+function M.pointee_type(context, cx_type)
+    local library = library_of(context)
+    if not library or cx_type == nil then
+        return nil
+    end
+    return library.clang_getPointeeType(cx_type)
+end
+
+function M.result_type_of(context, cx_type)
+    local library = library_of(context)
+    if not library or cx_type == nil then
+        return nil
+    end
+    return library.clang_getResultType(cx_type)
+end
+
+local function file_range(library, tu, header_path)
+    local file = library.clang_getFile(tu, header_path)
+    if file == nil then
+        return nil
+    end
+    local size = ffi.new("size_t[1]")
+    library.clang_getFileContents(tu, file, size)
+    -- clang_getLocationForOffset is inclusive; size is a byte count.
+    local nbytes = tonumber(size[0]) or 0
+    local last = nbytes
+    if last > 0 then
+        last = last - 1
+    end
+    return library.clang_getRange(
+        library.clang_getLocationForOffset(tu, file, 0),
+        library.clang_getLocationForOffset(tu, file, last)
+    ), nbytes
+end
+
+local function cursors_in_range(context, tu, range, kind_set, source_bytes)
+    local library = library_of(context)
+    if not library or range == nil then
+        return {}
+    end
+
+    -- Bytes are a conservative cap: a huge file cannot have few tokens.
+    if source_bytes and source_bytes > MAX_TOKENS then
+        error(string.format("token walk exceeded %d (file had %d bytes)", MAX_TOKENS, source_bytes), 0)
+    end
+
+    local tokens_ptr = ffi.new("CXToken *[1]")
+    local count_ptr = ffi.new("unsigned[1]")
+    library.clang_tokenize(tu, range, tokens_ptr, count_ptr)
+    local count = tonumber(count_ptr[0]) or 0
+    if count == 0 or tokens_ptr[0] == nil then
+        return {}
+    end
+
+    if count > MAX_TOKENS then
+        library.clang_disposeTokens(tu, tokens_ptr[0], count)
+        error(string.format("token walk exceeded %d (file had %d tokens)", MAX_TOKENS, count), 0)
+    end
+
+    local out = {}
+    local ok, err = pcall(function()
+        local annotated = ffi.new("CXCursor[?]", count)
+        library.clang_annotateTokens(tu, tokens_ptr[0], count, annotated)
+
+        for i = 0, count - 1 do
+            local kind = tonumber(library.clang_getCursorKind(annotated[i]))
+            if not kind_set or kind_set[kind] then
+                local copied = copy_cursor(annotated[i])
+                local dup = false
+                for j = 1, #out do
+                    if library.clang_equalCursors(out[j], copied) ~= 0 then
+                        dup = true
+                        break
+                    end
+                end
+                if not dup then
+                    out[#out + 1] = copied
+                end
+            end
+        end
+    end)
+
+    library.clang_disposeTokens(tu, tokens_ptr[0], count)
+    if not ok then
+        error(err)
+    end
+    return out
+end
+
+function M.tokenize(context, tu, range, kind_set)
+    return cursors_in_range(context, tu, range, kind_set)
+end
+
+-- DetailedPreprocessingRecord (0x01) + SkipFunctionBodies (0x40).
+local PARSE_OPTIONS = 0x01 + 0x40
+
+function M.parse(context, header_path, clang_args)
+    local library = library_of(context)
+    if not library then
+        return nil, nil, "libclang not initialized"
+    end
+
+    local args = clang_args or {}
+    local argc = #args
+    local argv = nil
+    if argc > 0 then
+        argv = ffi.new("const char*[?]", argc)
+        for i = 1, argc do
+            argv[i - 1] = args[i]
+        end
+    end
+
+    local index = library.clang_createIndex(0, 1)
+    local ok, translation_unit = pcall(
+        library.clang_parseTranslationUnit,
+        index,
+        header_path,
+        argv,
+        argc,
+        nil,
+        0,
+        PARSE_OPTIONS
+    )
+
+    if not ok then
+        library.clang_disposeIndex(index)
+        return nil, nil, tostring(translation_unit)
+    end
+    if translation_unit == nil then
+        library.clang_disposeIndex(index)
+        return nil, nil, "clang_parseTranslationUnit returned NULL"
+    end
+
+    local error_count = 0
+    local diagnostic_count = tonumber(library.clang_getNumDiagnostics(translation_unit)) or 0
+    for i = 0, diagnostic_count - 1 do
+        local diagnostic = library.clang_getDiagnostic(translation_unit, i)
+        if diagnostic ~= nil then
+            -- CXDiagnostic_Error = 3, CXDiagnostic_Fatal = 4
+            if (tonumber(library.clang_getDiagnosticSeverity(diagnostic)) or 0) >= 3 then
+                error_count = error_count + 1
+            end
+            library.clang_disposeDiagnostic(diagnostic)
+        end
+    end
+    if error_count > 0 then
+        library.clang_disposeTranslationUnit(translation_unit)
+        library.clang_disposeIndex(index)
+        return nil, nil, string.format("%d clang error(s)", error_count)
+    end
+
+    return translation_unit, index
+end
+
+function M.dispose_parse(context, translation_unit, index)
+    local library = library_of(context)
+    if not library then
+        return
+    end
+    if translation_unit ~= nil then
+        library.clang_disposeTranslationUnit(translation_unit)
+    end
+    if index ~= nil then
+        library.clang_disposeIndex(index)
+    end
+end
+
+function M.declarations(context, tu, header_path)
+    local library = library_of(context)
+    if not library then
+        return nil
+    end
+    local range, nbytes = file_range(library, tu, header_path)
+    if range == nil then
+        log.error("clang_getFile returned nil for '%s'.", header_path)
+        return nil
+    end
+    local found = cursors_in_range(context, tu, range, {
+        [M.CURSOR.StructDecl] = true,
+        [M.CURSOR.UnionDecl] = true,
+        [M.CURSOR.EnumDecl] = true,
+        [M.CURSOR.FunctionDecl] = true,
+        [M.CURSOR.TypedefDecl] = true,
+        [M.CURSOR.MacroDefinition] = true,
+    }, nbytes)
+    local out = {}
+    for _, cursor in ipairs(found) do
+        local copied = copy_cursor(cursor)
+        if M.from_main_file(context, copied) then
+            out[#out + 1] = copied
+        end
+    end
+    return out
+end
+
+local function field_is_member_of(library, field, record)
+    -- A field belongs to this record if its semantic parent is this cursor.
+    local parent = copy_cursor(library.clang_getCursorSemanticParent(field))
+    return library.clang_equalCursors(parent, record) ~= 0
+end
+
+function M.fields(context, tu, cursor)
+    local library = library_of(context)
+    if not library then
+        return {}
+    end
+    local found = {}
+    for _, field in ipairs(cursors_in_range(context, tu, library.clang_getCursorExtent(cursor), {
+        [M.CURSOR.FieldDecl] = true,
+    })) do
+        if field_is_member_of(library, field, cursor) then
+            if cstring(library, library.clang_getCursorSpelling(field)) == "" then
+                local nested = copy_cursor(library.clang_getTypeDeclaration(library.clang_getCursorType(field)))
+                for _, nested_field in ipairs(M.fields(context, tu, nested)) do
+                    found[#found + 1] = nested_field
+                end
+            else
+                found[#found + 1] = field
+            end
+        end
+    end
+    return found
+end
+
+function M.field_bit_width(context, cursor)
+    local library = library_of(context)
+    if not library then
+        return nil
+    end
+    local width = tonumber(library.clang_getFieldDeclBitWidth(cursor)) or -1
+    if width < 0 then
+        return nil
+    end
+    return width
+end
+
+function M.enum_constants(context, tu, cursor)
+    local library = library_of(context)
+    if not library then
+        return {}
+    end
+    return cursors_in_range(context, tu, library.clang_getCursorExtent(cursor), {
+        [M.CURSOR.EnumConstantDecl] = true,
+    })
+end
+
+local function cursor_extent_offsets(library, cursor)
+    local start_off = ffi.new("unsigned[1]")
+    local end_off = ffi.new("unsigned[1]")
+    local extent = library.clang_getCursorExtent(cursor)
+    library.clang_getExpansionLocation(library.clang_getRangeStart(extent), nil, nil, nil, start_off)
+    library.clang_getExpansionLocation(library.clang_getRangeEnd(extent), nil, nil, nil, end_off)
+    return tonumber(start_off[0]), tonumber(end_off[0])
+end
+
+function M.parameters(context, tu, cursor)
+    local library = library_of(context)
+    if not library then
+        return {}
+    end
+    local n = tonumber(library.clang_Cursor_getNumArguments(cursor)) or -1
+    local out = {}
+    -- TypedefDecl of a function pointer reports NumArgs -1. Those ParmDecls'
+    -- semantic parent is the TU, not the typedef.
+    if n >= 0 then
+        for i = 0, n - 1 do
+            local arg = copy_cursor(library.clang_Cursor_getArgument(cursor, i))
+            out[#out + 1] = {
+                name = M.spelling(context, arg),
+                type = M.type_spelling(context, library.clang_getCursorType(arg)),
+            }
+        end
+        return out
+    end
+    local raw = cursors_in_range(context, tu, library.clang_getCursorExtent(cursor), {
+        [M.CURSOR.ParmDecl] = true,
+    })
+    local offs = {}
+    for i, arg in ipairs(raw) do
+        local start_off, end_off = cursor_extent_offsets(library, arg)
+        offs[i] = { s = start_off, e = end_off }
+    end
+    for i, arg in ipairs(raw) do
+        local nested = false
+        for j = 1, #raw do
+            if i ~= j then
+                local outer = offs[j]
+                local inner = offs[i]
+                if outer.s <= inner.s and inner.e <= outer.e
+                    and not (outer.s == inner.s and outer.e == inner.e) then
+                    nested = true
+                    break
+                end
+            end
+        end
+        if not nested then
+            out[#out + 1] = {
+                name = M.spelling(context, arg),
+                type = M.type_spelling(context, library.clang_getCursorType(arg)),
+            }
+        end
+    end
+    return out
+end
+
 return M
