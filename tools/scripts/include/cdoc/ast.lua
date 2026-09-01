@@ -43,7 +43,7 @@ M.KIND = {
 ---
 --- Returns { filepath = filepath, line_number = line_number, column_number = column_number }
 function M.create_location_table(filepath, line_number, column_number)
-    return {filepath = filepath, line_number = line_number, column_number}
+    return {filepath = filepath, line_number = line_number, column_number = column_number}
 end
 
 --- Create a module node. This mirrors rustdoc's crate root.
