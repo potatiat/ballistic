@@ -20,6 +20,15 @@ local KIND_LABEL = {
     [ast.KIND.CONSTANT] = "Constant",
 }
 
+local SEARCH_KIND = {
+    [ast.KIND.STRUCT] = "struct",
+    [ast.KIND.UNION] = "union",
+    [ast.KIND.ENUM] = "enum",
+    [ast.KIND.FUNCTION] = "function",
+    [ast.KIND.TYPEDEF] = "typedef",
+    [ast.KIND.CONSTANT] = "constant",
+}
+
 local SIDEBAR_SECTIONS = {
     { kind = ast.KIND.STRUCT, title = "Structs" },
     { kind = ast.KIND.UNION, title = "Unions" },
@@ -97,6 +106,41 @@ local function page_href(name, anchor)
     return name .. ".html"
 end
 
+local function json_string(value)
+    return '"' .. value
+        :gsub("\\", "\\\\")
+        :gsub('"', '\\"')
+        :gsub("[%z\1-\31]", function(c)
+            return string.format("\\u%04x", string.byte(c))
+        end)
+        :gsub("</", "<\\/")
+        .. '"'
+end
+
+local function safe_index_href(href)
+    return type(href) == "string"
+        and (href:match("^[%w._-]+%.html$") or href:match("^[%w._-]+%.html#[%w._-]+$"))
+end
+
+local function encode_search_index(entries)
+    local parts = { "[" }
+    local first = true
+    for _, entry in ipairs(entries) do
+        if type(entry.name) == "string" and type(entry.kind) == "string" and safe_index_href(entry.href) then
+            if not first then
+                parts[#parts + 1] = ","
+            end
+            first = false
+            parts[#parts + 1] = "{\"name\":" .. json_string(entry.name)
+                .. ",\"kind\":" .. json_string(entry.kind)
+                .. ",\"href\":" .. json_string(entry.href)
+                .. "}"
+        end
+    end
+    parts[#parts + 1] = "]"
+    return table.concat(parts)
+end
+
 local function require_chrome(chrome)
     for _, name in ipairs(CHROME_HELPERS) do
         if type(chrome[name]) ~= "function" then
@@ -148,6 +192,14 @@ local function item_kind_label(item)
     end
     return KIND_LABEL[item.kind] or "Item"
 end
+
+local function item_search_kind(item)
+    if is_function_like_macro(item) then
+        return "macro"
+    end
+    return SEARCH_KIND[item.kind]
+end
+
 local function resolve_markdown(registry, text, current_file)
     if not text then
         return ""
@@ -399,7 +451,7 @@ local function write_file(path, contents)
     return true
 end
 
-local function render_module(project, module, theme_css, paint, crate_name, chrome)
+local function render_module(project, module, theme_css, paint, crate_name, chrome, search_index_json)
     local body = {
         chrome.breadcrumbs({
             { href = "index.html", name = crate_name },
@@ -450,7 +502,8 @@ local function render_module(project, module, theme_css, paint, crate_name, chro
         chrome.module_sidebar(module.name, module_sidebar_sections(module.items), markdown.escape, crate_name),
         table.concat(body),
         crate_name,
-        markdown.escape
+        markdown.escape,
+        search_index_json
     )
 end
 
@@ -475,6 +528,7 @@ function M.generate(project, out_directory, options)
     local accepted = {}
     local index_modules = {}
     local global_chips = {}
+    local search_index = {}
     local index_body = {
         chrome.breadcrumbs({ { name = crate_name } }, markdown.escape),
         "<h1>" .. markdown.escape(crate_name) .. "</h1>",
@@ -496,6 +550,7 @@ function M.generate(project, out_directory, options)
             seen[dest] = true
             accepted[#accepted + 1] = { module = module, dest = dest }
             index_modules[#index_modules + 1] = { href = dest, name = module.name }
+            search_index[#search_index + 1] = { name = module.name, kind = "module", href = dest }
             index_body[#index_body + 1] = "<div class=\"module-card\">"
             index_body[#index_body + 1] = string.format(
                 "<a href=\"%s\"><strong>%s</strong></a>",
@@ -511,10 +566,29 @@ function M.generate(project, out_directory, options)
                     local source = item.source_file or module.name
                     local item_href = page_href(source, item.anchor)
                     if item_href then
+                        search_index[#search_index + 1] = {
+                            name = item.name,
+                            kind = item_search_kind(item) or kind_label:lower(),
+                            href = item_href,
+                        }
                         global_chips[#global_chips + 1] = {
                             href = item_href,
                             name = item.name,
                         }
+                    end
+                    if item.kind == ast.KIND.ENUM then
+                        for _, variant in ipairs(item.variants or {}) do
+                            if type(variant.name) == "string" and variant.name ~= "" then
+                                item_href = page_href(source, variant.anchor)
+                                if item_href then
+                                    search_index[#search_index + 1] = {
+                                        name = variant.name,
+                                        kind = "variant",
+                                        href = item_href,
+                                    }
+                                end
+                            end
+                        end
                     end
                 end
             end
@@ -536,11 +610,12 @@ function M.generate(project, out_directory, options)
     end)
     index_body[#index_body + 1] = chrome.global_symbols(global_chips, markdown.escape)
 
+    local search_index_json = encode_search_index(search_index)
     local pending = {}
     for _, entry in ipairs(accepted) do
         pending[#pending + 1] = {
             path = out_directory .. "/" .. entry.dest,
-            contents = render_module(project, entry.module, theme_css, paint, crate_name, chrome),
+            contents = render_module(project, entry.module, theme_css, paint, crate_name, chrome, search_index_json),
         }
     end
     pending[#pending + 1] = {
@@ -551,7 +626,8 @@ function M.generate(project, out_directory, options)
             chrome.index_sidebar(index_modules, markdown.escape, crate_name),
             table.concat(index_body),
             crate_name,
-            markdown.escape
+            markdown.escape,
+            search_index_json
         ),
     }
 
