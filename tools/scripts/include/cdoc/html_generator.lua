@@ -1,5 +1,6 @@
 local markdown = require("cdoc.markdown")
 local ast = require("cdoc.ast")
+local syntax_picker = require("cdoc.syntax_picker")
 local log = require("log")
 local ffi = require("ffi")
 
@@ -200,6 +201,32 @@ local function item_search_kind(item)
     return SEARCH_KIND[item.kind]
 end
 
+local function highlight_source(source, registry, current_file)
+    return syntax_picker.highlight_c(source, {
+        escape = markdown.escape,
+        link = function(name)
+            local target = registry and registry[name]
+            if not target or target.kind == ast.KIND.MODULE then
+                return nil
+            end
+            return href(target, current_file)
+        end,
+        kind = function(name)
+            local target = registry and registry[name]
+            if not target then
+                return nil
+            end
+            if target.kind == ast.KIND.FUNCTION then
+                return "fn"
+            end
+            if target.kind == ast.KIND.CONSTANT and target.function_like == true then
+                return "macro"
+            end
+            return "type"
+        end,
+    })
+end
+
 local function resolve_markdown(registry, text, current_file)
     if not text then
         return ""
@@ -272,7 +299,9 @@ local function render_doc(registry, doc, current_file, heading)
         return ""
     end
     return "<div class=\"docblock\">"
-        .. markdown.render(resolve_markdown(registry, md, current_file))
+        .. markdown.render(resolve_markdown(registry, md, current_file), function(code)
+            return highlight_source(code, registry, current_file)
+        end)
         .. "</div>"
 end
 
@@ -367,12 +396,16 @@ local function render_decl(item, registry, current_file, paint)
     elseif item.kind == ast.KIND.CONSTANT then
         parts[#parts + 1] = paint.keyword("#define")
         parts[#parts + 1] = " "
-        parts[#parts + 1] = paint.function_name(item.name)
+        if is_function_like_macro(item) then
+            parts[#parts + 1] = "<span class=\"macro\">" .. markdown.escape(item.name) .. "</span>"
+        else
+            parts[#parts + 1] = paint.function_name(item.name)
+        end
         if item.value and item.value ~= "" then
             if not is_function_like_macro(item) then
                 parts[#parts + 1] = " "
             end
-            parts[#parts + 1] = markdown.escape(item.value)
+            parts[#parts + 1] = highlight_source(item.value, registry, current_file)
         end
     end
     return "<div class=\"item-decl\">" .. table.concat(parts) .. "</div>"
