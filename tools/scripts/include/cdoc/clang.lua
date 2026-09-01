@@ -384,10 +384,169 @@ function M.destroy(context)
     end
 end
 
+local function dirname(path)
+    if type(path) ~= "string" then
+        return nil
+    end
+    return path:match("^(.*)[/\\][^/\\]+$")
+end
+
+local function has_stdarg(include_dir)
+    local probe = io.open(include_dir .. "/stdarg.h", "r") or io.open(include_dir .. "\\stdarg.h", "r")
+    if probe then
+        probe:close()
+        return true
+    end
+    return false
+end
+
+local function list_dir_names(directory)
+    local names = {}
+    if jit.os ~= "Linux" then
+        return names
+    end
+    local opened, d = pcall(function()
+        return ffi.C.opendir(directory)
+    end)
+    if not opened or d == nil then
+        return names
+    end
+    while true do
+        local ent = ffi.C.readdir(d)
+        if ent == nil then
+            break
+        end
+        local name = ffi.string(ent.d_name)
+        if name ~= "." and name ~= ".." then
+            names[#names + 1] = name
+        end
+    end
+    ffi.C.closedir(d)
+    return names
+end
+
+local function clang_version_dir_names(library)
+    local names = {}
+    if library == nil then
+        return names, nil
+    end
+    local ok, version = pcall(function()
+        local cx = library.clang_getClangVersion()
+        local ptr = library.clang_getCString(cx)
+        local text = (ptr ~= nil) and ffi.string(ptr) or ""
+        library.clang_disposeString(cx)
+        return text
+    end)
+    if not ok or type(version) ~= "string" then
+        return names, nil
+    end
+    local fullVersion = version:match("(%d+%.%d+%.%d+)")
+    local major = version:match("(%d+)")
+    if fullVersion then
+        names[#names + 1] = fullVersion
+    end
+    if major and major ~= fullVersion then
+        names[#names + 1] = major
+    end
+    return names, fullVersion
+end
+
+local function wanted_resource_major(extra_names)
+    if not extra_names or extra_names[1] == nil then
+        return nil
+    end
+    return tonumber(extra_names[#extra_names]:match("^(%d+)"))
+end
+
+local function clang_include_under(clang_versions_dir, extra_names)
+    if extra_names then
+        for _, name in ipairs(extra_names) do
+            local include_dir = clang_versions_dir .. "/" .. name .. "/include"
+            if has_stdarg(include_dir) then
+                return include_dir
+            end
+        end
+    end
+    local names
+    if jit.os == "Linux" then
+        names = list_dir_names(clang_versions_dir)
+    else
+        -- io.open so Windows does not need opendir.
+        names = {}
+        for ver = 22, 10, -1 do
+            names[#names + 1] = tostring(ver)
+        end
+    end
+    -- use the resource dir that matches the loaded libclang version.
+    local need = wanted_resource_major(extra_names)
+    local best_ver = -1
+    local best_path = nil
+    for _, name in ipairs(names) do
+        local include_dir = clang_versions_dir .. "/" .. name .. "/include"
+        if has_stdarg(include_dir) then
+            local major = tonumber(name:match("^(%d+)")) or 0
+            if (not need or major == need) and major > best_ver then
+                best_ver = major
+                best_path = include_dir
+            end
+        end
+    end
+    return best_path
+end
+
+local function resource_dir_from_library_path(library_path, extra_names, fullVersion)
+    if type(library_path) ~= "string" or not library_path:find("[/\\]") then
+        return nil
+    end
+
+    local dir = dirname(library_path)
+    local seen = {}
+    local clang_roots = {}
+    local function add_root(path)
+        if path and not seen[path] then
+            seen[path] = true
+            clang_roots[#clang_roots + 1] = path
+        end
+    end
+
+    local walk = dir
+    for _ = 1, 4 do
+        if not walk then
+            break
+        end
+        add_root(walk .. "/clang")
+        add_root(walk .. "/lib/clang")
+        add_root(walk .. "/lib64/clang")
+        walk = dirname(walk)
+    end
+
+    for _, clang_root in ipairs(clang_roots) do
+        local found = clang_include_under(clang_root, extra_names)
+        if found then
+            return found
+        end
+        if fullVersion and has_stdarg(clang_root .. "/" .. fullVersion .. "/include") then
+            return clang_root .. "/" .. fullVersion .. "/include"
+        end
+        if has_stdarg(clang_root .. "/include") then
+            return clang_root .. "/include"
+        end
+    end
+
+    return nil
+end
+
 function M.resource_directory(context)
     if context == nil then
         log.error("Aborting function: context is NULL.")
         return nil
+    end
+
+    local version_names, fullVersion = clang_version_dir_names(context.library)
+    local from_library = resource_dir_from_library_path(context.library_path, version_names, fullVersion)
+    if from_library then
+        log.info("Found clang resource dir: %s", from_library)
+        return from_library
     end
 
     local os_name = jit and jit.os or "Unknown"
@@ -400,32 +559,71 @@ function M.resource_directory(context)
             candidates[#candidates + 1] = string.format("/usr/lib/llvm-%d/lib/clang/%d/include", ver, ver)
             candidates[#candidates + 1] = string.format("/usr/local/lib/clang/%d/include", ver)
         end
-    end
-
-    for _, path in ipairs(candidates) do
-        local d = ffi.C.opendir(path)
-
-        if d ~= nil then
-            while true do
-                local ent = ffi.C.readdir(d)
-
-                if ent == nil then
+        local found = clang_include_under("/usr/lib/clang", version_names)
+            or clang_include_under("/usr/lib64/clang", version_names)
+            or clang_include_under("/usr/local/lib/clang", version_names)
+        if found then
+            log.info("Found clang resource dir: %s", found)
+            return found
+        end
+    elseif os_name == "OSX" then
+        local found = clang_include_under("/opt/homebrew/opt/llvm/lib/clang", version_names)
+            or clang_include_under("/usr/local/opt/llvm/lib/clang", version_names)
+            or clang_include_under("/Library/Developer/CommandLineTools/usr/lib/clang", version_names)
+        if not found then
+            for ver = 22, 10, -1 do
+                found = clang_include_under(string.format("/opt/homebrew/opt/llvm@%d/lib/clang", ver), version_names)
+                    or clang_include_under(string.format("/usr/local/opt/llvm@%d/lib/clang", ver), version_names)
+                if found then
                     break
                 end
-
-                if ffi.string(ent.d_name) == "stdarg.h" then
-                    ffi.C.closedir(d)
-                    log.info("Found clang resource dir: %s", path)
-                    return path
-                end
             end
+        end
+        if found then
+            log.info("Found clang resource dir: %s", found)
+            return found
+        end
+        for _, name in ipairs(version_names) do
+            candidates[#candidates + 1] = string.format("/opt/homebrew/opt/llvm/lib/clang/%s/include", name)
+            candidates[#candidates + 1] = string.format("/usr/local/opt/llvm/lib/clang/%s/include", name)
+            candidates[#candidates + 1] = string.format("/Library/Developer/CommandLineTools/usr/lib/clang/%s/include", name)
+        end
+        for ver = 22, 10, -1 do
+            candidates[#candidates + 1] = string.format("/opt/homebrew/opt/llvm/lib/clang/%d/include", ver)
+            candidates[#candidates + 1] = string.format("/usr/local/opt/llvm/lib/clang/%d/include", ver)
+            candidates[#candidates + 1] = string.format("/opt/homebrew/opt/llvm@%d/lib/clang/%d/include", ver, ver)
+            candidates[#candidates + 1] = string.format("/usr/local/opt/llvm@%d/lib/clang/%d/include", ver, ver)
+            candidates[#candidates + 1] = string.format("/Library/Developer/CommandLineTools/usr/lib/clang/%d/include", ver)
+        end
+    elseif os_name == "Windows" then
+        local found = clang_include_under("C:\\Program Files\\LLVM\\lib\\clang", version_names)
+            or clang_include_under("C:\\Program Files (x86)\\LLVM\\lib\\clang", version_names)
+        if found then
+            log.info("Found clang resource dir: %s", found)
+            return found
+        end
+        for _, name in ipairs(version_names) do
+            candidates[#candidates + 1] = string.format("C:\\Program Files\\LLVM\\lib\\clang\\%s\\include", name)
+            candidates[#candidates + 1] = string.format("C:\\Program Files (x86)\\LLVM\\lib\\clang\\%s\\include", name)
+        end
+        for ver = 22, 10, -1 do
+            candidates[#candidates + 1] = string.format("C:\\Program Files\\LLVM\\lib\\clang\\%d\\include", ver)
+            candidates[#candidates + 1] = string.format("C:\\Program Files (x86)\\LLVM\\lib\\clang\\%d\\include", ver)
+        end
+    end
 
-            ffi.C.closedir(d)
+    local need = wanted_resource_major(version_names)
+    for _, path in ipairs(candidates) do
+        if has_stdarg(path) then
+            local major = tonumber(path:match("[/\\]clang[/\\](%d+)"))
+            if not need or major == need then
+                log.info("Found clang resource dir: %s", path)
+                return path
+            end
         end
     end
 
     log.warn("Could not locate clang resource directory.")
     return nil
 end
-
 return M
