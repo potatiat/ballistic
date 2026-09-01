@@ -126,6 +126,27 @@ local function href(target, current_file)
     return page_href(source)
 end
 
+local function is_function_like_macro(item)
+    return item.kind == ast.KIND.CONSTANT and item.function_like == true
+end
+
+local function item_heading_class(item)
+    if is_function_like_macro(item) then
+        return "macro"
+    elseif item.kind == ast.KIND.FUNCTION then
+        return "fn"
+    elseif item.kind == ast.KIND.CONSTANT then
+        return "constant"
+    end
+    return "type"
+end
+
+local function item_kind_label(item)
+    if is_function_like_macro(item) then
+        return "Macro"
+    end
+    return KIND_LABEL[item.kind] or "Item"
+end
 local function resolve_markdown(registry, text, current_file)
     if not text then
         return ""
@@ -277,7 +298,9 @@ local function render_decl(item, registry, current_file, paint)
         parts[#parts + 1] = " "
         parts[#parts + 1] = paint.function_name(item.name)
         if item.value and item.value ~= "" then
-            parts[#parts + 1] = " "
+            if not is_function_like_macro(item) then
+                parts[#parts + 1] = " "
+            end
             parts[#parts + 1] = markdown.escape(item.value)
         end
     end
@@ -308,7 +331,29 @@ end
 local function module_sidebar_sections(items)
     local sections = {}
     for _, spec in ipairs(SIDEBAR_SECTIONS) do
-        add_sidebar_section(sections, spec.title, sorted_items(items, spec.kind))
+        if spec.kind == ast.KIND.CONSTANT then
+            local macros = {}
+            local constants = {}
+            for _, item in ipairs(items) do
+                if item.kind == ast.KIND.CONSTANT then
+                    if is_function_like_macro(item) then
+                        macros[#macros + 1] = item
+                    else
+                        constants[#constants + 1] = item
+                    end
+                end
+            end
+            if #macros > 0 and #constants > 0 then
+                add_sidebar_section(sections, "Macros", macros)
+                add_sidebar_section(sections, "Constants", constants)
+            elseif #macros > 0 then
+                add_sidebar_section(sections, "Macros", macros)
+            else
+                add_sidebar_section(sections, "Constants", constants)
+            end
+        else
+            add_sidebar_section(sections, spec.title, sorted_items(items, spec.kind))
+        end
     end
     return sections
 end
@@ -339,14 +384,13 @@ local function render_module(project, module, theme_css, paint, crate_name, chro
     }
 
     for _, item in ipairs(module.items) do
-        local label = KIND_LABEL[item.kind] or "Item"
+        local label = item_kind_label(item)
         local anchor = markdown.escape(item.anchor or item.name)
-        local hclass = (item.kind == ast.KIND.FUNCTION and "fn") or (item.kind == ast.KIND.CONSTANT and "constant") or "type"
         body[#body + 1] = string.format(
             "<h2 id=\"%s\"><span class=\"item-kind\">%s</span> <a class=\"%s\" href=\"#%s\">%s</a></h2>",
             anchor,
             markdown.escape(label),
-            hclass,
+            item_heading_class(item),
             anchor,
             markdown.escape(item.name)
         )
