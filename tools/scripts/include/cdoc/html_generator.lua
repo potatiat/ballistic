@@ -29,7 +29,7 @@ local SIDEBAR_SECTIONS = {
     { kind = ast.KIND.CONSTANT, title = "Constants" },
 }
 
-local CHROME_HELPERS = { "page", "module_sidebar", "index_sidebar" }
+local CHROME_HELPERS = { "page", "module_sidebar", "index_sidebar", "global_symbols", "breadcrumbs" }
 
 local EEXIST = 17
 
@@ -341,6 +341,9 @@ local function add_sidebar_section(sections, title, matched)
     if #matched == 0 then
         return
     end
+    table.sort(matched, function(a, b)
+        return a.name < b.name
+    end)
     local entries = sidebar_entries(matched)
     if #entries > 0 then
         sections[#sections + 1] = { title = title, items = entries }
@@ -398,6 +401,10 @@ end
 
 local function render_module(project, module, theme_css, paint, crate_name, chrome)
     local body = {
+        chrome.breadcrumbs({
+            { href = "index.html", name = crate_name },
+            { name = module.name },
+        }, markdown.escape),
         "<h1>Header <span class=\"fn\">" .. markdown.escape(module.name) .. "</span></h1>",
         render_doc(project.symbols, module.documentation, module.name),
     }
@@ -467,7 +474,9 @@ function M.generate(project, out_directory, options)
     local seen = {}
     local accepted = {}
     local index_modules = {}
+    local global_chips = {}
     local index_body = {
+        chrome.breadcrumbs({ { name = crate_name } }, markdown.escape),
         "<h1>" .. markdown.escape(crate_name) .. "</h1>",
     }
 
@@ -495,6 +504,20 @@ function M.generate(project, out_directory, options)
             )
             index_body[#index_body + 1] = render_doc(project.symbols, module.documentation, nil)
             index_body[#index_body + 1] = "</div>"
+
+            for _, item in ipairs(module.items) do
+                local kind_label = KIND_LABEL[item.kind]
+                if kind_label then
+                    local source = item.source_file or module.name
+                    local item_href = page_href(source, item.anchor)
+                    if item_href then
+                        global_chips[#global_chips + 1] = {
+                            href = item_href,
+                            name = item.name,
+                        }
+                    end
+                end
+            end
         end
     end
 
@@ -507,6 +530,11 @@ function M.generate(project, out_directory, options)
         markdown = saved_markdown
         return false
     end
+
+    table.sort(global_chips, function(a, b)
+        return a.name < b.name
+    end)
+    index_body[#index_body + 1] = chrome.global_symbols(global_chips, markdown.escape)
 
     local pending = {}
     for _, entry in ipairs(accepted) do
