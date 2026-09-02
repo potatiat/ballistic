@@ -47,7 +47,7 @@ bal_fuzzer_state_compare(const bal_fuzzer_cpu_snapshot_t *expected,
             divergence->field          = BAL_FUZZER_FIELD_PC;
             divergence->register_index = 0U;
             divergence->expected_value = expected->pc;
-            divergence->actual_value   = expected->pc;
+            divergence->actual_value   = actual->pc;
             ++divergence_count;
         }
     }
