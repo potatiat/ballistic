@@ -21,6 +21,8 @@ void bal_fuzzer_ipc_destroy(bal_fuzzer_worker_handle_t *BAL_RESTRICT handle);
 bal_error_t bal_fuzzer_ipc_send(int                                    input_file_descriptor,
                                 const bal_fuzzer_input_t *BAL_RESTRICT input);
 
+bal_error_t bal_fuzzer_ipc_receive(int output_file_descriptor, bal_fuzzer_response_t *response);
+
 #endif // BALLISTIC_BAL_FUZZER_IPC_H
 
 /*** end of file ***/

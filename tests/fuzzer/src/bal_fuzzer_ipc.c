@@ -113,3 +113,45 @@ bal_fuzzer_ipc_send(const int input_file_descriptor, const bal_fuzzer_input_t *i
 
     return BAL_SUCCESS;
 }
+
+bal_error_t
+bal_fuzzer_ipc_receive(int output_file_descriptor, bal_fuzzer_response_t *response)
+{
+    if (output_file_descriptor < 0 || NULL == response)
+    {
+        return BAL_ERROR_INVALID_ARGUMENT;
+    }
+
+    uint8_t *BAL_RESTRICT response_cursor = (uint8_t *)response;
+    size_t                remaining       = sizeof(*response);
+    uint64_t              loop_count      = 0U;
+
+    while (remaining > 0U || loop_count < UINT64_MAX)
+    {
+        const ssize_t bytes_read = read(output_file_descriptor, response_cursor, remaining);
+
+        if (bytes_read < 0)
+        {
+            if (EINTR == errno)
+            {
+                continue;
+            }
+
+            return BAL_ERROR_THREAD_CLEANUP;
+        }
+
+        if (0 == bytes_read)
+        {
+            // Worker process died.
+            return BAL_ERROR_THREAD_CLEANUP;
+        }
+
+        response_cursor += (size_t)bytes_read;
+        remaining -= (size_t)bytes_read;
+        ++loop_count;
+    }
+
+    return BAL_SUCCESS;
+}
+
+/*** end of file ***/
