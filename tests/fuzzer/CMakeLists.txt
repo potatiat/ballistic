@@ -4,3 +4,8 @@ target_include_directories(BallisticTestFuzzerCore PUBLIC include)
 target_link_libraries(BallisticTestFuzzerCore PUBLIC Ballistic)
 add_strict_compiler_flags(BallisticTestFuzzerCore)
 add_sanitizers(BallisticTestFuzzerCore)
+
+add_executable(bal_fuzzer_worker_ballistic workers/ballistic/main.c)
+target_link_libraries(bal_fuzzer_worker_ballistic PRIVATE BallisticTestFuzzerCore)
+add_strict_compiler_flags(bal_fuzzer_worker_ballistic)
+add_sanitizers(bal_fuzzer_worker_ballistic)
