@@ -1,3 +1,4 @@
+#include "bal_engine.h"
 #include "bal_fuzzer_protocol.h"
 
 #include <string.h>
@@ -23,8 +24,10 @@ main(void)
         response.status     = BAL_FUZZER_WORKER_OK;
         (void)memset(&response.final_state, 0, sizeof(response.final_state));
 
-        response.final_state.x[0] = 42U;
-        response.final_state.pc   = 8U;
+        response.final_state.x[0]  = 0x2AU;
+        response.final_state.x[1]  = 0x5U;
+        response.final_state.x[30] = BAL_ENGINE_SENTINEL;
+        response.final_state.pc    = BAL_ENGINE_SENTINEL;
 
         if (write_exact(STDOUT_FILENO, &response, sizeof(response)) != 0)
         {
