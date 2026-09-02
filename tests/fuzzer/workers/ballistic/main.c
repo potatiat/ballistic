@@ -77,6 +77,13 @@ main(void)
             response.status = BAL_FUZZER_WORKER_ERROR_EXECUTION_FAILED;
         }
 
+        status = bal_engine_run_thread(&engine);
+
+        if (status != BAL_SUCCESS)
+        {
+            response.status = BAL_FUZZER_WORKER_ERROR_EXECUTION_FAILED;
+        }
+
         bal_fuzzer_state_capture(&response.final_state, &cpu);
         bal_engine_destroy(&engine);
         (void)bal_flat_translation_interface_destroy(&allocator, &memory_interface);
