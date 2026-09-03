@@ -20,6 +20,15 @@ local KIND_LABEL = {
     [ast.KIND.CONSTANT] = "Constant",
 }
 
+local SEARCH_KIND = {
+    [ast.KIND.STRUCT] = "struct",
+    [ast.KIND.UNION] = "union",
+    [ast.KIND.ENUM] = "enum",
+    [ast.KIND.FUNCTION] = "function",
+    [ast.KIND.TYPEDEF] = "typedef",
+    [ast.KIND.CONSTANT] = "constant",
+}
+
 local SIDEBAR_SECTIONS = {
     { kind = ast.KIND.STRUCT, title = "Structs" },
     { kind = ast.KIND.UNION, title = "Unions" },
@@ -29,7 +38,7 @@ local SIDEBAR_SECTIONS = {
     { kind = ast.KIND.CONSTANT, title = "Constants" },
 }
 
-local CHROME_HELPERS = { "page", "module_sidebar", "index_sidebar" }
+local CHROME_HELPERS = { "page", "module_sidebar", "index_sidebar", "global_symbols", "breadcrumbs" }
 
 local EEXIST = 17
 
@@ -44,6 +53,7 @@ local function mkdir_one(path)
         return true
     end
     local err = ffi.errno()
+    -- POSIX EEXIST is 17; Windows _mkdir may also set ERROR_ALREADY_EXISTS (183).
     return err == EEXIST or err == 183
 end
 
@@ -96,6 +106,41 @@ local function page_href(name, anchor)
     return name .. ".html"
 end
 
+local function json_string(value)
+    return '"' .. value
+        :gsub("\\", "\\\\")
+        :gsub('"', '\\"')
+        :gsub("[%z\1-\31]", function(c)
+            return string.format("\\u%04x", string.byte(c))
+        end)
+        :gsub("</", "<\\/")
+        .. '"'
+end
+
+local function safe_index_href(href)
+    return type(href) == "string"
+        and (href:match("^[%w._-]+%.html$") or href:match("^[%w._-]+%.html#[%w._-]+$"))
+end
+
+local function encode_search_index(entries)
+    local parts = { "[" }
+    local first = true
+    for _, entry in ipairs(entries) do
+        if type(entry.name) == "string" and type(entry.kind) == "string" and safe_index_href(entry.href) then
+            if not first then
+                parts[#parts + 1] = ","
+            end
+            first = false
+            parts[#parts + 1] = "{\"name\":" .. json_string(entry.name)
+                .. ",\"kind\":" .. json_string(entry.kind)
+                .. ",\"href\":" .. json_string(entry.href)
+                .. "}"
+        end
+    end
+    parts[#parts + 1] = "]"
+    return table.concat(parts)
+end
+
 local function require_chrome(chrome)
     for _, name in ipairs(CHROME_HELPERS) do
         if type(chrome[name]) ~= "function" then
@@ -124,6 +169,35 @@ local function href(target, current_file)
         return page_href(source, target.anchor)
     end
     return page_href(source)
+end
+
+local function is_function_like_macro(item)
+    return item.kind == ast.KIND.CONSTANT and item.function_like == true
+end
+
+local function item_heading_class(item)
+    if is_function_like_macro(item) then
+        return "macro"
+    elseif item.kind == ast.KIND.FUNCTION then
+        return "fn"
+    elseif item.kind == ast.KIND.CONSTANT then
+        return "constant"
+    end
+    return "type"
+end
+
+local function item_kind_label(item)
+    if is_function_like_macro(item) then
+        return "Macro"
+    end
+    return KIND_LABEL[item.kind] or "Item"
+end
+
+local function item_search_kind(item)
+    if is_function_like_macro(item) then
+        return "macro"
+    end
+    return SEARCH_KIND[item.kind]
 end
 
 local function resolve_markdown(registry, text, current_file)
@@ -269,15 +343,35 @@ local function render_decl(item, registry, current_file, paint)
     elseif item.kind == ast.KIND.TYPEDEF then
         parts[#parts + 1] = paint.keyword("typedef")
         parts[#parts + 1] = " "
-        parts[#parts + 1] = type_span(linkify_type(registry, item.underlying_type, current_file))
-        parts[#parts + 1] = " "
-        parts[#parts + 1] = paint.type_name(item.name)
+        if item.return_type then
+            parts[#parts + 1] = type_span(linkify_type(registry, item.return_type, current_file))
+            parts[#parts + 1] = " (*"
+            parts[#parts + 1] = paint.type_name(item.name)
+            parts[#parts + 1] = ")("
+            for i, param in ipairs(item.parameters or {}) do
+                if i > 1 then
+                    parts[#parts + 1] = ", "
+                end
+                parts[#parts + 1] = type_span(linkify_type(registry, param.type, current_file))
+                if param.name and param.name ~= "" then
+                    parts[#parts + 1] = " "
+                    parts[#parts + 1] = markdown.escape(param.name)
+                end
+            end
+            parts[#parts + 1] = ")"
+        else
+            parts[#parts + 1] = type_span(linkify_type(registry, item.underlying_type, current_file))
+            parts[#parts + 1] = " "
+            parts[#parts + 1] = paint.type_name(item.name)
+        end
     elseif item.kind == ast.KIND.CONSTANT then
         parts[#parts + 1] = paint.keyword("#define")
         parts[#parts + 1] = " "
         parts[#parts + 1] = paint.function_name(item.name)
         if item.value and item.value ~= "" then
-            parts[#parts + 1] = " "
+            if not is_function_like_macro(item) then
+                parts[#parts + 1] = " "
+            end
             parts[#parts + 1] = markdown.escape(item.value)
         end
     end
@@ -299,6 +393,9 @@ local function add_sidebar_section(sections, title, matched)
     if #matched == 0 then
         return
     end
+    table.sort(matched, function(a, b)
+        return a.name < b.name
+    end)
     local entries = sidebar_entries(matched)
     if #entries > 0 then
         sections[#sections + 1] = { title = title, items = entries }
@@ -308,7 +405,29 @@ end
 local function module_sidebar_sections(items)
     local sections = {}
     for _, spec in ipairs(SIDEBAR_SECTIONS) do
-        add_sidebar_section(sections, spec.title, sorted_items(items, spec.kind))
+        if spec.kind == ast.KIND.CONSTANT then
+            local macros = {}
+            local constants = {}
+            for _, item in ipairs(items) do
+                if item.kind == ast.KIND.CONSTANT then
+                    if is_function_like_macro(item) then
+                        macros[#macros + 1] = item
+                    else
+                        constants[#constants + 1] = item
+                    end
+                end
+            end
+            if #macros > 0 and #constants > 0 then
+                add_sidebar_section(sections, "Macros", macros)
+                add_sidebar_section(sections, "Constants", constants)
+            elseif #macros > 0 then
+                add_sidebar_section(sections, "Macros", macros)
+            else
+                add_sidebar_section(sections, "Constants", constants)
+            end
+        else
+            add_sidebar_section(sections, spec.title, sorted_items(items, spec.kind))
+        end
     end
     return sections
 end
@@ -332,21 +451,24 @@ local function write_file(path, contents)
     return true
 end
 
-local function render_module(project, module, theme_css, paint, crate_name, chrome)
+local function render_module(project, module, theme_css, paint, crate_name, chrome, search_index_json)
     local body = {
+        chrome.breadcrumbs({
+            { href = "index.html", name = crate_name },
+            { name = module.name },
+        }, markdown.escape),
         "<h1>Header <span class=\"fn\">" .. markdown.escape(module.name) .. "</span></h1>",
         render_doc(project.symbols, module.documentation, module.name),
     }
 
     for _, item in ipairs(module.items) do
-        local label = KIND_LABEL[item.kind] or "Item"
+        local label = item_kind_label(item)
         local anchor = markdown.escape(item.anchor or item.name)
-        local hclass = (item.kind == ast.KIND.FUNCTION and "fn") or (item.kind == ast.KIND.CONSTANT and "constant") or "type"
         body[#body + 1] = string.format(
             "<h2 id=\"%s\"><span class=\"item-kind\">%s</span> <a class=\"%s\" href=\"#%s\">%s</a></h2>",
             anchor,
             markdown.escape(label),
-            hclass,
+            item_heading_class(item),
             anchor,
             markdown.escape(item.name)
         )
@@ -362,6 +484,16 @@ local function render_module(project, module, theme_css, paint, crate_name, chro
                     .. "</div></div>"
             end
         end
+        if item.variants and #item.variants > 0 then
+            body[#body + 1] = "<h3>Variants</h3>"
+            for _, variant in ipairs(item.variants) do
+                body[#body + 1] = "<div class=\"field-item\" id=\"" .. markdown.escape(variant.anchor or (item.anchor .. "." .. variant.name)) .. "\">"
+                body[#body + 1] = "<code class=\"field-name\">" .. markdown.escape(variant.name) .. "</code>"
+                body[#body + 1] = "<div class=\"field-doc\">"
+                    .. render_doc(project.symbols, variant.documentation, module.name, "### ")
+                    .. "</div></div>"
+            end
+        end
     end
 
     return chrome.page(
@@ -370,7 +502,8 @@ local function render_module(project, module, theme_css, paint, crate_name, chro
         chrome.module_sidebar(module.name, module_sidebar_sections(module.items), markdown.escape, crate_name),
         table.concat(body),
         crate_name,
-        markdown.escape
+        markdown.escape,
+        search_index_json
     )
 end
 
@@ -394,7 +527,10 @@ function M.generate(project, out_directory, options)
     local seen = {}
     local accepted = {}
     local index_modules = {}
+    local global_chips = {}
+    local search_index = {}
     local index_body = {
+        chrome.breadcrumbs({ { name = crate_name } }, markdown.escape),
         "<h1>" .. markdown.escape(crate_name) .. "</h1>",
     }
 
@@ -414,6 +550,7 @@ function M.generate(project, out_directory, options)
             seen[dest] = true
             accepted[#accepted + 1] = { module = module, dest = dest }
             index_modules[#index_modules + 1] = { href = dest, name = module.name }
+            search_index[#search_index + 1] = { name = module.name, kind = "module", href = dest }
             index_body[#index_body + 1] = "<div class=\"module-card\">"
             index_body[#index_body + 1] = string.format(
                 "<a href=\"%s\"><strong>%s</strong></a>",
@@ -422,6 +559,39 @@ function M.generate(project, out_directory, options)
             )
             index_body[#index_body + 1] = render_doc(project.symbols, module.documentation, nil)
             index_body[#index_body + 1] = "</div>"
+
+            for _, item in ipairs(module.items) do
+                local kind_label = KIND_LABEL[item.kind]
+                if kind_label then
+                    local source = item.source_file or module.name
+                    local item_href = page_href(source, item.anchor)
+                    if item_href then
+                        search_index[#search_index + 1] = {
+                            name = item.name,
+                            kind = item_search_kind(item) or kind_label:lower(),
+                            href = item_href,
+                        }
+                        global_chips[#global_chips + 1] = {
+                            href = item_href,
+                            name = item.name,
+                        }
+                    end
+                    if item.kind == ast.KIND.ENUM then
+                        for _, variant in ipairs(item.variants or {}) do
+                            if type(variant.name) == "string" and variant.name ~= "" then
+                                item_href = page_href(source, variant.anchor)
+                                if item_href then
+                                    search_index[#search_index + 1] = {
+                                        name = variant.name,
+                                        kind = "variant",
+                                        href = item_href,
+                                    }
+                                end
+                            end
+                        end
+                    end
+                end
+            end
         end
     end
 
@@ -435,11 +605,17 @@ function M.generate(project, out_directory, options)
         return false
     end
 
+    table.sort(global_chips, function(a, b)
+        return a.name < b.name
+    end)
+    index_body[#index_body + 1] = chrome.global_symbols(global_chips, markdown.escape)
+
+    local search_index_json = encode_search_index(search_index)
     local pending = {}
     for _, entry in ipairs(accepted) do
         pending[#pending + 1] = {
             path = out_directory .. "/" .. entry.dest,
-            contents = render_module(project, entry.module, theme_css, paint, crate_name, chrome),
+            contents = render_module(project, entry.module, theme_css, paint, crate_name, chrome, search_index_json),
         }
     end
     pending[#pending + 1] = {
@@ -450,7 +626,8 @@ function M.generate(project, out_directory, options)
             chrome.index_sidebar(index_modules, markdown.escape, crate_name),
             table.concat(index_body),
             crate_name,
-            markdown.escape
+            markdown.escape,
+            search_index_json
         ),
     }
 

@@ -11,6 +11,7 @@ local page_structure = require("cdoc.page_structure")
 local markdown = require("cdoc.markdown")
 local documentation = require("cdoc.documentation")
 local ast = require("cdoc.ast")
+local log = require("log")
 
 local function main(...)
     local args = { ... }
@@ -18,57 +19,92 @@ local function main(...)
     local clang_library_path = nil
     local headers = {}
     local user_clang_arguments = {}
+    local theme_name = "dark"
+    local usage = "Usage: luajit cdoc.lua --out-directory <dir> [--theme dark|light] [--clang-library <path>] [--clang-arguments <arg>] [--clang-arg <arg>] <header1.h> ..."
 
     local i = 1
     while i <= #args do
-        if args[i] == "--out-directory" and args[i+1] then
-            out_directory = args[i+1];
+        local flag = args[i]
+        if flag == "--out-directory" or flag == "--clang-library"
+            or flag == "--clang-arguments" or flag == "--clang-arg"
+            or flag == "--theme" then
+            if not args[i + 1] or args[i + 1]:sub(1, 2) == "--" then
+                print(usage)
+                return 1
+            end
+            if flag == "--out-directory" then
+                out_directory = args[i + 1]
+            elseif flag == "--clang-library" then
+                clang_library_path = args[i + 1]
+            elseif flag == "--clang-arguments" or flag == "--clang-arg" then
+                table.insert(user_clang_arguments, args[i + 1])
+            else
+                theme_name = args[i + 1]
+            end
             i = i + 2
-        elseif args[i] == "--clang-library" and args[i+1] then
-            clang_library_path = args[i+1]
-            i = i + 2
-        elseif args[i] == "--clang-arguments" and args[i+1] then
-            table.insert(user_clang_arguments, args[i+1])
-            i = i + 2
+        elseif flag:sub(1, 1) == "-" then
+            -- Single-dash leftovers such as -I. are clang argv, not headers.
+            -- Treating them as paths made parse_headers fail and skipped HTML.
+            print(usage)
+            return 1
         else
             headers[#headers + 1] = args[i]
             i = i + 1
         end
     end
 
-    if #headers == 0 then
-        print("Usage: luajit cdoc.lua --out-directory <dir> [--clang-library <path>] [--clang-arg <arg>] <header1.h> ...")
+    if #headers == 0 or not color_picker.has(theme_name) then
+        print(usage)
         return 1
     end
 
-    local clang_context = clang_api.create_context()
-    clang_api.init(clang_context, clang_library_path)
-    local clang_resource_directory = clang_api.resource_directory(clang_context)
-    local clang_arguments = {"-xc"}
+    log.set_level("INFO")
+    local started = os.clock()
 
-    if clang_resource_directory then
-        table.insert(clang_arguments, "-I" .. clang_resource_directory)
+    local clang_context = clang_api.create_context()
+    if not clang_api.init(clang_context, clang_library_path) then
+        return 1
+    end
+    local clang_resource_directory = clang_api.resource_directory(clang_context)
+    if not clang_resource_directory then
+        log.error("Could not locate clang builtin headers (stdarg.h) for the loaded libclang.")
+        clang_api.destroy(clang_context)
+        return 1
     end
 
+    local clang_arguments = {"-xc", "-I.", "-Iinclude", "-I" .. clang_resource_directory}
     for _, user_clang_argument in ipairs(user_clang_arguments) do
         table.insert(clang_arguments, user_clang_argument)
     end
 
     local project = parser.parse_headers(clang_context, headers, clang_arguments, {
-        clang = clang_api, documentation = documentation, ast = ast,
+        clang = clang_api,
+        documentation = documentation,
+        ast = ast,
     })
+    if #project.modules ~= #headers then
+        log.error("Parsed %d of %d headers; not writing HTML.", #project.modules, #headers)
+        clang_api.destroy(clang_context)
+        return 1
+    end
     clang_api.destroy(clang_context)
-    if not project or #project.modules ~= #headers then
-        return 1
-    end
-    local ok = html_generator.generate(project, out_directory, {
-        crate_name = "ballistic", theme = color_picker.named("dark"),
-        syntax = syntax_picker.new(nil, markdown), colors = color_picker,
-        page = page_structure, markdown = markdown,
+
+    local generated = html_generator.generate(project, out_directory, {
+        crate_name = "ballistic",
+        theme = color_picker.named(theme_name),
+        syntax = syntax_picker.new(nil, markdown),
+        colors = color_picker,
+        page = page_structure,
+        markdown = markdown,
     })
-    if not ok then
+
+    if not generated then
+        log.error("Failed to write HTML under '%s'.", out_directory)
         return 1
     end
+
+    local elapsed_ms = math.floor((os.clock() - started) * 1000 + 0.5)
+    log.info("Generated %d modules in %d ms.", #project.modules, elapsed_ms)
     return 0
 end
 
