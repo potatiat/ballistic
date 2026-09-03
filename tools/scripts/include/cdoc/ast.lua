@@ -30,7 +30,7 @@ M.KIND = {
     --- Typedef alias, optionally a function pointer.
     TYPEDEF = 9,
 
-    --- #define numeric constant.
+    --- #define constant. Stays KIND.CONSTANT; function_like iff `(` immediately after the name.
     CONSTANT = 10,
 
     --- static_assert verifying struct size of invariants.
@@ -87,8 +87,9 @@ end
 ---     type = string,                          -- clang type spelling
 ---     documentation = table|nil,
 ---     location = { filepath = string, line_number = number, column_number = number },
+---     bit_width = number|nil,                 -- from clang_getFieldDeclBitWidth
 --- }
-function M.create_field(name, type_name, documentation, location)
+function M.create_field(name, type_name, documentation, location, bit_width)
     log.trace("Creating field node '%s'.", name)
     return
         {
@@ -97,6 +98,7 @@ function M.create_field(name, type_name, documentation, location)
             type = type_name,
             documentation = documentation,
             location = location,
+            bit_width = bit_width,
         }
 end
 
@@ -249,22 +251,24 @@ function M.create_typedef(name, underlying_type, return_type, parameters, docume
         }
 end
 
---- #define numeric constant.
+--- #define constant. Stays KIND.CONSTANT; function_like iff `(` immediately after the name.
 --- Returns:
 --- {
 ---     kind = ast.Kind.CONSTANT,
 ---     name = string,
 ---     value = string,
+---     function_like = boolean,                -- true iff `(` immediately after the name
 ---     documentation = table|nil,
 ---     location = { filepath = string, line_number = number, column_number = number },
 --- }
-function M.create_constant(name, value, documentation, location)
+function M.create_constant(name, value, documentation, location, function_like)
     log.trace("Creating constant node '%s'.", name)
     return
         {
             kind = M.KIND.CONSTANT,
             name = name,
             value = value,
+            function_like = function_like == true,
             documentation = documentation,
             location = location,
         }

@@ -1094,4 +1094,78 @@ function M.parameters(context, tu, cursor)
     return out
 end
 
+function M.prototype_parameters(context, proto_type)
+    local library = library_of(context)
+    if not library then
+        return {}
+    end
+    -- FunctionProto CXType has argument types, not names.
+    local n = tonumber(library.clang_getNumArgTypes(proto_type)) or 0
+    if n < 0 then
+        n = 0
+    end
+    local out = {}
+    for i = 0, n - 1 do
+        out[#out + 1] = {
+            name = "",
+            type = M.type_spelling(context, library.clang_getArgType(proto_type, i)),
+        }
+    end
+    return out
+end
+
+function M.macro_replacement(context, tu, cursor)
+    local library = library_of(context)
+    if not library then
+        return nil, false
+    end
+
+    local name = M.spelling(context, cursor)
+    local extent = library.clang_getCursorExtent(cursor)
+    local file = ffi.new("CXFile[1]")
+    local begin_off = ffi.new("unsigned[1]")
+    local end_off = ffi.new("unsigned[1]")
+    library.clang_getExpansionLocation(library.clang_getRangeStart(extent), file, nil, nil, begin_off)
+    library.clang_getExpansionLocation(library.clang_getRangeEnd(extent), nil, nil, nil, end_off)
+
+    if file[0] == nil then
+        return nil, false
+    end
+
+    local size = ffi.new("size_t[1]")
+    local buf = library.clang_getFileContents(tu, file[0], size)
+    if buf == nil then
+        return nil, false
+    end
+
+    local first = tonumber(begin_off[0]) or 0
+    local last = tonumber(end_off[0]) or 0
+    local nbytes = tonumber(size[0]) or 0
+    if last <= first or first >= nbytes then
+        return nil, false
+    end
+    if last > nbytes then
+        last = nbytes
+    end
+
+    local slice = ffi.string(buf + first, last - first)
+    if name ~= "" and slice:sub(1, #name) == name then
+        slice = slice:sub(#name + 1)
+    end
+    local function_like = slice:sub(1, 1) == "("
+    slice = slice:match("^%s*(.-)%s*$") or ""
+    if slice == "" then
+        return nil, false
+    end
+    return slice, function_like
+end
+
+function M.from_main_file(context, cursor)
+    local library = library_of(context)
+    if not library then
+        return false
+    end
+    return library.clang_Location_isFromMainFile(library.clang_getCursorLocation(cursor)) ~= 0
+end
+
 return M
