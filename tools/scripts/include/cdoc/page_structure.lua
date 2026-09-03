@@ -15,46 +15,65 @@ body {
     background: var(--bg);
     color: var(--text);
     margin: 0;
-    display: flex;
-    flex-direction: column;
     height: 100vh;
     overflow: hidden;
     line-height: 1.6;
 }
+.workspace {
+    display: flex;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+}
+.sidebar {
+  flex: 0 0 300px;
+  width: 300px;
+  height: 100%;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border);
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 16px 20px 24px;
+}
+.main {
+  position: relative;
+  flex: 1 1 0%;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 .navbar {
     display: flex;
     align-items: center;
-    height: 40px;
-    padding: 0 20px;
+    justify-content: flex-end;
+    gap: 8px;
+    height: 44px;
+    padding: 0 16px;
     background: var(--navbar-bg);
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
     font-family: "Fira Sans", sans-serif;
 }
-.navbar a {
-    color: var(--header-text);
-    font-weight: 600;
-    text-decoration: none;
+.search-form {
+  flex: 1 1 auto;
+  width: auto;
+  max-width: 100%;
 }
-.workspace {
-    display: flex;
-    flex: 1;
-    min-height: 0;
+.content-scroll {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  overflow: auto;
 }
-.sidebar {
-  width: 300px;
-  background: var(--sidebar-bg);
-  border-right: 1px solid var(--border);
-  overflow-y: auto;
-  padding: 16px 20px 24px;
-  flex-shrink: 0;
-}
-.main {
-  flex: 1;
-  padding: 32px 40px 48px;
-  overflow-y: auto;
+.content {
+  width: 100%;
   max-width: 960px;
   margin: 0 auto;
+  padding: 32px 40px 48px;
 }
 .sidebar a {
   display: block;
@@ -141,6 +160,7 @@ a { color: var(--link); text-decoration: none; }
 a:hover { text-decoration: underline; }
 pre {
   width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
   background: var(--code-bg);
   padding: 14px 16px;
@@ -165,15 +185,22 @@ pre code {
   font-size: 14px;
 }
 .item-decl {
+  display: block;
+  position: relative;
+  z-index: 1;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   box-sizing: border-box;
   background: var(--code-bg);
   padding: 14px 16px;
   font-family: "Source Code Pro", monospace;
   margin: 0 0 1em;
   border-radius: 4px;
-  white-space: pre-wrap;
+  white-space: pre;
   overflow-x: auto;
+  overflow-wrap: normal;
+  word-break: normal;
   font-size: 14px;
   line-height: 1.45;
   color: var(--text);
@@ -181,15 +208,16 @@ pre code {
   tab-size: 4;
 }
 .item-decl a, pre a {
-  color: var(--type);
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
   text-decoration: none;
-  border-bottom: 1px dotted var(--border);
+  border-bottom: 1px dotted;
 }
 .item-decl a:hover, pre a:hover {
   text-decoration: none;
-  border-bottom: 1px solid var(--type);
+  border-bottom-style: solid;
 }
-.item-decl a.fn, pre a.fn, .item-decl a.macro, pre a.macro { color: var(--fn); }
 .kw { color: var(--kw); font-weight: 600; }
 .type { color: var(--type); }
 .fn { color: var(--fn); font-weight: 600; }
@@ -216,28 +244,125 @@ pre code {
 .docblock h1 { font-size: 18px; font-weight: 600; margin-top: 25px; margin-bottom: 10px; border-bottom: none; color: var(--header-text); }
 .docblock h2 { font-size: 17px; font-weight: 600; margin-top: 25px; margin-bottom: 10px; border-bottom: none; color: var(--header-text); }
 .docblock h3 { font-size: 16px; font-weight: 600; margin-top: 20px; margin-bottom: 10px; }
-#search { width: 100%; padding: 6px 8px; background: var(--code-bg); color: var(--text); border: 1px solid var(--border); }
+#search {
+  width: 100%;
+  padding: 6px 8px;
+  background: var(--code-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  font-family: "Fira Sans", sans-serif;
+  font-size: 14px;
+}
+#search:focus {
+  outline: 1px solid var(--link);
+  border-color: var(--link);
+}
 .docblock p { margin-bottom: 1em; }
 .docblock ul { padding-left: 20px; margin-bottom: 1em; }
 .docblock ol { padding-left: 20px; }
-.module-card { margin-bottom: 24px; }
+.crate-intro { margin: 0 0 8px; }
+.module-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 16px;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--code-bg);
+}
+.module-card-desc { margin: 0; flex: 1 1 12em; font-size: 15px; }
+.module-card-desc.empty { color: var(--comment); font-style: italic; }
 #search-results {
   display: none;
-  margin: 6px 0 10px;
-  max-height: 220px;
+  position: absolute;
+  top: 44px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  margin: 0;
+  padding: 12px 24px 32px;
   overflow-y: auto;
-  border: 1px solid var(--border);
-  background: var(--code-bg);
-  border-radius: 3px;
+  border: none;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 0;
 }
 #search-results a {
-  padding: 4px 8px;
+  display: block;
+  padding: 8px 12px;
   margin: 0;
-  font-size: 13px;
+  font-size: 15px;
+  font-family: "Fira Sans", sans-serif;
+  border-bottom: 1px solid var(--border);
 }
 #search-results a.search-selected {
   background: var(--border);
   color: var(--link);
+}
+.help-button {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--code-bg);
+  color: var(--header-text);
+  font-family: "Fira Sans", sans-serif;
+  font-size: 16px;
+  cursor: pointer;
+}
+.help-button:hover {
+  border-color: var(--link);
+  color: var(--link);
+}
+.help-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+}
+.help-overlay[hidden] { display: none !important; }
+.help-panel {
+  background: var(--sidebar-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 20px 24px;
+  min-width: 280px;
+  max-width: 90vw;
+  font-family: "Fira Sans", sans-serif;
+}
+.help-panel h2 {
+  margin: 0 0 12px;
+  font-size: 18px;
+  border-bottom: none;
+}
+.help-panel dl { margin: 0 0 16px; }
+.help-panel dt { font-weight: 600; margin-top: 10px; }
+.help-panel dd { margin: 4px 0 0; }
+.help-panel kbd {
+  font-family: "Source Code Pro", monospace;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--code-bg);
+}
+.help-close {
+  font-family: "Fira Sans", sans-serif;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--code-bg);
+  color: var(--header-text);
+  cursor: pointer;
 }
 .symbol-chips {
   display: flex;
@@ -286,12 +411,16 @@ function M.breadcrumbs(parts, escape)
     return table.concat(html)
 end
 
-function M.search_box()
-    return "<input id=\"search\" placeholder=\"Search\" aria-label=\"Search\">"
-end
-
 local function search_results_slot()
     return "<div id=\"search-results\"></div>"
+end
+
+function M.search_box()
+    return table.concat({
+        "<form class=\"search-form\" role=\"search\" action=\"#\" method=\"get\">",
+        "<input id=\"search\" type=\"search\" placeholder=\"Search\" aria-label=\"Search\" autocomplete=\"off\" spellcheck=\"false\">",
+        "</form>",
+    })
 end
 
 function M.search_script()
@@ -321,13 +450,42 @@ function M.search_script()
     }
   }
 
+  var overlay = document.getElementById("help-overlay");
   var selected = -1;
+
+  function closeSearch() {
+    results.style.display = "none";
+    selected = -1;
+  }
 
   function isSafeHref(href) {
     if (typeof href !== "string") return false;
     return /^#[\w.-]+$/.test(href)
       || /^[\w.-]+\.html$/.test(href)
       || /^[\w.-]+\.html#[\w.-]+$/.test(href);
+  }
+
+  function isTypingTarget(el) {
+    if (!el) return false;
+    var tag = (el.tagName || "").toLowerCase();
+    if (tag === "input" || tag === "textarea" || tag === "select") return true;
+    return !!el.isContentEditable;
+  }
+
+  function helpOpen() {
+    return !!(overlay && !overlay.hasAttribute("hidden"));
+  }
+
+  function setHelp(open) {
+    if (!overlay) return;
+    if (open) overlay.removeAttribute("hidden");
+    else overlay.setAttribute("hidden", "");
+  }
+
+  function focusSearch() {
+    setHelp(false);
+    input.focus();
+    if (typeof input.select === "function") input.select();
   }
 
   function hits() {
@@ -358,9 +516,71 @@ function M.search_script()
     var target = list[selected >= 0 ? selected : 0];
     var href = target.getAttribute("href");
     if (!isSafeHref(href)) return;
+    closeSearch();
+    input.blur();
     if (typeof target.click === "function") target.click();
     else location.assign(href);
   }
+
+  results.addEventListener("click", function (e) {
+    var el = e.target;
+    while (el && el !== results && (el.tagName || "").toLowerCase() !== "a") {
+      el = el.parentNode;
+    }
+    if (el && el !== results) closeSearch();
+  });
+
+  if (input.form) {
+    input.form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      navigateSelected();
+    });
+  }
+
+  var helpToggle = document.getElementById("help-toggle");
+  if (helpToggle) {
+    helpToggle.addEventListener("click", function () {
+      setHelp(!helpOpen());
+    });
+  }
+  var helpClose = document.getElementById("help-close");
+  if (helpClose) {
+    helpClose.addEventListener("click", function () {
+      setHelp(false);
+    });
+  }
+  if (overlay) {
+    overlay.addEventListener("click", function (e) {
+      if (e.target === overlay) setHelp(false);
+    });
+  }
+
+  document.addEventListener("keydown", function (e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === "Escape") {
+      if (helpOpen()) {
+        e.preventDefault();
+        setHelp(false);
+        return;
+      }
+      if (document.activeElement === input || results.style.display === "block") {
+        e.preventDefault();
+        closeSearch();
+        input.blur();
+      }
+      return;
+    }
+    if (isTypingTarget(e.target)) return;
+    if (e.key === "?") {
+      e.preventDefault();
+      setHelp(!helpOpen());
+      return;
+    }
+    if (e.key === "/" || e.key === "s" || e.key === "S") {
+      e.preventDefault();
+      focusSearch();
+    }
+  });
 
   input.addEventListener("input", function () {
     var q = input.value.toLowerCase();
@@ -375,7 +595,7 @@ function M.search_script()
       results.removeChild(results.firstChild);
     }
     if (!q) {
-      results.style.display = "none";
+      closeSearch();
       return;
     }
 
@@ -398,11 +618,22 @@ function M.search_script()
       results.appendChild(a);
       shown++;
     }
-    results.style.display = shown ? "block" : "none";
+    if (!shown) {
+      var empty = document.createElement("div");
+      empty.textContent = "No results found.";
+      results.appendChild(empty);
+    }
+    results.style.display = "block";
   });
 
   input.addEventListener("keydown", function (e) {
     var list = hits();
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (list.length) navigateSelected();
+      else closeSearch();
+      return;
+    }
     if (!list.length) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
@@ -410,9 +641,6 @@ function M.search_script()
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setSelected(selected < 0 ? list.length - 1 : selected - 1);
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      navigateSelected();
     }
   });
 })();
@@ -427,8 +655,6 @@ function M.module_sidebar(module_name, sections, escape, crate_name)
         "<a class=\"sidebar-crate\" href=\"index.html\">%s</a>",
         escape(crate_name or "ballistic")
     )
-    html[#html + 1] = M.search_box()
-    html[#html + 1] = search_results_slot()
     html[#html + 1] = "<div class=\"sidebar-module\">" .. escape(module_name) .. "</div>"
     for _, section in ipairs(sections or {}) do
         html[#html + 1] = "<h3>" .. escape(section.title) .. "</h3>"
@@ -453,8 +679,6 @@ function M.index_sidebar(modules, escape, crate_name)
             "<a class=\"sidebar-crate\" href=\"index.html\">%s</a>",
             escape(crate_name or "ballistic")
         ),
-        M.search_box(),
-        search_results_slot(),
         "<h3>Modules</h3>",
     }
     for _, module in ipairs(modules or {}) do
@@ -497,12 +721,28 @@ function M.page(title, theme_css, sidebar, body, crate_name, escape, search_inde
         "<style>",
         M.stylesheet(theme_css),
         "</style></head><body>",
-        "<div class=\"navbar\"><a href=\"index.html\">" .. escape(crate_name) .. "</a></div>",
         "<div class=\"workspace\">",
         sidebar,
         "<main class=\"main\">",
+        "<nav class=\"navbar\" aria-label=\"" .. escape(crate_name) .. " documentation toolbar\">",
+        M.search_box(),
+        "<button type=\"button\" class=\"help-button\" id=\"help-toggle\" title=\"Keyboard shortcuts\" aria-label=\"Keyboard shortcuts\">?</button>",
+        "</nav>",
+        search_results_slot(),
+        "<div class=\"content-scroll\">",
+        "<div class=\"content\">",
         body,
-        "</main></div>",
+        "</div></div></main></div>",
+        "<div id=\"help-overlay\" class=\"help-overlay\" hidden>",
+        "<div class=\"help-panel\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"help-title\">",
+        "<h2 id=\"help-title\">Keyboard shortcuts</h2>",
+        "<dl>",
+        "<dt><kbd>/</kbd> or <kbd>s</kbd></dt><dd>Focus search</dd>",
+        "<dt><kbd>?</kbd></dt><dd>Open this help</dd>",
+        "<dt><kbd>Esc</kbd></dt><dd>Close help or search</dd>",
+        "</dl>",
+        "<button type=\"button\" class=\"help-close\" id=\"help-close\">Close</button>",
+        "</div></div>",
     }
     if search_index_json and search_index_json ~= "" then
         html[#html + 1] = "<script type=\"application/json\" id=\"crate-search-index\">"

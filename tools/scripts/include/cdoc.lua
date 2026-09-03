@@ -20,14 +20,16 @@ local function main(...)
     local headers = {}
     local user_clang_arguments = {}
     local theme_name = "dark"
-    local usage = "Usage: luajit cdoc.lua --out-directory <dir> [--theme dark|light] [--clang-library <path>] [--clang-arguments <arg>] [--clang-arg <arg>] <header1.h> ..."
+    local crate_name = "ballistic"
+    local crate_intro = "A rewrite of the dynarmic ARM recompiler with an extremely low cache footprint."
+    local usage = "Usage: luajit cdoc.lua --out-directory <dir> [--theme dark|light] [--crate-intro <text>] [--clang-library <path>] [--clang-arguments <arg>] [--clang-arg <arg>] <header1.h> ..."
 
     local i = 1
     while i <= #args do
         local flag = args[i]
         if flag == "--out-directory" or flag == "--clang-library"
             or flag == "--clang-arguments" or flag == "--clang-arg"
-            or flag == "--theme" then
+            or flag == "--theme" or flag == "--crate-intro" then
             if not args[i + 1] or args[i + 1]:sub(1, 2) == "--" then
                 print(usage)
                 return 1
@@ -38,6 +40,8 @@ local function main(...)
                 clang_library_path = args[i + 1]
             elseif flag == "--clang-arguments" or flag == "--clang-arg" then
                 table.insert(user_clang_arguments, args[i + 1])
+            elseif flag == "--crate-intro" then
+                crate_intro = args[i + 1]
             else
                 theme_name = args[i + 1]
             end
@@ -90,7 +94,8 @@ local function main(...)
     clang_api.destroy(clang_context)
 
     local generated = html_generator.generate(project, out_directory, {
-        crate_name = "ballistic",
+        crate_name = crate_name,
+        crate_intro = crate_intro,
         theme = color_picker.named(theme_name),
         syntax = syntax_picker.new(nil, markdown),
         colors = color_picker,
